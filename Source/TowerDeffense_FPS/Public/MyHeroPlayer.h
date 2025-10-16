@@ -3,17 +3,24 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
 #include "MyHeroPlayer.generated.h"
 
 UCLASS()
 class TOWERDEFFENSE_FPS_API AMyHeroPlayer : public ACharacter
 {
+	UPROPERTY(VisibleAnywhere)
+	UCameraComponent* CameraComponent;
+
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this character's properties
 	AMyHeroPlayer();
+
+	
 
 protected:
 	// Called when the game starts or when spawned
@@ -30,4 +37,10 @@ public:
 
 	UFUNCTION()
 	void MoveRight(float value);
+
+	UFUNCTION()
+	void StartJump();
+
+	UFUNCTION()
+	void StopJump();
 };

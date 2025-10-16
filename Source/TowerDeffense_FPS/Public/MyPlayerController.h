@@ -15,6 +15,8 @@ class TOWERDEFFENSE_FPS_API AMyPlayerController : public APlayerController
 public:
     AMyPlayerController();
 
+   
+
 protected:
     AMyHeroPlayer* m_pAMyCharacter;
 
@@ -25,4 +27,7 @@ protected:
     void MoveForward_Axis(float axisValue);
     void MoveRight_Axis(float axisValue);
 	
+    void StartJump_Input();
+    void StopJump_Input();
+
 };
