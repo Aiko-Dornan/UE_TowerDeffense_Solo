@@ -2,6 +2,7 @@
 
 
 #include "MyHeroPlayer.h"
+#include "Engine/World.h"
 
 // Sets default values
 AMyHeroPlayer::AMyHeroPlayer()
@@ -18,12 +19,19 @@ AMyHeroPlayer::AMyHeroPlayer()
 
 	CameraComponent->bUsePawnControlRotation = true;
 
+	//GunComponent = CreateDefaultSubobject<AWeaponBase>(TEXT("/Game/BluePrint/MyWeaponBase"));
+
+	CurrentWeapon = nullptr;
+
 }
 
 // Called when the game starts or when spawned
 void AMyHeroPlayer::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// ここで初期武器を装備する場合（例としてWeaponBaseの派生クラスを指定）
+	EquipWeapon(GunComponent);
 	
 }
 
@@ -69,4 +77,31 @@ void AMyHeroPlayer::StopJump()
 	bPressedJump = false;
 }
 
+void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
+{
+	if (!WeaponClass) return;
+
+	// 既に武器がある場合は破棄 or 非表示にする処理（省略可能）
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->Destroy();
+		CurrentWeapon = nullptr;
+	}
+
+	// 武器をスポーン
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = GetInstigator();
+
+	AWeaponBase* SpawnedWeapon = GetWorld()->SpawnActor<AWeaponBase>(WeaponClass, SpawnParams);
+
+	if (SpawnedWeapon)
+	{
+		// 武器をキャラクターのメッシュのソケットにアタッチ
+		const FName WeaponSocketName = TEXT("WeaponSocket"); // ソケット名はメッシュ側に合わせて変更してください
+		SpawnedWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponSocketName);
+
+		CurrentWeapon = SpawnedWeapon;
+	}
+}
 

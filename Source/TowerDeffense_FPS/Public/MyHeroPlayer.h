@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include"WeaponBase.h"
 #include "GameFramework/Character.h"
 #include "MyHeroPlayer.generated.h"
 
@@ -14,13 +15,17 @@ class TOWERDEFFENSE_FPS_API AMyHeroPlayer : public ACharacter
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* CameraComponent;
 
+	
+	TSubclassOf<class AWeaponBase> GunComponent;
+
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this character's properties
 	AMyHeroPlayer();
 
-	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+	AWeaponBase* CurrentWeapon;
 
 protected:
 	// Called when the game starts or when spawned
@@ -43,4 +48,8 @@ public:
 
 	UFUNCTION()
 	void StopJump();
+
+	// •Ší‚ğƒXƒ|[ƒ“•‘•”õ‚·‚éŠÖ”
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass);
 };
