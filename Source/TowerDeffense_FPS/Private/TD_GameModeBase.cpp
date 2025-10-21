@@ -6,5 +6,8 @@
 
 ATD_GameModeBase::ATD_GameModeBase()
 {
-	DefaultPawnClass = AMyHeroPlayer::StaticClass();
+	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnClassFinder(TEXT("/Game/BluePrint/MyMyHeroPlayer"));
+	DefaultPawnClass = PlayerPawnClassFinder.Class;
+
+	//DefaultPawnClass = AMyHeroPlayer::StaticClass();
 }

@@ -1,7 +1,16 @@
 //// Fill out your copyright notice in the Description page of Project Settings.
 //
 //
+
 #include "WeaponBase.h"
+
+#include "DrawDebugHelpers.h"
+#include "GameFramework/Actor.h"
+#include "GameFramework/PlayerController.h"
+#include "Engine/World.h"
+#include "GameFramework/DamageType.h"
+
+
 #include"Kismet/GameplayStatics.h"
 #include"Kismet/KismetMathLibrary.h"
 
@@ -20,6 +29,8 @@ AWeaponBase::AWeaponBase()
 	bCanFire = true;
 
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
+
+	//bIsFullAuto = true;
 
 	MaxAmmo = 30.0f;
 	Ammo = 30.0f;
@@ -44,7 +55,7 @@ void AWeaponBase::Fire()
 	{
 		if (GetAmmo()>0.0f)
 		{
-			FireAction();
+			FireAtackAction();
 
 			FireEffect();
 
@@ -63,6 +74,35 @@ void AWeaponBase::Fire()
 
 
 
+}
+
+void AWeaponBase::FireAtackAction()
+{
+	if (!ProjectileClass) return;
+
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor) return;
+
+	FVector MuzzleLocation = GetActorLocation() + MuzzleOffset;
+	FRotator MuzzleRotation;
+
+	// カメラの方向を取得
+	FVector EyeLocation;
+	FRotator EyeRotation;
+	OwnerActor->GetActorEyesViewPoint(EyeLocation, EyeRotation);
+	MuzzleRotation = EyeRotation;
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = OwnerActor->GetInstigator();
+
+	// 弾をスポーン
+	GetWorld()->SpawnActor<AMyProjectileActor>(
+		ProjectileClass,
+		MuzzleLocation,
+		MuzzleRotation,
+		SpawnParams
+	);
 }
 
 void AWeaponBase::SetCanFire()
@@ -114,3 +154,5 @@ float AWeaponBase::GetFireSpread()
 {
 	return FireSpread;
 }
+
+

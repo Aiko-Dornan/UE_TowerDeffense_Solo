@@ -16,7 +16,7 @@ class TOWERDEFFENSE_FPS_API AMyHeroPlayer : public ACharacter
 	UCameraComponent* CameraComponent;
 
 	
-	TSubclassOf<class AWeaponBase> GunComponent;
+	
 
 	GENERATED_BODY()
 
@@ -24,7 +24,12 @@ public:
 	// Sets default values for this character's properties
 	AMyHeroPlayer();
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+	// エディタから指定可能な武器クラス
+	UPROPERTY(EditAnywhere, Category = "Weapon")
+	TSubclassOf<AWeaponBase> GunComponent;
+
+	// 現在装備中の武器
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	AWeaponBase* CurrentWeapon;
 
 protected:
@@ -48,6 +53,9 @@ public:
 
 	UFUNCTION()
 	void StopJump();
+
+	UFUNCTION()
+	void HandleFire();
 
 	// 武器をスポーン＆装備する関数
 	UFUNCTION(BlueprintCallable, Category = "Weapon")

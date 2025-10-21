@@ -3,6 +3,8 @@
 
 #include "MyHeroPlayer.h"
 #include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
+#include "Components/CapsuleComponent.h"
 
 // Sets default values
 AMyHeroPlayer::AMyHeroPlayer()
@@ -30,9 +32,11 @@ void AMyHeroPlayer::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ここで初期武器を装備する場合（例としてWeaponBaseの派生クラスを指定）
-	EquipWeapon(GunComponent);
-	
+	// ゲーム開始時に銃を装備
+	if (GunComponent)
+	{
+		EquipWeapon(GunComponent);
+	}
 }
 
 // Called every frame
@@ -53,6 +57,15 @@ void AMyHeroPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	
 	PlayerInputComponent->BindAxis("Turn", this, &AMyHeroPlayer::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("Look Up", this, &AMyHeroPlayer::AddControllerPitchInput);
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMyHeroPlayer::HandleFire);
+}
+
+void AMyHeroPlayer::HandleFire()
+{
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->Fire();
+	}
 }
 
 void AMyHeroPlayer::MoveForward(float value)
@@ -81,7 +94,7 @@ void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
 {
 	if (!WeaponClass) return;
 
-	// 既に武器がある場合は破棄 or 非表示にする処理（省略可能）
+	// 既存の武器を削除
 	if (CurrentWeapon)
 	{
 		CurrentWeapon->Destroy();
@@ -97,10 +110,8 @@ void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
 
 	if (SpawnedWeapon)
 	{
-		// 武器をキャラクターのメッシュのソケットにアタッチ
-		const FName WeaponSocketName = TEXT("WeaponSocket"); // ソケット名はメッシュ側に合わせて変更してください
+		const FName WeaponSocketName = TEXT("WeaponSocket"); // スケルトンメッシュのソケット名に一致させる
 		SpawnedWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponSocketName);
-
 		CurrentWeapon = SpawnedWeapon;
 	}
 }

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include"MyProjectileActor.h"
 #include "WeaponBase.generated.h"
 
 
@@ -19,6 +20,8 @@ class TOWERDEFFENSE_FPS_API AWeaponBase : public AActor
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* Mesh;
+
+	
 
 //	
 public:	
@@ -37,8 +40,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Action")
 	void FireEffect();
 
-	UFUNCTION(BlueprintImplementableEvent,BlueprintCallable, Category = "Action")
-	void FireAction();
+	//UFUNCTION(BlueprintImplementableEvent,BlueprintCallable, Category = "Action")
+	UFUNCTION(BlueprintCallable, Category = "Action")
+	void FireAtackAction();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	TSubclassOf<class AMyProjectileActor> ProjectileClass;
 
 protected:
 //Called when the game starts or when spawned
@@ -50,8 +57,12 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Gameplay")
 	void SetCanFire();
 
+	/*UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Weapon")
+	bool bIsFullAuto;*/
+
 public:	
-	
+	/*UFUNCTION(BlueprintPure,Category="Weapon")
+	bool IsFullAuto();*/
 
 	//FORCEINLINE class USkeletalMeshComponent* GetMesh() const { return Mesh; }
 	FORCEINLINE class UStaticMeshComponent* GetMesh() const { return Mesh; }
