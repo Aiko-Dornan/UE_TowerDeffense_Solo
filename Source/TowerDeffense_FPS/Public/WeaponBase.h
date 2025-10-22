@@ -18,16 +18,19 @@ class TOWERDEFFENSE_FPS_API AWeaponBase : public AActor
 //UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
 //class USkeletalMeshComponent* Mesh;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
-	class UStaticMeshComponent* Mesh;
-
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
+	//class UStaticMeshComponent* Mesh;
+	
 	
 
 //	
 public:	
 	// Sets default values for this actor's properties
 	AWeaponBase();
-//
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
+	UStaticMeshComponent* Mesh;
+
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Gameplay")
 	USoundBase* FireSound;
 
