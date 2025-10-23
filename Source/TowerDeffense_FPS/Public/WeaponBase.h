@@ -28,7 +28,7 @@ public:
 	// Sets default values for this actor's properties
 	AWeaponBase();
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	UStaticMeshComponent* Mesh;
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Gameplay")
@@ -60,8 +60,17 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Gameplay")
 	void SetCanFire();
 
-	/*UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Weapon")
-	bool bIsFullAuto;*/
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Weapon")
+	bool bIsFullAuto;
+
+	bool bIsFiring = false; // 現在射撃中か
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+	bool bIsReloading = false;
+
+	FTimerHandle FireTimerHandle;       // フルオート用ループ
+	FTimerHandle FireResetTimerHandle;  // 単発用リセット
+	FTimerHandle ReloadTimerHandle;
 
 public:	
 	/*UFUNCTION(BlueprintPure,Category="Weapon")
@@ -85,6 +94,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	float FireSpread;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Reload")
+	float ReloadTime = 2.0f; // リロード時間（秒）
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Reload")
+	USoundBase* ReloadSound;
+
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	float GetMaxAmmo();
 	UFUNCTION(BlueprintPure, Category = "Weapon")
@@ -99,5 +114,15 @@ public:
 	float GetFireRange();
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	float GetFireSpread();
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void StartFire(); // 押下開始
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void StopFire(); // 押下終了
+
+	// ==== リロード ====
+	void StartReload();
+	void FinishReload();
 
 };

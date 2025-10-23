@@ -57,7 +57,29 @@ public:
 	UFUNCTION()
 	void HandleFire();
 
+	UFUNCTION()
+	void OnFirePressed();
+
+	UFUNCTION()
+	void OnFireReleased();
+
+	UFUNCTION()
+	void OnReloadPressed();
+
 	// •Ší‚ğƒXƒ|[ƒ“•‘•”õ‚·‚éŠÖ”
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<class UUserWidget> AmmoWidgetClass;
+
+	//Getter
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	int32 GetCurrentAmmo() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	int32 GetCurrentStockAmmo() const;
+
+
 };

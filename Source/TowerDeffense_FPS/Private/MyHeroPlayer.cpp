@@ -5,6 +5,7 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "Components/CapsuleComponent.h"
+#include "Blueprint/UserWidget.h" // ñYÇÍÇ∏Ç…ÅI
 
 // Sets default values
 AMyHeroPlayer::AMyHeroPlayer()
@@ -37,6 +38,16 @@ void AMyHeroPlayer::BeginPlay()
 	{
 		EquipWeapon(GunComponent);
 	}
+
+	if (AmmoWidgetClass)
+	{
+		UUserWidget* AmmoWidget = CreateWidget<UUserWidget>(GetWorld(), AmmoWidgetClass);
+		if (AmmoWidget)
+		{
+			AmmoWidget->AddToViewport();
+		}
+	}
+
 }
 
 // Called every frame
@@ -57,7 +68,13 @@ void AMyHeroPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	
 	PlayerInputComponent->BindAxis("Turn", this, &AMyHeroPlayer::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("Look Up", this, &AMyHeroPlayer::AddControllerPitchInput);
-	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMyHeroPlayer::HandleFire);
+	//PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMyHeroPlayer::HandleFire);
+	// ÉNÉäÉbÉNÇ≈éÀåÇ
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMyHeroPlayer::OnFirePressed);
+	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AMyHeroPlayer::OnFireReleased);
+	//reload
+	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &AMyHeroPlayer::OnReloadPressed);
+
 }
 
 void AMyHeroPlayer::HandleFire()
@@ -65,6 +82,30 @@ void AMyHeroPlayer::HandleFire()
 	if (CurrentWeapon)
 	{
 		CurrentWeapon->Fire();
+	}
+}
+
+void AMyHeroPlayer::OnFirePressed()
+{
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->StartFire(); // Å© âüÇµÇΩèuä‘
+	}
+}
+
+void AMyHeroPlayer::OnFireReleased()
+{
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->StopFire(); // Å© ó£ÇµÇΩèuä‘
+	}
+}
+
+void AMyHeroPlayer::OnReloadPressed()
+{
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->StartReload();
 	}
 }
 
@@ -114,5 +155,23 @@ void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
 		SpawnedWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponSocketName);
 		CurrentWeapon = SpawnedWeapon;
 	}
+}
+
+int32 AMyHeroPlayer::GetCurrentAmmo() const
+{
+	if (CurrentWeapon)
+	{
+		return (int32)CurrentWeapon->GetAmmo();
+	}
+	return 0;
+}
+
+int32 AMyHeroPlayer::GetCurrentStockAmmo() const
+{
+	if (CurrentWeapon)
+	{
+		return (int32)CurrentWeapon->GetStockAmmo();
+	}
+	return 0;
 }
 

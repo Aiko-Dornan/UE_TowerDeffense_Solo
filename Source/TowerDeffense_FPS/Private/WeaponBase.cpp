@@ -27,6 +27,8 @@ AWeaponBase::AWeaponBase()
 	RootComponent = Mesh;
 
 	bCanFire = true;
+	bIsFiring = false;
+	bIsReloading = false;
 
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
 
@@ -47,34 +49,54 @@ void AWeaponBase::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	
+	Mesh = Cast<UStaticMeshComponent>(GetRootComponent());
 
 }
 
 void AWeaponBase::Fire()
 {
-	if (bCanFire==true)
-	{
-		if (GetAmmo()>0.0f)
-		{
-			FireAtackAction();
+	//if (bCanFire==true)
+	//{
+	//	if (GetAmmo()>0.0f)
+	//	{
+	//		FireAtackAction();
 
-			FireEffect();
+	//		FireEffect();
 
-			Ammo = FMath::Clamp(GetAmmo() - 1.0f, 0.0f, GetMaxAmmo());
+	//		Ammo = FMath::Clamp(GetAmmo() - 1.0f, 0.0f, GetMaxAmmo());
 
-			bCanFire = false;
+	//		
 
-			FTimerManager& timeManager = GetWorldTimerManager();
-			FTimerHandle _TimerHandle;
-			GetWorldTimerManager().SetTimer(_TimerHandle, this, &AWeaponBase::SetCanFire, AWeaponBase::GetFireRate(), false);
+	//		if (bIsFullAuto && bIsFiring)
+	//		{
+	//			GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AWeaponBase::Fire, FireRate, false);
+	//		}
+	//		else
+	//		{
+	//			// 単発射撃時は通常の発射間隔でリセット
+	//			GetWorldTimerManager().SetTimer(FireResetTimerHandle, this, &AWeaponBase::SetCanFire, FireRate, false);
+	//		}
 
-		}
+	//	}
 
 
-	}
+	//}
 
+	if (!bCanFire || Ammo <= 0.0f || bIsReloading) return;
 
+	FireAtackAction();
+	FireEffect();
+
+	Ammo = FMath::Clamp(Ammo - 1.0f, 0.0f, MaxAmmo);
+	bCanFire = false;
+
+	GetWorldTimerManager().SetTimer(FireResetTimerHandle, this, &AWeaponBase::SetCanFire, FireRate, false);
+
+	// 弾切れ自動リロード
+	//if (Ammo <= 0.0f /*&& StockAmmo > 0*/)
+	//{
+	//	StartReload();
+	//}
 
 }
 
@@ -97,7 +119,7 @@ void AWeaponBase::FireAtackAction()
 
 	FName MuzzleSocketName = "FireSocket"; // ソケット名が "Muzzle" の場合。必要に応じて変更。
 
-	if (!Mesh->DoesSocketExist(MuzzleSocketName))
+	if (!StaticMeshComp->DoesSocketExist(MuzzleSocketName))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Socket %s not found on mesh"), *MuzzleSocketName.ToString());
 		return;
@@ -180,4 +202,81 @@ float AWeaponBase::GetFireSpread()
 	return FireSpread;
 }
 
+// 追加：ボタン押下時に呼ばれる
+void AWeaponBase::StartFire()
+{
+//	if (bIsFiring)
+//		return;
+//
+//	bIsFiring = true;
+//	Fire(); // すぐ1発撃つ
 
+	if (bIsFiring || bIsReloading) return;
+	bIsFiring = true;
+
+	Fire();
+
+	if (bIsFullAuto)
+	{
+		GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AWeaponBase::Fire, FireRate, true);
+	}
+
+}
+
+// 追加：ボタン離したら呼ばれる
+void AWeaponBase::StopFire()
+{
+	//bIsFiring = false;
+
+	//// タイマーを止める
+	//GetWorldTimerManager().ClearTimer(FireTimerHandle);
+	//GetWorldTimerManager().ClearTimer(FireResetTimerHandle);
+
+	//// 再び撃てるようにリセット
+	//bCanFire = true;
+
+	bIsFiring = false;
+	GetWorldTimerManager().ClearTimer(FireTimerHandle);
+	GetWorldTimerManager().ClearTimer(FireResetTimerHandle);
+	bCanFire = true;
+
+}
+
+// ==========================
+// リロード関連
+// ==========================
+void AWeaponBase::StartReload()
+{
+	if (bIsReloading || Ammo >= MaxAmmo || StockAmmo <= 0)
+		return;
+
+	bIsReloading = true;
+	bCanFire = false;
+
+	// リロード音
+	/*if (ReloadSound)
+	{
+		UGameplayStatics::PlaySound2D(this, ReloadSound);
+	}*/
+
+	// ReloadTime 秒後に完了
+	GetWorldTimerManager().SetTimer(ReloadTimerHandle, this, &AWeaponBase::FinishReload, ReloadTime, false);
+
+	UE_LOG(LogTemp, Log, TEXT("Reload started..."));
+}
+
+void AWeaponBase::FinishReload()
+{
+	if (!bIsReloading) return;
+
+	const float NeededAmmo = MaxAmmo - Ammo;
+	const float AmmoToLoad = FMath::Min(NeededAmmo, StockAmmo);
+
+	Ammo += AmmoToLoad;
+	StockAmmo -= AmmoToLoad;
+
+	bIsReloading = false;
+	bCanFire = true;
+
+	UE_LOG(LogTemp, Log, TEXT("Reload finished: Ammo=%f / Stock=%f"), Ammo, StockAmmo);
+}
