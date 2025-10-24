@@ -6,6 +6,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include"WeaponBase.h"
+#include "AmmoDisplayWidget.h"   // Å© Ç±ÇÍÇí«â¡ÅI
 #include "GameFramework/Character.h"
 #include "MyHeroPlayer.generated.h"
 
@@ -70,9 +71,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass);
 
+	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	
+	TSubclassOf<class UUserWidget> AmmoWidgetClass;*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
-	TSubclassOf<class UUserWidget> AmmoWidgetClass;
+	TSubclassOf<class UAmmoDisplay> AmmoWidgetClass;  // Å© Ç±Ç±Ç UUserWidget Ç©ÇÁïœçX
 
+	class UAmmoDisplay* AmmoWidget;
 	//Getter
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
@@ -81,5 +86,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	int32 GetCurrentStockAmmo() const;
 
+	UFUNCTION()
+	void OnAmmoChanged(int32 CurrentAmmo, int32 StockAmmo);
 
+	UFUNCTION()
+	void OnReloadStateChanged(bool bIsReloading);
 };

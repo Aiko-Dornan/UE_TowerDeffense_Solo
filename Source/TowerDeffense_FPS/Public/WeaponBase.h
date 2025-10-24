@@ -7,7 +7,9 @@
 #include"MyProjectileActor.h"
 #include "WeaponBase.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAmmoChanged, int32, CurrentAmmo, int32, StockAmmo);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnReloadStateChanged, bool, bIsReloading);
 
 UCLASS()
 class TOWERDEFFENSE_FPS_API AWeaponBase : public AActor
@@ -27,6 +29,13 @@ class TOWERDEFFENSE_FPS_API AWeaponBase : public AActor
 public:	
 	// Sets default values for this actor's properties
 	AWeaponBase();
+
+	// 弾数変更イベント（Blueprintでも使えるようにBlueprintAssignable）
+	UPROPERTY(BlueprintAssignable, Category = "Weapon")
+	FOnAmmoChanged OnAmmoChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Weapon")
+	FOnReloadStateChanged OnReloadStateChanged;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	UStaticMeshComponent* Mesh;

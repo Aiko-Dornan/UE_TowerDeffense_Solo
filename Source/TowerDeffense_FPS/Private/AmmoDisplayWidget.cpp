@@ -9,19 +9,24 @@ void UAmmoDisplay::UpdateAmmoText(int32 CurrentAmmo, int32 StockAmmo)
     {
         FString AmmoString = FString::Printf(TEXT("%d / %d"), CurrentAmmo, StockAmmo);
         AmmoTextBlock->SetText(FText::FromString(AmmoString));
+
     }
+    UE_LOG(LogTemp, Warning, TEXT("UpdateAmmoText called: %d / %d"), CurrentAmmo, StockAmmo);
 }
 
 void UAmmoDisplay::SetReloading(bool bIsReloading)
 {
-    /*if (ReloadTextBlock)
-    {
-        ReloadTextBlock->SetVisibility(bIsReloading ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
-    }*/
-
-    // リロード中は弾数表示を非表示にしたい場合
     if (AmmoTextBlock)
     {
         AmmoTextBlock->SetVisibility(bIsReloading ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
+    }
+
+    if (ReloadTextBlock)
+    {
+        ReloadTextBlock->SetVisibility(bIsReloading ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+        if (bIsReloading)
+        {
+            ReloadTextBlock->SetText(FText::FromString(TEXT("RELOADING...")));
+        }
     }
 }

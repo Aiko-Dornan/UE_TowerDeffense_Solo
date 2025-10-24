@@ -97,7 +97,8 @@ void AWeaponBase::Fire()
 	//{
 	//	StartReload();
 	//}
-
+	//  弾数更新イベントを発火
+	OnAmmoChanged.Broadcast((int32)Ammo, (int32)StockAmmo);
 }
 
 void AWeaponBase::FireAtackAction()
@@ -259,6 +260,8 @@ void AWeaponBase::StartReload()
 		UGameplayStatics::PlaySound2D(this, ReloadSound);
 	}*/
 
+	OnReloadStateChanged.Broadcast(true);  // リロード開始を通知
+
 	// ReloadTime 秒後に完了
 	GetWorldTimerManager().SetTimer(ReloadTimerHandle, this, &AWeaponBase::FinishReload, ReloadTime, false);
 
@@ -279,4 +282,7 @@ void AWeaponBase::FinishReload()
 	bCanFire = true;
 
 	UE_LOG(LogTemp, Log, TEXT("Reload finished: Ammo=%f / Stock=%f"), Ammo, StockAmmo);
+
+	OnReloadStateChanged.Broadcast(false); //  リロード終了を通知
+	OnAmmoChanged.Broadcast((int32)Ammo, (int32)StockAmmo);
 }

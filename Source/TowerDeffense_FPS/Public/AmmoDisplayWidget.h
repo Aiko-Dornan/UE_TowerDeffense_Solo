@@ -16,8 +16,8 @@ public:
     UPROPERTY(meta = (BindWidget))
     UTextBlock* AmmoTextBlock;
 
-   /* UPROPERTY(meta = (BindWidget))
-    UTextBlock* ReloadTextBlock;*/
+    UPROPERTY(meta = (BindWidget))
+    UTextBlock* ReloadTextBlock;
 
     // íeêîçXêVä÷êî
     UFUNCTION(BlueprintCallable)

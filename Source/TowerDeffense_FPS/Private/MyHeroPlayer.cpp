@@ -41,12 +41,22 @@ void AMyHeroPlayer::BeginPlay()
 
 	if (AmmoWidgetClass)
 	{
+		AmmoWidget = CreateWidget<UAmmoDisplay>(GetWorld(), AmmoWidgetClass);
+		if (AmmoWidget)
+		{
+			AmmoWidget->AddToViewport();
+			AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
+		}
+	}
+
+	/*if (AmmoWidgetClass)
+	{
 		UUserWidget* AmmoWidget = CreateWidget<UUserWidget>(GetWorld(), AmmoWidgetClass);
 		if (AmmoWidget)
 		{
 			AmmoWidget->AddToViewport();
 		}
-	}
+	}*/
 
 }
 
@@ -83,6 +93,9 @@ void AMyHeroPlayer::HandleFire()
 	{
 		CurrentWeapon->Fire();
 	}
+
+	
+
 }
 
 void AMyHeroPlayer::OnFirePressed()
@@ -90,6 +103,11 @@ void AMyHeroPlayer::OnFirePressed()
 	if (CurrentWeapon)
 	{
 		CurrentWeapon->StartFire(); // © ‰Ÿ‚µ‚½uŠÔ
+	}
+
+	if (AmmoWidget)
+	{
+		AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
 	}
 }
 
@@ -99,6 +117,11 @@ void AMyHeroPlayer::OnFireReleased()
 	{
 		CurrentWeapon->StopFire(); // © —£‚µ‚½uŠÔ
 	}
+
+	if (AmmoWidget)
+	{
+		AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
+	}
 }
 
 void AMyHeroPlayer::OnReloadPressed()
@@ -107,6 +130,12 @@ void AMyHeroPlayer::OnReloadPressed()
 	{
 		CurrentWeapon->StartReload();
 	}
+
+	if (AmmoWidget)
+	{
+		AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
+	}
+
 }
 
 void AMyHeroPlayer::MoveForward(float value)
@@ -155,6 +184,12 @@ void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
 		SpawnedWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponSocketName);
 		CurrentWeapon = SpawnedWeapon;
 	}
+
+	//  ’e”•ÏXƒCƒxƒ“ƒg‚ðw“Ç
+	CurrentWeapon->OnAmmoChanged.AddDynamic(this, &AMyHeroPlayer::OnAmmoChanged);
+
+	// ƒŠƒ[ƒhó‘Ô’Ê’m
+	CurrentWeapon->OnReloadStateChanged.AddDynamic(this, &AMyHeroPlayer::OnReloadStateChanged);
 }
 
 int32 AMyHeroPlayer::GetCurrentAmmo() const
@@ -173,5 +208,21 @@ int32 AMyHeroPlayer::GetCurrentStockAmmo() const
 		return (int32)CurrentWeapon->GetStockAmmo();
 	}
 	return 0;
+}
+
+void AMyHeroPlayer::OnAmmoChanged(int32 CurrentAmmo, int32 StockAmmo)
+{
+	if (AmmoWidget)
+	{
+		AmmoWidget->UpdateAmmoText(CurrentAmmo, StockAmmo);
+	}
+}
+
+void AMyHeroPlayer::OnReloadStateChanged(bool bIsReloading)
+{
+	if (AmmoWidget)
+	{
+		AmmoWidget->SetReloading(bIsReloading);
+	}
 }
 
