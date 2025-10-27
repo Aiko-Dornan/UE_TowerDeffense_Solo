@@ -1,6 +1,7 @@
 #include "TD_GameModeBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "EnemyCharacterBase.h"
+#include"EnemySpawnerWave.h"
 
 ATD_GameModeBase::ATD_GameModeBase()
 {
@@ -12,18 +13,18 @@ void ATD_GameModeBase::BeginPlay()
 {
     Super::BeginPlay();
 
-    if (EnemyClass)
+    if (EnemyWaveClass)
     {
-        FVector SpawnLocation(200.f, 200.f, 100.f);
+        FVector SpawnLocation(1100.f, 200.f, 100.f);
         FRotator SpawnRotation = FRotator::ZeroRotator;
 
-        AEnemyCharacterBase* SpawnedEnemy = GetWorld()->SpawnActor<AEnemyCharacterBase>(EnemyClass, SpawnLocation, SpawnRotation);
+        AEnemySpawnerWave* SpawnedEnemy = GetWorld()->SpawnActor<AEnemySpawnerWave>(EnemyWaveClass, SpawnLocation, SpawnRotation);
         if (SpawnedEnemy)
         {
             UE_LOG(LogTemp, Warning, TEXT("Enemy spawned: %s"), *SpawnedEnemy->GetName());
 
             // Spawn後にAIControllerをアタッチ
-            SpawnedEnemy->SpawnDefaultController();
+           /* SpawnedEnemy->SpawnDefaultController();
 
             if (SpawnedEnemy->GetController())
             {
@@ -32,7 +33,7 @@ void ATD_GameModeBase::BeginPlay()
             else
             {
                 UE_LOG(LogTemp, Error, TEXT("Enemy has NO controller!"));
-            }
+            }*/
         }
     }
 }

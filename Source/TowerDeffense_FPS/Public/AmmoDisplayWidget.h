@@ -19,6 +19,9 @@ public:
     UPROPERTY(meta = (BindWidget))
     UTextBlock* ReloadTextBlock;
 
+    UPROPERTY(meta = (BindWidget))
+    UTextBlock* HPTextBlock;
+
     // 弾数更新関数
     UFUNCTION(BlueprintCallable)
     void UpdateAmmoText(int32 CurrentAmmo, int32 StockAmmo);
@@ -26,4 +29,8 @@ public:
     // リロード状態切替
     UFUNCTION(BlueprintCallable)
     void SetReloading(bool bIsReloading);
+
+    // HP更新関数
+    UFUNCTION(BlueprintCallable)
+    void UpdateHPText(int32 RestHP);
 };

@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "EnemyCharacterBase.h"
+#include"EnemySpawnerWave.h"
 #include "TD_GameModeBase.generated.h"
 
 UCLASS()
@@ -20,6 +21,8 @@ public:
 
     UPROPERTY(EditDefaultsOnly, Category = "Enemy")
     TSubclassOf<AEnemyCharacterBase> EnemyClass;
+    UPROPERTY(EditDefaultsOnly, Category = "EnemyWave")
+    TSubclassOf<AEnemySpawnerWave> EnemyWaveClass;
 };
 
 //#include "CoreMinimal.h"

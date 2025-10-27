@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Components/CapsuleComponent.h"
 #include "Blueprint/UserWidget.h" // 忘れずに！
+#include "GameFramework/CharacterMovementComponent.h"
 
 // Sets default values
 AMyHeroPlayer::AMyHeroPlayer()
@@ -21,6 +22,14 @@ AMyHeroPlayer::AMyHeroPlayer()
 	CameraComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 50.0f + BaseEyeHeight));
 
 	CameraComponent->bUsePawnControlRotation = true;
+
+	//  カメラの向きに体も追従させる
+	bUseControllerRotationYaw = true;
+	bUseControllerRotationPitch = true;
+	bUseControllerRotationRoll = false;
+
+	//  移動時に自動で体の向きを変えないように
+	GetCharacterMovement()->bOrientRotationToMovement = false;
 
 	//GunComponent = CreateDefaultSubobject<AWeaponBase>(TEXT("/Game/BluePrint/MyWeaponBase"));
 
@@ -158,6 +167,27 @@ void AMyHeroPlayer::StartJump()
 void AMyHeroPlayer::StopJump()
 {
 	bPressedJump = false;
+}
+
+float AMyHeroPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	PlayerHP -= ActualDamage;
+	UE_LOG(LogTemp, Warning, TEXT("Player took %f damage! HP = %f"), ActualDamage, PlayerHP);
+
+	if (AmmoWidget)
+	{
+		AmmoWidget->UpdateHPText(PlayerHP);
+	}
+
+	if (PlayerHP <= 0.0f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Player is dead!"));
+		// TODO: 死亡処理（リスポーン・ゲームオーバーUIなど）
+	}
+
+	return ActualDamage;
 }
 
 void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)

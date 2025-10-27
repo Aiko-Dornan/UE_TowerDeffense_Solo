@@ -5,6 +5,7 @@
 #include "EnemyCharacterBase.generated.h"
 
 class AEnemyAIController;
+class AMyHeroPlayer;
 
 UCLASS()
 class TOWERDEFFENSE_FPS_API AEnemyCharacterBase : public ACharacter
@@ -15,158 +16,42 @@ public:
     AEnemyCharacterBase();
 
     virtual void Tick(float DeltaTime) override;
+    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+        AController* EventInstigator, AActor* DamageCauser) override;
 
     void PerformAttack();
 
+    
+
 protected:
     virtual void BeginPlay() override;
+    void ResetAttack();
+    void Die();  // 死亡処理
 
 public:
-    // 攻撃範囲
+    // 攻撃設定
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
     float AttackRange;
 
-    // 攻撃クールダウン
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
     float AttackCooldown;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+    float AttackDamage = 10.0f;
+
+    // === HP関連 ===
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy Stats")
+    float MaxHealth = 100.0f;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy Stats")
+    float CurrentHealth;
+
+
+
 private:
     bool bCanAttack = true;
+    bool bIsDead = false;
+
     FTimerHandle AttackCooldownTimerHandle;
-
-    void ResetAttack();
+    AMyHeroPlayer* PlayerCharacter;
 };
-
-
-//#pragma once
-//
-//#include "CoreMinimal.h"
-//#include "GameFramework/Character.h"
-//#include "EnemyCharacterBase.generated.h"
-//
-//UCLASS()
-//class TOWERDEFFENSE_FPS_API AEnemyCharacterBase : public ACharacter
-//{
-//    GENERATED_BODY()
-//
-//public:
-//    AEnemyCharacterBase();
-//
-//protected:
-//    virtual void BeginPlay() override;
-//
-//public:
-//    virtual void Tick(float DeltaTime) override;
-//
-//    // 攻撃処理（AIController から呼ぶため public に）
-//    void PerformAttack();
-//
-//    // 攻撃範囲
-//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-//    float AttackRange;
-//
-//    // 攻撃クールダウン（秒）
-//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-//    float AttackCooldown;
-//
-//    // 移動速度
-//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-//    float MoveSpeed;
-//
-//private:
-//    bool bCanAttack;
-//    FTimerHandle AttackCooldownTimerHandle;
-//
-//    void ResetAttack();
-//};
-
-
-//#pragma once
-//
-//#include "CoreMinimal.h"
-//#include "GameFramework/Character.h"
-//#include "EnemyCharacterBase.generated.h"
-//
-//UCLASS()
-//class TOWERDEFFENSE_FPS_API AEnemyCharacterBase : public ACharacter
-//{
-//    GENERATED_BODY()
-//
-//public:
-//    AEnemyCharacterBase();
-//
-//protected:
-//    virtual void BeginPlay() override;
-//
-//    UPROPERTY()
-//    APawn* PlayerPawn;
-//
-//    UPROPERTY(EditAnywhere, Category = "AI")
-//    float AttackRange = 150.0f;
-//
-//    UPROPERTY(EditAnywhere, Category = "AI")
-//    float AttackCooldown = 2.0f;
-//
-//    bool bCanAttack = true;
-//
-//    FTimerHandle AttackCooldownTimerHandle;
-//
-//    void PerformAttack();
-//    void ResetAttack();
-//
-//
-//
-//public:
-//    virtual void Tick(float DeltaTime) override;
-//};
-
-
-
-//#pragma once
-//
-//#include "CoreMinimal.h"
-//#include "GameFramework/Character.h"
-//#include "EnemyCharacterBase.generated.h"
-//
-//UCLASS()
-//class TOWERDEFFENSE_FPS_API AEnemyCharacterBase : public ACharacter
-//{
-//    GENERATED_BODY()
-//
-//public:
-//    AEnemyCharacterBase();
-//
-//protected:
-//    virtual void BeginPlay() override;
-//
-//    // ターゲット(プレイヤー)
-//    UPROPERTY()
-//    APawn* PlayerPawn;
-//
-//    // 攻撃範囲
-//    UPROPERTY(EditAnywhere, Category = "AI")
-//    float AttackRange;
-//
-//    // 攻撃クールダウン（秒）
-//    UPROPERTY(EditAnywhere, Category = "AI")
-//    float AttackCooldown;
-//
-//    // 移動速度
-//    UPROPERTY(EditAnywhere, Category = "AI")
-//    float MoveSpeed;
-//
-//    bool bCanAttack;
-//
-//    FTimerHandle AttackCooldownTimerHandle;
-//
-//    // 攻撃処理
-//    void PerformAttack();
-//
-//    void ResetAttack();
-//
-//    // 移動処理
-//    void MoveToPlayer();
-//
-//public:
-//    virtual void Tick(float DeltaTime) override;
-//};

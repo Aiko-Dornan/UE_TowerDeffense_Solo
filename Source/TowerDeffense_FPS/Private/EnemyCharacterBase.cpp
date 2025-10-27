@@ -1,7 +1,10 @@
 #include "EnemyCharacterBase.h"
 #include "EnemyAIController.h"
+#include "MyHeroPlayer.h"
+#include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
+
 
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
@@ -9,30 +12,51 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 
     AttackRange = 150.0f;
     AttackCooldown = 2.0f;
+    AttackDamage = 10.0f;
+    MaxHealth = 100.0f;
+    CurrentHealth = MaxHealth;
 
     GetCharacterMovement()->MaxWalkSpeed = 600.f;
 
     AIControllerClass = AEnemyAIController::StaticClass();
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+
+
 }
 
 void AEnemyCharacterBase::BeginPlay()
 {
     Super::BeginPlay();
+
+    PlayerCharacter = Cast<AMyHeroPlayer>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
+    CurrentHealth = MaxHealth;
 }
 
 void AEnemyCharacterBase::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
-    UE_LOG(LogTemp, Warning, TEXT("EnemyCharacter Tick"));
+
+    if (bIsDead || !PlayerCharacter) return;
+
+    float Distance = FVector::Dist(GetActorLocation(), PlayerCharacter->GetActorLocation());
+    if (Distance <= AttackRange)
+    {
+        PerformAttack();
+    }
+
+    
+
 }
 
 void AEnemyCharacterBase::PerformAttack()
 {
-    if (!bCanAttack) return;
+    if (!bCanAttack || !PlayerCharacter || bIsDead) return;
 
     bCanAttack = false;
-    UE_LOG(LogTemp, Warning, TEXT("Enemy attacks!"));
+
+    UE_LOG(LogTemp, Warning, TEXT("Enemy attacks player!"));
+
+    UGameplayStatics::ApplyDamage(PlayerCharacter, AttackDamage, GetController(), this, nullptr);
 
     GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
 }
@@ -42,204 +66,38 @@ void AEnemyCharacterBase::ResetAttack()
     bCanAttack = true;
 }
 
+float AEnemyCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
+    AController* EventInstigator, AActor* DamageCauser)
+{
+    if (bIsDead) return 0.f;
 
+    const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-//#include "EnemyCharacterBase.h"
-//#include "Kismet/GameplayStatics.h"
-//#include "GameFramework/CharacterMovementComponent.h"
-//#include "TimerManager.h"
-//
-//AEnemyCharacterBase::AEnemyCharacterBase()
-//{
-//    PrimaryActorTick.bCanEverTick = true;
-//
-//    AttackRange = 150.0f;
-//    AttackCooldown = 2.0f;
-//    MoveSpeed = 600.0f; // キャラクター移動速度
-//    bCanAttack = true;
-//
-//    GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
-//}
-//
-//void AEnemyCharacterBase::BeginPlay()
-//{
-//    Super::BeginPlay();
-//}
-//
-//void AEnemyCharacterBase::Tick(float DeltaTime)
-//{
-//    Super::Tick(DeltaTime);
-//
-//    
-//
-//    //UE_LOG(LogTemp, Warning, TEXT("EnemyCharacterBase Tick"));
-//}
-//
-//void AEnemyCharacterBase::PerformAttack()
-//{
-//    if (!bCanAttack) return;
-//
-//    bCanAttack = false;
-//
-//    // 攻撃処理例
-//    UE_LOG(LogTemp, Warning, TEXT("%s attacks player!"), *GetName());
-//
-//    // 攻撃クールダウン
-//    GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
-//}
-//
-//void AEnemyCharacterBase::ResetAttack()
-//{
-//    bCanAttack = true;
-//}
+    CurrentHealth -= ActualDamage;
+    UE_LOG(LogTemp, Warning, TEXT("%s took %f damage! HP: %f/%f"),
+        *GetName(), ActualDamage, CurrentHealth, MaxHealth);
 
+    if (CurrentHealth <= 0.0f)
+    {
+        Die();
+    }
 
-//#include "EnemyCharacterBase.h"
-//#include "Kismet/GameplayStatics.h"
-//#include "EnemyAIController.h"
-//#include "GameFramework/CharacterMovementComponent.h"
-//#include "TimerManager.h"
-//
-//AEnemyCharacterBase::AEnemyCharacterBase()
-//{
-//    PrimaryActorTick.bCanEverTick = true;
-//
-//    AIControllerClass = AEnemyAIController::StaticClass();
-//    AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
-//
-//    
-//
-//    GetCharacterMovement()->bUseControllerDesiredRotation = true;
-//    GetCharacterMovement()->bOrientRotationToMovement = true;
-//    GetCharacterMovement()->MaxWalkSpeed = 300.f;
-//}
-//
-//void AEnemyCharacterBase::BeginPlay()
-//{
-//    Super::BeginPlay();
-//    PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-//}
-//
-//void AEnemyCharacterBase::Tick(float DeltaTime)
-//{
-//    Super::Tick(DeltaTime);
-//
-//    if (!PlayerPawn) return;
-//
-//    FVector MyLocation = GetActorLocation();
-//    FVector PlayerLocation = PlayerPawn->GetActorLocation();
-//    float Distance = FVector::Dist(MyLocation, PlayerLocation);
-//
-//    if (Distance <= AttackRange)
-//    {
-//        // 攻撃範囲に入ったら停止＋攻撃
-//        AAIController* AICon = Cast<AAIController>(GetController());
-//        if (AICon)
-//        {
-//            AICon->StopMovement();
-//        }
-//
-//        if (bCanAttack)
-//        {
-//            PerformAttack();
-//        }
-//    }
-//}
-//
-//void AEnemyCharacterBase::PerformAttack()
-//{
-//    bCanAttack = false;
-//    UE_LOG(LogTemp, Warning, TEXT("%s attacks player!"), *GetName());
-//
-//    GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
-//}
-//
-//void AEnemyCharacterBase::ResetAttack()
-//{
-//    bCanAttack = true;
-//}
+    return ActualDamage;
+}
 
+void AEnemyCharacterBase::Die()
+{
+    if (bIsDead) return;
+    bIsDead = true;
 
-//#include "EnemyCharacterBase.h"
-//#include "Kismet/GameplayStatics.h"
-//#include "GameFramework/CharacterMovementComponent.h"
-//#include "TimerManager.h"
-//#include"EnemyAIController.h"
-//
-//AEnemyCharacterBase::AEnemyCharacterBase()
-//{
-//    PrimaryActorTick.bCanEverTick = true;
-//
-//    AttackRange = 150.0f;    // 近接攻撃レンジ
-//    AttackCooldown = 2.0f;   // 攻撃クールダウン秒数
-//    MoveSpeed = 5.0f;       //移動速度
-//    bCanAttack = true;
-//
-//    AIControllerClass = AEnemyAIController::StaticClass();
-//    AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
-//
-//    GetCharacterMovement()->MaxWalkSpeed = 600.f;  // 好きな速度に設定
-//}
-//
-//void AEnemyCharacterBase::BeginPlay()
-//{
-//    Super::BeginPlay();
-//
-//    PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-//
-//
-//}
-//
-//void AEnemyCharacterBase::Tick(float DeltaTime)
-//{
-//    Super::Tick(DeltaTime);
-//
-//    if (!PlayerPawn) return;
-//
-//    FVector Direction = PlayerPawn->GetActorLocation() - GetActorLocation();
-//    float DistanceToPlayer = Direction.Size();
-//
-//    if (DistanceToPlayer > AttackRange)
-//    {
-//        // プレイヤーに向かって移動
-//        MoveToPlayer();
-//    }
-//    else
-//    {
-//        // 攻撃範囲内なら攻撃
-//        if (bCanAttack)
-//        {
-//            PerformAttack();
-//        }
-//        // 停止
-//        GetCharacterMovement()->StopMovementImmediately();
-//    }
-//}
-//
-//void AEnemyCharacterBase::MoveToPlayer()
-//{
-//    if (!PlayerPawn) return;
-//
-//    FVector Direction = (PlayerPawn->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-//
-//    AddMovementInput(Direction, 1.0f);
-//
-//   // UE_LOG(LogTemp, Warning, TEXT("Movement!!"));
-//   // UE_LOG(LogTemp, Warning, TEXT("%s"),*PlayerPawn->GetName());
-//}
-//
-//void AEnemyCharacterBase::PerformAttack()
-//{
-//    bCanAttack = false;
-//
-//    // 攻撃処理例：ログ出力
-//    UE_LOG(LogTemp, Warning, TEXT("Enemy attacks player!"));
-//
-//    // 攻撃クールダウンタイマーをセット
-//    GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
-//}
-//
-//void AEnemyCharacterBase::ResetAttack()
-//{
-//    bCanAttack = true;
-//}
+    UE_LOG(LogTemp, Warning, TEXT("Enemy %s died!"), *GetName());
+
+    // TODO: アニメーションやエフェクトを追加したい場合はここで再生
+    // PlayAnimMontage(DeathAnimMontage);
+
+    // 一定時間後に消滅してもよい
+    //SetLifeSpan(2.0f);
+
+    // すぐに消す場合は
+     Destroy();
+}

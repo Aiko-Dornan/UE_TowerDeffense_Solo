@@ -108,49 +108,28 @@ void AWeaponBase::FireAtackAction()
 	AActor* OwnerActor = GetOwner();
 	if (!OwnerActor) return;
 
-	/*FVector MuzzleLocation = GetActorLocation() + MuzzleOffset;
-	FRotator MuzzleRotation;*/
-
 	UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(GetRootComponent());
-	if (!StaticMeshComp)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("RootComponent is not a StaticMeshComponent"));
-		return;
-	}
+	if (!StaticMeshComp) return;
 
-	FName MuzzleSocketName = "FireSocket"; // ソケット名が "Muzzle" の場合。必要に応じて変更。
-
-	if (!StaticMeshComp->DoesSocketExist(MuzzleSocketName))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Socket %s not found on mesh"), *MuzzleSocketName.ToString());
-		return;
-	}
-
+	FName MuzzleSocketName = "FireSocket";
 	FVector MuzzleLocation = StaticMeshComp->GetSocketLocation(MuzzleSocketName);
 	FRotator MuzzleRotation = StaticMeshComp->GetSocketRotation(MuzzleSocketName);
-
-	 //ソケット位置・回転の取得
-	//FVector MuzzleLocation = Mesh->GetSocketLocation(MuzzleSocketName);
-	//FRotator MuzzleRotation = Mesh->GetSocketRotation(MuzzleSocketName);
-	
-
-	// カメラの方向を取得
-	FVector EyeLocation;
-	FRotator EyeRotation;
-	OwnerActor->GetActorEyesViewPoint(EyeLocation, EyeRotation);
-	//MuzzleRotation = EyeRotation;
 
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
 	SpawnParams.Instigator = OwnerActor->GetInstigator();
 
-	// 弾をスポーン
-	GetWorld()->SpawnActor<AMyProjectileActor>(
+	AMyProjectileActor* Projectile = GetWorld()->SpawnActor<AMyProjectileActor>(
 		ProjectileClass,
 		MuzzleLocation,
 		MuzzleRotation,
 		SpawnParams
 	);
+
+	if (Projectile)
+	{
+		Projectile->Damage = WeaponDamage; // 武器の攻撃力を弾に反映
+	}
 }
 
 void AWeaponBase::SetCanFire()

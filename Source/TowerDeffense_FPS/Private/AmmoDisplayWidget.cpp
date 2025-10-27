@@ -30,3 +30,13 @@ void UAmmoDisplay::SetReloading(bool bIsReloading)
         }
     }
 }
+
+void UAmmoDisplay::UpdateHPText(int32 RestHP)
+{
+    if (HPTextBlock)
+    {
+        FString HPString = FString::Printf(TEXT("%d"), RestHP);
+        HPTextBlock->SetText(FText::FromString(HPString));
+
+    }
+}

@@ -91,4 +91,11 @@ public:
 
 	UFUNCTION()
 	void OnReloadStateChanged(bool bIsReloading);
+
+	// プレイヤーのHP
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player Stats")
+	float PlayerHP = 100.0f;
+
+	// ダメージ処理
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 };
