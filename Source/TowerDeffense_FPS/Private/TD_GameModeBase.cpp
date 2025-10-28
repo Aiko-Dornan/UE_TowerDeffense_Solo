@@ -18,15 +18,24 @@ void ATD_GameModeBase::BeginPlay()
 
     if (DefenseBaseClass)
     {
-        FVector SpawnLocation(1100.f, 200.f, 100.f);
+        FVector SpawnLocation(0.0f, 14520.f, 0.0f);
         FRotator SpawnRotation = FRotator::ZeroRotator;
 
         ADefenseBase* SpawnedBase = GetWorld()->SpawnActor<ADefenseBase>(DefenseBaseClass, SpawnLocation, SpawnRotation);
     }
 
+    if (AllyClass)
+    {
+        FVector SpawnLocation(-400.0f, 14520.f, 100.f);
+        FRotator SpawnRotation = FRotator::ZeroRotator;
+
+        AAllyCharacter* SpawnedBase = GetWorld()->SpawnActor<AAllyCharacter>(AllyClass, SpawnLocation, SpawnRotation);
+    }
+
+
     if (EnemyWaveClass)
     {
-        FVector SpawnLocation(1100.f, 200.f, 100.f);
+        FVector SpawnLocation(0.0f, 14520.f, 100.f);
         FRotator SpawnRotation = FRotator::ZeroRotator;
 
         AEnemySpawnerWave* SpawnedEnemy = GetWorld()->SpawnActor<AEnemySpawnerWave>(EnemyWaveClass, SpawnLocation, SpawnRotation);

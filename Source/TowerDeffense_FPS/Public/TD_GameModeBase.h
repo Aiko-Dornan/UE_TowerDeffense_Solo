@@ -8,6 +8,7 @@
 #include "EnemyCharacterBase.h"
 #include"EnemySpawnerWave.h"
 #include"DefenseBase.h"
+#include"AllyCharacter.h"
 #include "TD_GameModeBase.generated.h"
 
 UCLASS()
@@ -26,6 +27,9 @@ public:
     TSubclassOf<AEnemySpawnerWave> EnemyWaveClass;
     UPROPERTY(EditDefaultsOnly, Category = "DefenseBase")
     TSubclassOf<ADefenseBase> DefenseBaseClass;
+    UPROPERTY(EditDefaultsOnly, Category = "Ally")
+    TSubclassOf<AAllyCharacter> AllyClass;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
     TSubclassOf<UUserWidget> GameOverWidgetClass;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
