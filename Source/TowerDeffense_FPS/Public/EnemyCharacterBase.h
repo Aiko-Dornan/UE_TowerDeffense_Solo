@@ -21,10 +21,11 @@ public:
 
     void PerformAttack();
 
-    
+    AActor* ChooseTarget();  // ターゲット選択関数
 
 protected:
     virtual void BeginPlay() override;
+    
     void ResetAttack();
     void Die();  // 死亡処理
 
@@ -54,4 +55,5 @@ private:
 
     FTimerHandle AttackCooldownTimerHandle;
     AMyHeroPlayer* PlayerCharacter;
+    AActor* CurrentTarget;  // 現在狙っている対象
 };

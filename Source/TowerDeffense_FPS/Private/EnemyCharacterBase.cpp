@@ -1,10 +1,12 @@
 #include "EnemyCharacterBase.h"
 #include "EnemyAIController.h"
 #include "MyHeroPlayer.h"
+#include"DefenseBase.h"
+#include"TD_GameModeBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
-
+#include "UObject/WeakObjectPtr.h"
 
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
@@ -38,7 +40,17 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
 
     if (bIsDead || !PlayerCharacter) return;
 
-    float Distance = FVector::Dist(GetActorLocation(), PlayerCharacter->GetActorLocation());
+    // 1. 攻撃対象を選ぶ
+    AActor* Target = ChooseTarget();
+
+    if (!Target) return;
+
+    CurrentTarget = Target;
+
+    // 2. 距離チェック
+    const float Distance = FVector::Dist(GetActorLocation(), Target->GetActorLocation());
+
+    //float Distance = FVector::Dist(GetActorLocation(), PlayerCharacter->GetActorLocation());
     if (Distance <= AttackRange)
     {
         PerformAttack();
@@ -48,17 +60,67 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
 
 }
 
+AActor* AEnemyCharacterBase::ChooseTarget()
+{
+    // 優先度1：プレイヤーが近いならプレイヤーを狙う
+    if (IsValid(PlayerCharacter))
+    {
+        const float DistanceToPlayer = FVector::Dist(GetActorLocation(), PlayerCharacter->GetActorLocation());
+        if (DistanceToPlayer <= 800.f) // 例: 8m以内なら優先
+        {
+            return PlayerCharacter;
+        }
+    }
+
+    // 優先度2：防衛対象（基地）を探す
+    TArray<AActor*> FoundBases;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+
+    if (FoundBases.Num() > 0)
+    {
+        return FoundBases[0]; // 最初の基地をターゲットに
+    }
+
+    return nullptr;
+}
+
 void AEnemyCharacterBase::PerformAttack()
 {
-    if (!bCanAttack || !PlayerCharacter || bIsDead) return;
+
+    if (!bCanAttack || bIsDead || !CurrentTarget) return;
 
     bCanAttack = false;
 
-    UE_LOG(LogTemp, Warning, TEXT("Enemy attacks player!"));
+    UE_LOG(LogTemp, Warning, TEXT("%s attacks %s!"), *GetName(), *CurrentTarget->GetName());
 
-    UGameplayStatics::ApplyDamage(PlayerCharacter, AttackDamage, GetController(), this, nullptr);
+    UGameplayStatics::ApplyDamage(CurrentTarget, AttackDamage, GetController(), this, nullptr);
 
     GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
+
+
+    //if (!bCanAttack || !PlayerCharacter || bIsDead) return;
+
+    //AActor* Target = PlayerCharacter;
+    //if (!Target)
+    //{
+    //    // 防衛対象を検索（プレイヤーがいない場合）
+    //    TArray<AActor*> FoundBases;
+    //    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+    //    if (FoundBases.Num() > 0)
+    //    {
+    //        Target = FoundBases[0];
+    //    }
+    //}
+
+    //if (!Target) return;
+
+    //bCanAttack = false;
+
+    //UE_LOG(LogTemp, Warning, TEXT("Enemy attacks target: %s"), *Target->GetName());
+
+    //UGameplayStatics::ApplyDamage(PlayerCharacter, AttackDamage, GetController(), this, nullptr);
+
+    //GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
 }
 
 void AEnemyCharacterBase::ResetAttack()
@@ -97,6 +159,13 @@ void AEnemyCharacterBase::Die()
 
     // 一定時間後に消滅してもよい
     //SetLifeSpan(2.0f);
+
+    // GameModeに通知
+    ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+    if (GM)
+    {
+        GM->OnEnemyDestroyed();
+    }
 
     // すぐに消す場合は
      Destroy();

@@ -7,6 +7,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "EnemyCharacterBase.h"
 #include"EnemySpawnerWave.h"
+#include"DefenseBase.h"
 #include "TD_GameModeBase.generated.h"
 
 UCLASS()
@@ -23,6 +24,33 @@ public:
     TSubclassOf<AEnemyCharacterBase> EnemyClass;
     UPROPERTY(EditDefaultsOnly, Category = "EnemyWave")
     TSubclassOf<AEnemySpawnerWave> EnemyWaveClass;
+    UPROPERTY(EditDefaultsOnly, Category = "DefenseBase")
+    TSubclassOf<ADefenseBase> DefenseBaseClass;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+    TSubclassOf<UUserWidget> GameOverWidgetClass;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+    TSubclassOf<UUserWidget> GameClearWidgetClass;
+
+
+    UFUNCTION(BlueprintCallable)
+    void GameClear();
+
+    // スポーナーへの参照
+    AEnemySpawnerWave* EnemySpawnerRef;
+
+    // 残りの敵数を追跡（必要に応じて使う）
+    int32 AliveEnemies = 0;
+
+    
+
+    // 敵の死亡を通知する
+    void OnEnemyDestroyed();
+
+    // ゲームオーバー処理
+    UFUNCTION(BlueprintCallable)
+    void GameOver();
+
+
 };
 
 //#include "CoreMinimal.h"

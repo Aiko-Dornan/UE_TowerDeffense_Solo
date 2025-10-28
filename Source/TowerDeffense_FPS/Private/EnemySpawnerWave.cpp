@@ -1,4 +1,5 @@
 #include "EnemySpawnerWave.h"
+#include"TD_GameModeBase.h"
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -25,28 +26,50 @@ void AEnemySpawnerWave::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 
     // 現在ウェーブ中で、敵が全滅していたら次ウェーブ進行タイマーをセット
-    if (bWaveInProgress && AreAllEnemiesDead()&&CurrentWave<LimitWave)
+    /*if (bWaveInProgress && AreAllEnemiesDead() && CurrentWave < LimitWave)
     {
         bWaveInProgress = false;
         UE_LOG(LogTemp, Warning, TEXT("All enemies defeated! Next wave in %.1f seconds."), TimeAfterClear);
 
         GetWorldTimerManager().ClearTimer(WaveTimerHandle);
         GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeAfterClear, false);
+    }*/
+
+    if (bWaveInProgress && AreAllEnemiesDead())
+    {
+        bWaveInProgress = false;
+
+        // 最終ウェーブならゲームクリア
+        if (CurrentWave >= LimitWave)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Final wave cleared! Game clear!"));
+
+            ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+            if (GM)
+            {
+                GM->GameClear(); // GameClear() を呼び出す
+            }
+
+            return; // もう次のウェーブに進まない
+        }
+
+        // まだ残りウェーブがある場合は次のウェーブへ
+        UE_LOG(LogTemp, Warning, TEXT("All enemies defeated! Next wave in %.1f seconds."), TimeAfterClear);
+        GetWorldTimerManager().ClearTimer(WaveTimerHandle);
+        GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeAfterClear, false);
     }
 
-    //// 現在ウェーブ中で、敵が全滅していたら次へ進むタイマーを開始
-    //if (bWaveInProgress && AreAllEnemiesDead())
-    //{
-    //    bWaveInProgress = false; // 二重実行防止
-    //    UE_LOG(LogTemp, Warning, TEXT("All enemies defeated! Next wave in %.1f seconds."), TimeAfterClear);
-
-    //    GetWorldTimerManager().ClearTimer(WaveTimerHandle);
-    //    GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeAfterClear, false);
-    //}
 }
-
 void AEnemySpawnerWave::SpawnWave()
 {
+    // 上限チェック
+    if (CurrentWave > LimitWave)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("SpawnWave() called but CurrentWave (%d) exceeds LimitWave (%d)."),
+            CurrentWave, LimitWave);
+        return;
+    }
+
     UE_LOG(LogTemp, Warning, TEXT("SpawnWave() called! CurrentWave: %d"), CurrentWave);
 
     if (!EnemyClass)
@@ -203,6 +226,13 @@ void AEnemySpawnerWave::SpawnWave()
 
 void AEnemySpawnerWave::StartNextWave()
 {
+    // すでに最終ウェーブなら何もしない
+    if (CurrentWave >= LimitWave)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("All waves completed! No more enemies will spawn."));
+        return;
+    }
+
     CurrentWave++;
     SpawnWave();
 }
@@ -223,8 +253,11 @@ void AEnemySpawnerWave::GenerateRandomSpawnPoints()
 {
     SpawnPoints.Empty();
 
-    APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-    if (!PlayerPawn) return;
+    /*APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+    if (!PlayerPawn) return;*/
+
+    ADefenseBase* Base = Cast<ADefenseBase>(UGameplayStatics::GetActorOfClass(GetWorld(), ADefenseBase::StaticClass()));
+    if (!Base) return;
 
     int32 SpawnedCount = 0;
     int32 MaxAttempts = 100;
@@ -237,12 +270,19 @@ void AEnemySpawnerWave::GenerateRandomSpawnPoints()
         float RandZ = FMath::FRandRange(SpawnAreaMin.Z, SpawnAreaMax.Z);
         FVector CandidateLocation(RandX, RandY, RandZ);
 
-        float DistToPlayer = FVector::Dist(PlayerPawn->GetActorLocation(), CandidateLocation);
-        if (DistToPlayer >= MinDistanceFromPlayer || Attempts >= MaxAttempts)
+        FVector BaseLocation = Base->GetActorLocation();
+        float DistToBase = FVector::Dist(BaseLocation, CandidateLocation);
+        if (DistToBase >= MinDistanceFromBase || Attempts >= MaxAttempts)
         {
             SpawnPoints.Add(CandidateLocation);
             SpawnedCount++;
         }
+        /*float DistToPlayer = FVector::Dist(PlayerPawn->GetActorLocation(), CandidateLocation);
+        if (DistToPlayer >= MinDistanceFromPlayer || Attempts >= MaxAttempts)
+        {
+            SpawnPoints.Add(CandidateLocation);
+            SpawnedCount++;
+        }*/
         Attempts++;
     }
 

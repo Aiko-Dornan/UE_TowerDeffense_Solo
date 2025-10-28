@@ -13,6 +13,9 @@ class TOWERDEFFENSE_FPS_API AEnemySpawnerWave : public AActor
 public:
     AEnemySpawnerWave();
 
+    // 敵が全滅しているか確認
+    bool AreAllEnemiesDead() const;
+
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
@@ -25,8 +28,7 @@ protected:
     // 次のウェーブへ進行
     void StartNextWave();
 
-    // 敵が全滅しているか確認
-    bool AreAllEnemiesDead() const;
+    
 
 public:
     // 敵のクラス
@@ -54,7 +56,7 @@ public:
     int32 CurrentWave = 1;
 
     // 限界ウェーブ数
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Wave")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave")
     int32 LimitWave = 5;
 
     // 敵全滅後に次ウェーブに進むまでの待機時間
@@ -67,6 +69,9 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "WaveSpawn")
     float MinDistanceFromPlayer = 1000.f; // プレイヤーから最低距離
+
+    UPROPERTY(EditAnywhere, Category = "WaveSpawn")
+    float MinDistanceFromBase = 1000.f; // 基地から最低距離
 
     UPROPERTY(EditAnywhere, Category = "WaveSpawn")
     FVector SpawnAreaMin; // スポーン可能範囲の最小座標

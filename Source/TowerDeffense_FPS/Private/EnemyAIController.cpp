@@ -1,12 +1,26 @@
 #include "EnemyAIController.h"
 #include "Kismet/GameplayStatics.h"
 #include "EnemyCharacterBase.h"
+#include "DefenseBase.h"
+#include "MyHeroPlayer.h"
 
 void AEnemyAIController::BeginPlay()
 {
     Super::BeginPlay();
     PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
     UE_LOG(LogTemp, Warning, TEXT("EnemyAIController BeginPlay"));
+
+    // ñhâqëŒè€ÇíTÇ∑
+    TArray<AActor*> FoundBases;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+
+    if (FoundBases.Num() > 0)
+    {
+        TargetActor = FoundBases[0]; // ç≈èâÇÃñhâqëŒè€Çñ⁄ìIínÇ…
+        MoveToActor(TargetActor, 50.0f);
+        UE_LOG(LogTemp, Warning, TEXT("EnemyAI target set to DefenseBase: %s"), *TargetActor->GetName());
+    }
+
 }
 
 void AEnemyAIController::OnPossess(APawn* InPawn)
@@ -25,10 +39,15 @@ void AEnemyAIController::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
-    if (PlayerPawn)
+    AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(GetPawn());
+    if (!Enemy) return;
+
+    AActor* Target = Enemy->ChooseTarget();
+    if (Target)
     {
-        MoveToActor(PlayerPawn, 0.0f);
+        MoveToActor(Target, 50.f);
     }
+
 }
 
 

@@ -2,6 +2,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "EnemyCharacterBase.h"
 #include"EnemySpawnerWave.h"
+#include"DefenseBase.h"
+#include "Blueprint/UserWidget.h"
+
 
 ATD_GameModeBase::ATD_GameModeBase()
 {
@@ -12,6 +15,14 @@ ATD_GameModeBase::ATD_GameModeBase()
 void ATD_GameModeBase::BeginPlay()
 {
     Super::BeginPlay();
+
+    if (DefenseBaseClass)
+    {
+        FVector SpawnLocation(1100.f, 200.f, 100.f);
+        FRotator SpawnRotation = FRotator::ZeroRotator;
+
+        ADefenseBase* SpawnedBase = GetWorld()->SpawnActor<ADefenseBase>(DefenseBaseClass, SpawnLocation, SpawnRotation);
+    }
 
     if (EnemyWaveClass)
     {
@@ -35,6 +46,97 @@ void ATD_GameModeBase::BeginPlay()
                 UE_LOG(LogTemp, Error, TEXT("Enemy has NO controller!"));
             }*/
         }
+    }
+
+    // ワールド内の EnemySpawnerWave を探す
+    TArray<AActor*> FoundSpawners;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemySpawnerWave::StaticClass(), FoundSpawners);
+
+    if (FoundSpawners.Num() > 0)
+    {
+        EnemySpawnerRef = Cast<AEnemySpawnerWave>(FoundSpawners[0]);
+        UE_LOG(LogTemp, Warning, TEXT("GameMode found EnemySpawnerWave: %s"), *EnemySpawnerRef->GetName());
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("No EnemySpawnerWave found in the level!"));
+    }
+}
+
+void ATD_GameModeBase::GameOver()
+{
+    UE_LOG(LogTemp, Error, TEXT("=== GAME OVER ==="));
+
+    // 時間を停止
+    UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.0f);
+
+    // プレイヤー操作を無効化
+    APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+    if (PC)
+    {
+        PC->SetPause(true);
+        PC->SetIgnoreMoveInput(true);
+        PC->SetIgnoreLookInput(true);
+        PC->bShowMouseCursor = true; // UI操作用にマウスを出す
+    }
+
+    //  「Game Over」を画面に出す（シンプル版）
+   // GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("GAME OVER"));
+
+    // UI（Widget）を表示したい場合
+    
+    if (GameOverWidgetClass)
+    {
+        UUserWidget* GameOverWidget = CreateWidget<UUserWidget>(GetWorld(), GameOverWidgetClass);
+        if (GameOverWidget)
+        {
+            GameOverWidget->AddToViewport();
+        }
+    }
+    
+}
+
+void ATD_GameModeBase::GameClear()
+{
+    UE_LOG(LogTemp, Warning, TEXT("=== GAME CLEAR! ==="));
+    UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.0f);
+
+    APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+    if (PC)
+    {
+        PC->SetIgnoreMoveInput(true);
+        PC->SetIgnoreLookInput(true);
+        PC->bShowMouseCursor = true;
+    }
+
+    //GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("GAME CLEAR!"));
+
+    // BlueprintでUIを出したいならここに追加
+    
+    if (GameClearWidgetClass)
+    {
+        UUserWidget* Widget = CreateWidget<UUserWidget>(GetWorld(), GameClearWidgetClass);
+        if (Widget) Widget->AddToViewport();
+    }
+    
+}
+
+void ATD_GameModeBase::OnEnemyDestroyed()
+{
+    // スポーナーが存在するか確認
+    if (!EnemySpawnerRef) return;
+
+    int32 CurrentWave = EnemySpawnerRef->CurrentWave;
+    int32 LimitWave = EnemySpawnerRef->LimitWave;
+    bool bAllDead = EnemySpawnerRef->AreAllEnemiesDead();
+
+    UE_LOG(LogTemp, Warning, TEXT("Enemy destroyed. Wave %d/%d, AllDead=%d"),
+        CurrentWave, LimitWave, bAllDead ? 1 : 0);
+
+    // 条件：最終ウェーブ & 全滅
+    if (bAllDead && CurrentWave >= LimitWave)
+    {
+        GameClear();
     }
 }
 

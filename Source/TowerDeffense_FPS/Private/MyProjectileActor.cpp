@@ -26,7 +26,7 @@ AMyProjectileActor::AMyProjectileActor()
 	// ˆÚ“®
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 	ProjectileMovement->InitialSpeed = 3000.f;
-	ProjectileMovement->MaxSpeed = 3000.f;
+	ProjectileMovement->MaxSpeed = 6000.f;
 	ProjectileMovement->bRotationFollowsVelocity = true;
 	ProjectileMovement->bShouldBounce = false;
 
