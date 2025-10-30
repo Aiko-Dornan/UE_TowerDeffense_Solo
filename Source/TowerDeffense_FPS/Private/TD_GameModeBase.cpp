@@ -26,7 +26,7 @@ void ATD_GameModeBase::BeginPlay()
 
     if (AllyClass)
     {
-        FVector SpawnLocation(-400.0f, 14520.f, 100.f);
+        FVector SpawnLocation(-800.0f, 11000.f, 0.f);
         FRotator SpawnRotation = FRotator::ZeroRotator;
 
         AAllyCharacter* SpawnedBase = GetWorld()->SpawnActor<AAllyCharacter>(AllyClass, SpawnLocation, SpawnRotation);
@@ -55,21 +55,32 @@ void ATD_GameModeBase::BeginPlay()
                 UE_LOG(LogTemp, Error, TEXT("Enemy has NO controller!"));
             }*/
         }
+
+       
     }
 
-    // ワールド内の EnemySpawnerWave を探す
+    if (WaveWidgetClass)
+    {
+        WaveWidgetInstance = CreateWidget<UWaveWidget>(GetWorld(), WaveWidgetClass);
+        if (WaveWidgetInstance)
+        {
+            WaveWidgetInstance->AddToViewport();
+        }
+    }
+
+    // EnemySpawnerWaveを探してバインド
     TArray<AActor*> FoundSpawners;
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemySpawnerWave::StaticClass(), FoundSpawners);
 
     if (FoundSpawners.Num() > 0)
     {
         EnemySpawnerRef = Cast<AEnemySpawnerWave>(FoundSpawners[0]);
-        UE_LOG(LogTemp, Warning, TEXT("GameMode found EnemySpawnerWave: %s"), *EnemySpawnerRef->GetName());
+        if (EnemySpawnerRef && WaveWidgetInstance)
+        {
+            EnemySpawnerRef->OnWaveChanged.AddDynamic(WaveWidgetInstance, &UWaveWidget::UpdateWaveText);
+        }
     }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("No EnemySpawnerWave found in the level!"));
-    }
+
 }
 
 void ATD_GameModeBase::GameOver()

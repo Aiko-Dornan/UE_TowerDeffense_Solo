@@ -9,6 +9,7 @@
 #include"EnemySpawnerWave.h"
 #include"DefenseBase.h"
 #include"AllyCharacter.h"
+#include "WaveWidget.h"
 #include "TD_GameModeBase.generated.h"
 
 UCLASS()
@@ -54,6 +55,12 @@ public:
     UFUNCTION(BlueprintCallable)
     void GameOver();
 
+    //Waveêîï\é¶
+    UPROPERTY()
+    UWaveWidget* WaveWidgetInstance;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+    TSubclassOf<UWaveWidget> WaveWidgetClass;
 
 };
 

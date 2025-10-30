@@ -136,6 +136,11 @@ void AEnemySpawnerWave::SpawnWave()
 
     UE_LOG(LogTemp, Warning, TEXT("Wave %d started! SpawnPoints.Num = %d"), CurrentWave, SpawnPoints.Num());
 
+
+    UE_LOG(LogTemp, Warning, TEXT("SpawnWave() called! CurrentWave: %d"), CurrentWave);
+    // ウィジェットへ通知
+    OnWaveChanged.Broadcast(CurrentWave); // 1引数の場合
+
     //if (!EnemyClass) return;
 
     //UWorld* World = GetWorld();
@@ -233,7 +238,13 @@ void AEnemySpawnerWave::StartNextWave()
         return;
     }
 
+    
+
     CurrentWave++;
+
+    //新ウェーブを通知
+    //OnWaveChanged.Broadcast(CurrentWave, LimitWave);
+
     SpawnWave();
 }
 

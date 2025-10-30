@@ -2,8 +2,15 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "WaveWidget.h"  // WaveWidget を追加
 #include "EnemyCharacterBase.h"
 #include "EnemySpawnerWave.generated.h"
+
+// ウェーブ更新通知イベント
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnWaveChanged, int32, CurrentWave, int32, MaxWave);
+// Waveが変化したときに通知するデリゲート
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWaveChanged, int32, CurrentWave);
+
 
 UCLASS()
 class TOWERDEFFENSE_FPS_API AEnemySpawnerWave : public AActor
@@ -58,6 +65,20 @@ public:
     // 限界ウェーブ数
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave")
     int32 LimitWave = 5;
+
+    UPROPERTY()
+    UWaveWidget* WaveWidgetInstance; // WaveWidget のインスタンス
+
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<UUserWidget> WaveWidgetClass; // WaveWidget の Blueprint クラス
+
+    // Wave変化時に呼び出す
+    UPROPERTY(BlueprintAssignable, Category = "Wave")
+    FOnWaveChanged OnWaveChanged;
+
+    //UPROPERTY(BlueprintAssignable, Category = "Wave")
+    //FOnWaveChanged OnWaveChanged; //  ウィジェット側が購読できるイベント
+
 
     // 敵全滅後に次ウェーブに進むまでの待機時間
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave")
