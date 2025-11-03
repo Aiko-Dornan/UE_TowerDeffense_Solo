@@ -9,6 +9,11 @@
 #include "TimerManager.h"
 #include "UObject/WeakObjectPtr.h"
 
+#include "DefenseStructure.h"
+#include "NavigationSystem.h"
+#include "DrawDebugHelpers.h"
+#include "Kismet/KismetMathLibrary.h"
+
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
     PrimaryActorTick.bCanEverTick = true;
@@ -63,28 +68,87 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
 
 AActor* AEnemyCharacterBase::ChooseTarget()
 {
-    // 1. 味方キャラクターをすべて取得
-    TArray<AActor*> AllAllies;
 
-    // プレイヤー
+    // 1. プレイヤー・味方キャラ・防衛対象をリストアップ
+    TArray<AActor*> PotentialTargets;
     if (PlayerCharacter)
     {
-        AllAllies.Add(PlayerCharacter);
+        PotentialTargets.Add(PlayerCharacter);
     }
 
-    // 他の味方キャラクター
     TArray<AActor*> FoundAllies;
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAllyCharacter::StaticClass(), FoundAllies);
-    AllAllies.Append(FoundAllies);
+    PotentialTargets.Append(FoundAllies);
 
-    // 2. 最も近い味方を探索
+    // 防衛対象（基地）
+    TArray<AActor*> FoundBases;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+
+    AActor* DefenseBase = (FoundBases.Num() > 0) ? FoundBases[0] : nullptr;
+
+    // --- まず防衛対象の方向に壊れるオブジェクトがあるかチェック ---
+    TArray<AActor*> FoundStructures;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseStructure::StaticClass(), FoundStructures);
+
+    ADefenseStructure* BlockingStructure = nullptr;
+    float NearestStructureDist = FLT_MAX;
+
+    for (AActor* StructureActor : FoundStructures)
+    {
+        ADefenseStructure* Structure = Cast<ADefenseStructure>(StructureActor);
+        if (!Structure || !IsValid(Structure)) continue;
+
+        //FVector ToStructure = Structure->GetActorLocation() - GetActorLocation();
+        //FVector ToBase = DefenseBase ? DefenseBase->GetActorLocation() - GetActorLocation() : FVector::ZeroVector();
+
+        //// 同じ方向にあるか（おおよそ同じ角度）
+        //float Angle = FMath::RadiansToDegrees(acosf(FVector::DotProduct(ToStructure.GetSafeNormal(), ToBase.GetSafeNormal())));
+
+        FVector ToStructure = Structure->GetActorLocation() - GetActorLocation();
+        FVector ToBase = DefenseBase ? (DefenseBase->GetActorLocation() - GetActorLocation()) : FVector::ZeroVector;
+
+        // 同じ方向にあるか（おおよそ同じ角度）
+        float Dot = FVector::DotProduct(ToStructure.GetSafeNormal(), ToBase.GetSafeNormal());
+        float Angle = FMath::RadiansToDegrees(FMath::Acos(Dot));
+
+        if (Angle < 30.f) // ±30度以内をルート上とみなす
+        {
+            float Dist = ToStructure.Size();
+            // 壁などが近い場合優先
+            if (Dist < NearestStructureDist)
+            {
+                // ライン・オブ・サイトで確認
+                FHitResult Hit;
+                FCollisionQueryParams Params;
+                Params.AddIgnoredActor(this);
+
+                bool bHit = GetWorld()->LineTraceSingleByChannel(Hit,
+                    GetActorLocation() + FVector(0, 0, 50.f),
+                    Structure->GetActorLocation() + FVector(0, 0, 50.f),
+                    ECC_Visibility, Params);
+
+                if (bHit && Hit.GetActor() == Structure)
+                {
+                    BlockingStructure = Structure;
+                    NearestStructureDist = Dist;
+                }
+            }
+        }
+    }
+
+    // --- 壊れるオブジェクトがルート上にあればそれを攻撃 ---
+    if (BlockingStructure)
+    {
+        return BlockingStructure;
+    }
+
+    // --- 味方キャラが近い場合はそちらを攻撃 ---
     AActor* NearestAlly = nullptr;
     float NearestDistance = FLT_MAX;
 
-    for (AActor* Ally : AllAllies)
+    for (AActor* Ally : PotentialTargets)
     {
         if (!IsValid(Ally)) continue;
-
         float Dist = FVector::Dist(GetActorLocation(), Ally->GetActorLocation());
         if (Dist < NearestDistance)
         {
@@ -95,79 +159,119 @@ AActor* AEnemyCharacterBase::ChooseTarget()
 
     if (NearestAlly)
     {
-        return NearestAlly; // 最も近い味方をターゲットに
+        return NearestAlly;
     }
 
-    // 3. 味方がいなければ防衛対象（基地）を探す
-    TArray<AActor*> FoundBases;
-    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+    // --- 最後に基地をターゲットに ---
+    return DefenseBase;
 
-    if (FoundBases.Num() > 0)
-    {
-        return FoundBases[0];
-    }
+   // // 1. 味方キャラクターをすべて取得
+   // TArray<AActor*> AllAllies;
 
+   // // プレイヤー
+   // if (PlayerCharacter)
+   // {
+   //     AllAllies.Add(PlayerCharacter);
+   // }
 
-
+   // // 他の味方キャラクター
    // TArray<AActor*> FoundAllies;
    // UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAllyCharacter::StaticClass(), FoundAllies);
+   // AllAllies.Append(FoundAllies);
 
-   // if (FoundAllies.Num() > 0)
-   // {
-   //     return FoundAllies[0]; // 最初の味方を選択
-   // }
+   // // 2. 最も近い味方を探索
+   // AActor* NearestAlly = nullptr;
+   // float NearestDistance = FLT_MAX;
 
-   // // 優先度1：プレイヤーが近いならプレイヤーを狙う
-   // if (IsValid(PlayerCharacter))
+   // for (AActor* Ally : AllAllies)
    // {
-   //     const float DistanceToPlayer = FVector::Dist(GetActorLocation(), PlayerCharacter->GetActorLocation());
-   //     if (DistanceToPlayer <= 800.f) // 例: 8m以内なら優先
+   //     if (!IsValid(Ally)) continue;
+
+   //     float Dist = FVector::Dist(GetActorLocation(), Ally->GetActorLocation());
+   //     if (Dist < NearestDistance)
    //     {
-   //         return PlayerCharacter;
+   //         NearestDistance = Dist;
+   //         NearestAlly = Ally;
    //     }
    // }
 
-   //  // 2. 味方キャラクターを検索して距離最短のものを選択
-   //// TArray<AActor*> FoundAllies;
-   // UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAllyCharacter::StaticClass(), FoundAllies);
-
-   // AActor* ClosestAlly = nullptr;
-   // float ClosestDistance = FLT_MAX;
-
-   // for (AActor* Ally : FoundAllies)
+   // if (NearestAlly)
    // {
-   //     // 自分自身は除外
-   //     //if (Ally == this) continue;
-
-   //     // 生存チェック
-   //     AAllyCharacter* AllyChar = Cast<AAllyCharacter>(Ally);
-   //     if (!AllyChar || IsValid(AllyChar)) continue;
-
-   //     const float DistanceToAlly = FVector::Dist(GetActorLocation(), Ally->GetActorLocation());
-
-   //     // 800cm以内の味方だけ対象
-   //     if (DistanceToAlly <= 2000.f && DistanceToAlly < ClosestDistance)
-   //     {
-   //         ClosestDistance = DistanceToAlly;
-   //         ClosestAlly = Ally;
-   //     }
+   //     return NearestAlly; // 最も近い味方をターゲットに
    // }
 
-   // if (ClosestAlly)
-   // {
-   //     return ClosestAlly;
-   // }
 
-   // // 優先度2：防衛対象（基地）を探す
+
+   // // 3. 味方がいなければ防衛対象（基地）を探す
    // TArray<AActor*> FoundBases;
    // UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
 
    // if (FoundBases.Num() > 0)
    // {
-   //     return FoundBases[0]; // 最初の基地をターゲットに
+   //     return FoundBases[0];
    // }
 
-    return nullptr;
+
+
+   //// TArray<AActor*> FoundAllies;
+   //// UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAllyCharacter::StaticClass(), FoundAllies);
+
+   //// if (FoundAllies.Num() > 0)
+   //// {
+   ////     return FoundAllies[0]; // 最初の味方を選択
+   //// }
+
+   //// // 優先度1：プレイヤーが近いならプレイヤーを狙う
+   //// if (IsValid(PlayerCharacter))
+   //// {
+   ////     const float DistanceToPlayer = FVector::Dist(GetActorLocation(), PlayerCharacter->GetActorLocation());
+   ////     if (DistanceToPlayer <= 800.f) // 例: 8m以内なら優先
+   ////     {
+   ////         return PlayerCharacter;
+   ////     }
+   //// }
+
+   ////  // 2. 味方キャラクターを検索して距離最短のものを選択
+   ////// TArray<AActor*> FoundAllies;
+   //// UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAllyCharacter::StaticClass(), FoundAllies);
+
+   //// AActor* ClosestAlly = nullptr;
+   //// float ClosestDistance = FLT_MAX;
+
+   //// for (AActor* Ally : FoundAllies)
+   //// {
+   ////     // 自分自身は除外
+   ////     //if (Ally == this) continue;
+
+   ////     // 生存チェック
+   ////     AAllyCharacter* AllyChar = Cast<AAllyCharacter>(Ally);
+   ////     if (!AllyChar || IsValid(AllyChar)) continue;
+
+   ////     const float DistanceToAlly = FVector::Dist(GetActorLocation(), Ally->GetActorLocation());
+
+   ////     // 800cm以内の味方だけ対象
+   ////     if (DistanceToAlly <= 2000.f && DistanceToAlly < ClosestDistance)
+   ////     {
+   ////         ClosestDistance = DistanceToAlly;
+   ////         ClosestAlly = Ally;
+   ////     }
+   //// }
+
+   //// if (ClosestAlly)
+   //// {
+   ////     return ClosestAlly;
+   //// }
+
+   //// // 優先度2：防衛対象（基地）を探す
+   //// TArray<AActor*> FoundBases;
+   //// UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+
+   //// if (FoundBases.Num() > 0)
+   //// {
+   ////     return FoundBases[0]; // 最初の基地をターゲットに
+   //// }
+
+   // return nullptr;
 }
 
 void AEnemyCharacterBase::PerformAttack()

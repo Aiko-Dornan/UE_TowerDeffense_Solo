@@ -30,6 +30,18 @@ void ATD_GameModeBase::BeginPlay()
         FRotator SpawnRotation = FRotator::ZeroRotator;
 
         AAllyCharacter* SpawnedBase = GetWorld()->SpawnActor<AAllyCharacter>(AllyClass, SpawnLocation, SpawnRotation);
+
+        if (SpawnedBase)
+        {
+            SpawnedBase->SpawnDefaultController();
+            UE_LOG(LogTemp, Warning, TEXT("All spawned and AI should possess it."));
+        }
+
+       /* FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+        SpawnParams.Owner = this;
+        SpawnParams.Instigator = GetInstigator();
+        AAllyCharacter* Ally = GetWorld()->SpawnActor<AAllyCharacter>(AllyClass, SpawnLocation, SpawnRotation, SpawnParams);*/
     }
 
 

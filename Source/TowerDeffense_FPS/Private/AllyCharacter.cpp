@@ -1,17 +1,20 @@
 #include "AllyCharacter.h"
-#include "AIController.h"
+#include "AAllyAIController.h"
 #include "WeaponBase.h"
 #include "EnemyCharacterBase.h"
+#include "AIController.h"
 #include "TimerManager.h"
 #include "EngineUtils.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "NavigationSystem.h"
+#include "NavigationPath.h"
+#include "DrawDebugHelpers.h"
 
 AAllyCharacter::AAllyCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
-
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
-    AIControllerClass = AAIController::StaticClass();
+    AIControllerClass = AAllyAIController::StaticClass();
 }
 
 void AAllyCharacter::BeginPlay()
@@ -19,8 +22,8 @@ void AAllyCharacter::BeginPlay()
     Super::BeginPlay();
 
     CurrentHealth = MaxHealth;
+    InitialPosition = GetActorLocation();
 
-    // 武器生成
     if (WeaponClass)
     {
         EquippedWeapon = GetWorld()->SpawnActor<AWeaponBase>(WeaponClass);
@@ -31,7 +34,6 @@ void AAllyCharacter::BeginPlay()
         }
     }
 
-    // 敵検出タイマー
     GetWorldTimerManager().SetTimer(TargetUpdateTimer, this, &AAllyCharacter::FindNearestEnemy, 0.5f, true);
 }
 
@@ -39,30 +41,44 @@ void AAllyCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    if (!TargetEnemy || !IsValid(TargetEnemy) || !EquippedWeapon)
+    // 敵がいない → 初期位置へ戻る
+    if (!TargetEnemy || !IsValid(TargetEnemy))
     {
         GetWorldTimerManager().ClearTimer(FireTimerHandle);
+        MoveBackToInitialPosition();
+        return;
+    }
+    else
+    {
+        FaceTarget(TargetEnemy);
+    }
+
+    FindNearestEnemy();
+
+    const float DistanceToEnemy = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
+
+    // 敵が遠すぎる → 初期位置へ戻る
+    if (DistanceToEnemy > EnemyDetectRange)
+    {
+        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+        MoveBackToInitialPosition();
         return;
     }
 
-    // 敵方向を常に向く
     FaceTarget(TargetEnemy);
 
-    // 敵との距離をチェック
-    float Distance = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
-
-    // 距離を維持して移動
-    if (FMath::Abs(Distance - MaintainDistance) > AcceptableRadius)
+    // 敵が近づきすぎたら後退
+    if (DistanceToEnemy < MaintainDistance)
     {
-        MoveToSafeDistance(TargetEnemy, MaintainDistance);
+        MoveAwayFromEnemy(TargetEnemy);
     }
     else
     {
         StopMovement();
     }
 
-    // 射撃制御
-    if (Distance <= FireRange)
+    // 射撃範囲内なら射撃開始
+    if (DistanceToEnemy <= FireRange)
     {
         if (!GetWorldTimerManager().IsTimerActive(FireTimerHandle))
         {
@@ -73,30 +89,6 @@ void AAllyCharacter::Tick(float DeltaTime)
     {
         GetWorldTimerManager().ClearTimer(FireTimerHandle);
     }
-}
-
-void AAllyCharacter::MoveToSafeDistance(AActor* Target, float DesiredDistance)
-{
-    if (!Target) return;
-
-    FVector ToTarget = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-    FVector Destination = Target->GetActorLocation() - ToTarget * DesiredDistance;
-
-    // 目的地に向かって移動
-    if (AAIController* AICon = Cast<AAIController>(GetController()))
-    {
-        AICon->MoveToLocation(Destination, AcceptableRadius);
-    }
-}
-
-void AAllyCharacter::FaceTarget(AActor* Target)
-{
-    if (!Target) return;
-
-    FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
-    ToTarget.Z = 0.f;
-    FRotator LookRotation = FRotationMatrix::MakeFromX(ToTarget).Rotator();
-    SetActorRotation(FMath::RInterpTo(GetActorRotation(), LookRotation, GetWorld()->GetDeltaSeconds(), 5.f));
 }
 
 void AAllyCharacter::FindNearestEnemy()
@@ -120,6 +112,75 @@ void AAllyCharacter::FindNearestEnemy()
     TargetEnemy = ClosestEnemy;
 }
 
+void AAllyCharacter::FaceTarget(AActor* Target)
+{
+    if (!Target) return;
+
+    FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
+    ToTarget.Z = 0.f;
+
+    FRotator LookRotation = FRotationMatrix::MakeFromX(ToTarget).Rotator();
+    SetActorRotation(FMath::RInterpTo(GetActorRotation(), LookRotation, GetWorld()->GetDeltaSeconds(), 5.f));
+}
+
+void AAllyCharacter::MoveBackToInitialPosition()
+{
+    FVector ToInitial = InitialPosition - GetActorLocation();
+    ToInitial.Z = 0.f;
+
+    if (ToInitial.Size() < AcceptableRadius)
+    {
+        StopMovement();
+        return;
+    }
+
+    if (AAIController* AICon = Cast<AAIController>(GetController()))
+    {
+        AICon->MoveToLocation(InitialPosition, AcceptableRadius);
+    }
+    else
+    {
+        AddMovementInput(ToInitial.GetSafeNormal(), 1.f);
+    }
+}
+
+void AAllyCharacter::MoveAwayFromEnemy(AActor* Target)
+{
+    if (!Target) return;
+
+    FVector MoveDir = (GetActorLocation() - Target->GetActorLocation()).GetSafeNormal();
+    FVector Start = GetActorLocation();
+    FVector End = Start + MoveDir * 150.f;
+
+    // 壁回避
+    FHitResult Hit;
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params);
+    if (bHit)
+    {
+        FVector Right = FVector::CrossProduct(FVector::UpVector, MoveDir).GetSafeNormal();
+        FVector Left = -Right;
+
+        FVector CheckRightEnd = Start + Right * 100.f;
+        FVector CheckLeftEnd = Start + Left * 100.f;
+
+        bool bRightClear = !GetWorld()->LineTraceTestByChannel(Start, CheckRightEnd, ECC_WorldStatic, Params);
+        bool bLeftClear = !GetWorld()->LineTraceTestByChannel(Start, CheckLeftEnd, ECC_WorldStatic, Params);
+
+        if (bRightClear)
+            MoveDir = (MoveDir + Right * 0.5f).GetSafeNormal();
+        else if (bLeftClear)
+            MoveDir = (MoveDir + Left * 0.5f).GetSafeNormal();
+        else
+            MoveDir = FVector::ZeroVector;
+    }
+
+    if (!MoveDir.IsZero())
+        AddMovementInput(MoveDir, 1.f);
+}
+
 void AAllyCharacter::HandleFire()
 {
     if (!EquippedWeapon) return;
@@ -139,11 +200,6 @@ void AAllyCharacter::StopMovement()
     {
         AICon->StopMovement();
     }
-}
-
-void AAllyCharacter::SetTargetEnemy(AActor* NewTarget)
-{
-    TargetEnemy = Cast<AEnemyCharacterBase>(NewTarget);
 }
 
 float AAllyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
@@ -170,6 +226,828 @@ void AAllyCharacter::Die()
     UE_LOG(LogTemp, Warning, TEXT("Ally %s died!"), *GetName());
     Destroy();
 }
+
+
+//#include "AllyCharacter.h"
+//#include "AIController.h"
+//#include "TimerManager.h"
+//#include "EngineUtils.h"
+//#include "Kismet/KismetMathLibrary.h"
+//#include "GameFramework/CharacterMovementComponent.h"
+//#include "DrawDebugHelpers.h"
+//#include "NavigationSystem.h"     // UNavigationSystemV1
+//#include "NavigationPath.h"       // FNavLocation
+//
+//AAllyCharacter::AAllyCharacter()
+//{
+//    PrimaryActorTick.bCanEverTick = true;
+//    AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+//    AIControllerClass = AAllyAIController::StaticClass();
+//}
+//
+//void AAllyCharacter::BeginPlay()
+//{
+//    Super::BeginPlay();
+//
+//    CurrentHealth = MaxHealth;
+//    InitialPosition = GetActorLocation(); // 初期位置を保存
+//
+//    if (WeaponClass)
+//    {
+//        EquippedWeapon = GetWorld()->SpawnActor<AWeaponBase>(WeaponClass);
+//        if (EquippedWeapon)
+//        {
+//            EquippedWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("WeaponSocket"));
+//            EquippedWeapon->SetOwner(this);
+//        }
+//    }
+//
+//    // 敵更新タイマー
+//    GetWorldTimerManager().SetTimer(TargetUpdateTimer, this, &AAllyCharacter::FindNearestEnemy, 0.5f, true);
+//}
+//
+////void AAllyCharacter::Tick(float DeltaTime)
+////{
+////    Super::Tick(DeltaTime);
+////
+////    bool bShouldReturnHome = true;
+////    float DistanceToEnemy = 0.f;
+////
+////    if (TargetEnemy && IsValid(TargetEnemy))
+////    {
+////        DistanceToEnemy = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
+////
+////        if (IsEnemyVisible(TargetEnemy))
+////            bShouldReturnHome = false; // 視認可能かつ到達可能なら戦闘
+////    }
+////
+////    if (bShouldReturnHome)
+////    {
+////        // 初期位置へ戻る（壁回避付き）
+////        FVector ToInitial = InitialPosition - GetActorLocation();
+////        ToInitial.Z = 0.f;
+////
+////        if (ToInitial.Size() > AcceptableRadius)
+////        {
+////            FVector MoveDir = ToInitial.GetSafeNormal();
+////
+////            // 壁回避
+////            FHitResult Hit;
+////            FVector Start = GetActorLocation();
+////            FVector End = Start + MoveDir * 100.f;
+////            FCollisionQueryParams Params;
+////            Params.AddIgnoredActor(this);
+////
+////            bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params);
+////
+////            if (bHit)
+////            {
+////                FVector Right = FVector::CrossProduct(FVector::UpVector, MoveDir).GetSafeNormal();
+////                FVector Left = -Right;
+////
+////                FVector CheckRightEnd = Start + Right * 100.f;
+////                FVector CheckLeftEnd = Start + Left * 100.f;
+////
+////                bool bRightClear = !GetWorld()->LineTraceTestByChannel(Start, CheckRightEnd, ECC_WorldStatic, Params);
+////                bool bLeftClear = !GetWorld()->LineTraceTestByChannel(Start, CheckLeftEnd, ECC_WorldStatic, Params);
+////
+////                if (bRightClear)
+////                    MoveDir = (MoveDir + Right * 0.5f).GetSafeNormal();
+////                else if (bLeftClear)
+////                    MoveDir = (MoveDir + Left * 0.5f).GetSafeNormal();
+////                else
+////                    MoveDir = FVector::ZeroVector;
+////            }
+////
+////            if (!MoveDir.IsZero())
+////                AddMovementInput(MoveDir, 1.f);
+////        }
+////
+////        GetWorldTimerManager().ClearTimer(FireTimerHandle); // 戦闘停止
+////        return;
+////    }
+////
+////    // 敵が視認可能なら戦闘
+////    FaceTarget(TargetEnemy);
+////
+////    if (DistanceToEnemy < MaintainDistance)
+////    {
+////        FVector ToTarget = (TargetEnemy->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+////        FVector MoveDirection = -ToTarget;
+////
+////        // 壁回避ロジック（既存のまま）
+////        FHitResult Hit;
+////        FVector Start = GetActorLocation();
+////        FVector End = Start + MoveDirection * 100.f;
+////        FCollisionQueryParams Params;
+////        Params.AddIgnoredActor(this);
+////
+////        bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params);
+////
+////        if (bHit)
+////        {
+////            FVector Right = FVector::CrossProduct(FVector::UpVector, MoveDirection).GetSafeNormal();
+////            FVector Left = -Right;
+////
+////            FVector CheckRightEnd = Start + Right * 100.f;
+////            FVector CheckLeftEnd = Start + Left * 100.f;
+////
+////            bool bRightClear = !GetWorld()->LineTraceTestByChannel(Start, CheckRightEnd, ECC_WorldStatic, Params);
+////            bool bLeftClear = !GetWorld()->LineTraceTestByChannel(Start, CheckLeftEnd, ECC_WorldStatic, Params);
+////
+////            if (bRightClear)
+////                MoveDirection = (MoveDirection + Right * 0.5f).GetSafeNormal();
+////            else if (bLeftClear)
+////                MoveDirection = (MoveDirection + Left * 0.5f).GetSafeNormal();
+////            else
+////                MoveDirection = FVector::ZeroVector;
+////        }
+////
+////        if (!MoveDirection.IsZero())
+////            AddMovementInput(MoveDirection, 1.0f);
+////    }
+////
+////    // 射撃
+////    if (DistanceToEnemy <= FireRange)
+////    {
+////        if (!GetWorldTimerManager().IsTimerActive(FireTimerHandle))
+////            GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AAllyCharacter::HandleFire, FireInterval, true);
+////    }
+////    else
+////    {
+////        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+////    }
+////}
+//
+//
+//void AAllyCharacter::Tick(float DeltaTime)
+//{
+//    Super::Tick(DeltaTime);
+//
+//    // 敵がいない、または敵が遠すぎる場合は初期位置に戻る
+//    bool bShouldReturnHome = true;
+//    float DistanceToEnemy = 0.f;
+//    
+//
+//    if (TargetEnemy && IsValid(TargetEnemy))
+//    {
+//        DistanceToEnemy = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
+//        FaceTarget(TargetEnemy);
+//        if (DistanceToEnemy <= EnemyDetectRange)
+//            bShouldReturnHome = false; // 敵が範囲内にいる場合は戦闘
+//        if (!GetWorldTimerManager().IsTimerActive(FireTimerHandle))
+//            GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AAllyCharacter::HandleFire, FireInterval, true);
+//
+//    }
+//
+//    if (bShouldReturnHome)
+//    {
+//        FVector ToInitial = InitialPosition - GetActorLocation();
+//        ToInitial.Z = 0.f;
+//
+//        if (ToInitial.Size() > AcceptableRadius)
+//        {
+//            FVector MoveDir = ToInitial.GetSafeNormal();
+//
+//            // 壁回避
+//            FHitResult Hit;
+//            FVector Start = GetActorLocation();
+//            FVector End = Start + MoveDir * 100.f;
+//            FCollisionQueryParams Params;
+//            Params.AddIgnoredActor(this);
+//
+//            bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params);
+//
+//            if (bHit)
+//            {
+//                FVector Right = FVector::CrossProduct(FVector::UpVector, MoveDir).GetSafeNormal();
+//                FVector Left = -Right;
+//
+//                FVector CheckRightEnd = Start + Right * 100.f;
+//                FVector CheckLeftEnd = Start + Left * 100.f;
+//
+//                bool bRightClear = !GetWorld()->LineTraceTestByChannel(Start, CheckRightEnd, ECC_WorldStatic, Params);
+//                bool bLeftClear = !GetWorld()->LineTraceTestByChannel(Start, CheckLeftEnd, ECC_WorldStatic, Params);
+//
+//                if (bRightClear)
+//                    MoveDir = (MoveDir + Right * 0.5f).GetSafeNormal();
+//                else if (bLeftClear)
+//                    MoveDir = (MoveDir + Left * 0.5f).GetSafeNormal();
+//                else
+//                    MoveDir = FVector::ZeroVector;
+//            }
+//
+//            if (!MoveDir.IsZero())
+//                AddMovementInput(MoveDir, 1.f);
+//        }
+//
+//        GetWorldTimerManager().ClearTimer(FireTimerHandle); // 戦闘停止
+//        return;
+//    }
+//
+//    // --- 敵が範囲内の場合は戦闘 ---
+//    FaceTarget(TargetEnemy);
+//
+//    if (DistanceToEnemy < MaintainDistance)
+//    {
+//        FVector ToTarget = (TargetEnemy->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+//        FVector MoveDirection = -ToTarget;
+//
+//        // 壁回避（既存ロジック）
+//        FHitResult Hit;
+//        FVector Start = GetActorLocation();
+//        FVector End = Start + MoveDirection * 100.f;
+//        FCollisionQueryParams Params;
+//        Params.AddIgnoredActor(this);
+//
+//        bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params);
+//
+//        if (bHit)
+//        {
+//            FVector Right = FVector::CrossProduct(FVector::UpVector, MoveDirection).GetSafeNormal();
+//            FVector Left = -Right;
+//
+//            FVector CheckRightEnd = Start + Right * 100.f;
+//            FVector CheckLeftEnd = Start + Left * 100.f;
+//
+//            bool bRightClear = !GetWorld()->LineTraceTestByChannel(Start, CheckRightEnd, ECC_WorldStatic, Params);
+//            bool bLeftClear = !GetWorld()->LineTraceTestByChannel(Start, CheckLeftEnd, ECC_WorldStatic, Params);
+//
+//            if (bRightClear)
+//                MoveDirection = (MoveDirection + Right * 0.5f).GetSafeNormal();
+//            else if (bLeftClear)
+//                MoveDirection = (MoveDirection + Left * 0.5f).GetSafeNormal();
+//            else
+//                MoveDirection = FVector::ZeroVector;
+//        }
+//
+//        if (!MoveDirection.IsZero())
+//            AddMovementInput(MoveDirection, 1.0f);
+//    }
+//
+//    // 射撃
+//    if (DistanceToEnemy <= FireRange)
+//    {
+//        if (!GetWorldTimerManager().IsTimerActive(FireTimerHandle))
+//            GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AAllyCharacter::HandleFire, FireInterval, true);
+//    }
+//    else
+//    {
+//        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+//    }
+//}
+//
+//
+////void AAllyCharacter::Tick(float DeltaTime)
+////{
+////    Super::Tick(DeltaTime);
+////
+////    if (!TargetEnemy || !IsValid(TargetEnemy) || !EquippedWeapon)
+////    {
+////        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+////        return;
+////    }
+////
+////    // 敵方向を向く
+////    FaceTarget(TargetEnemy);
+////
+////    float Distance = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
+////
+////    if (Distance < MaintainDistance)
+////    {
+////        FVector ToTarget = (TargetEnemy->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+////        FVector MoveDirection = -ToTarget; // 後退
+////
+////        // 壁回避チェック
+////        FHitResult Hit;
+////        FVector Start = GetActorLocation();
+////        FVector End = Start + MoveDirection * 100.f;
+////        FCollisionQueryParams Params;
+////        Params.AddIgnoredActor(this);
+////
+////        bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params);
+////
+////        if (bHit)
+////        {
+////            FVector Right = FVector::CrossProduct(FVector::UpVector, MoveDirection).GetSafeNormal();
+////            FVector Left = -Right;
+////
+////            FVector CheckRightEnd = Start + Right * 100.f;
+////            FVector CheckLeftEnd = Start + Left * 100.f;
+////
+////            bool bRightClear = !GetWorld()->LineTraceTestByChannel(Start, CheckRightEnd, ECC_WorldStatic, Params);
+////            bool bLeftClear = !GetWorld()->LineTraceTestByChannel(Start, CheckLeftEnd, ECC_WorldStatic, Params);
+////
+////            if (bRightClear)
+////                MoveDirection = (MoveDirection + Right * 0.5f).GetSafeNormal();
+////            else if (bLeftClear)
+////                MoveDirection = (MoveDirection + Left * 0.5f).GetSafeNormal();
+////            else
+////                MoveDirection = FVector::ZeroVector; // 完全に塞がれた場合
+////        }
+////
+////        if (!MoveDirection.IsZero())
+////            AddMovementInput(MoveDirection, 1.0f);
+////    }
+////
+////    // 射撃処理
+////    if (Distance <= FireRange)
+////    {
+////        if (!GetWorldTimerManager().IsTimerActive(FireTimerHandle))
+////            GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AAllyCharacter::HandleFire, FireInterval, true);
+////    }
+////    else
+////    {
+////        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+////    }
+////}
+//
+////bool AAllyCharacter::IsEnemyVisible(AEnemyCharacterBase* Enemy)
+////{
+////    if (!Enemy || !IsValid(Enemy))
+////        return false;
+////
+////    FVector ToEnemy = Enemy->GetActorLocation() - GetActorLocation();
+////    ToEnemy.Z = 0.f;
+////
+////    // 距離チェック
+////    if (ToEnemy.Size() > SightDistance)
+////        return false;
+////
+////    // 視界角度チェック
+////    FVector Forward = GetActorForwardVector();
+////    Forward.Z = 0.f;
+////    float AngleDeg = FMath::RadiansToDegrees(acosf(FVector::DotProduct(Forward.GetSafeNormal(), ToEnemy.GetSafeNormal())));
+////    if (AngleDeg > SightAngle / 2.f)
+////        return false;
+////
+////    // 壁越し判定（ライン・オブ・サイト）
+////    FHitResult Hit;
+////    FVector Start = GetActorLocation() + FVector(0, 0, 50.f);
+////    FVector End = Enemy->GetActorLocation() + FVector(0, 0, 50.f);
+////    FCollisionQueryParams Params;
+////    Params.AddIgnoredActor(this);
+////
+////    bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params);
+////    if (bHit && Hit.GetActor() != Enemy)
+////        return false;
+////
+////    // NavMesh 到達可能チェック（UE5 用）
+////    UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+////    if (!NavSys)
+////        return false;
+////
+////    // Start から Enemy への経路を取得
+////    UNavigationPath* NavPath = NavSys->FindPathToLocationSynchronously(GetWorld(), GetActorLocation(), Enemy->GetActorLocation(), this);
+////    if (!NavPath || NavPath->PathPoints.Num() == 0)
+////        return false; // 経路なし＝到達不可
+////
+////    return true;
+////}
+//
+//
+//
+//void AAllyCharacter::FaceTarget(AActor* Target)
+//{
+//    if (!Target) return;
+//    FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
+//    ToTarget.Z = 0.f;
+//    FRotator LookRotation = FRotationMatrix::MakeFromX(ToTarget).Rotator();
+//    SetActorRotation(FMath::RInterpTo(GetActorRotation(), LookRotation, GetWorld()->GetDeltaSeconds(), 5.f));
+//}
+//
+//void AAllyCharacter::FindNearestEnemy()
+//{
+//    float ClosestDistance = TNumericLimits<float>::Max();
+//    AEnemyCharacterBase* ClosestEnemy = nullptr;
+//
+//    for (TActorIterator<AEnemyCharacterBase> It(GetWorld()); It; ++It)
+//    {
+//        AEnemyCharacterBase* Enemy = *It;
+//        if (!Enemy) continue;
+//        float Distance = FVector::Dist(GetActorLocation(), Enemy->GetActorLocation());
+//        if (Distance < ClosestDistance)
+//        {
+//            ClosestDistance = Distance;
+//            ClosestEnemy = Enemy;
+//        }
+//    }
+//
+//    TargetEnemy = ClosestEnemy;
+//}
+//
+//void AAllyCharacter::HandleFire()
+//{
+//    if (!EquippedWeapon) return;
+//    if (EquippedWeapon->GetAmmo() <= 0)
+//    {
+//        EquippedWeapon->StartReload();
+//        return;
+//    }
+//    EquippedWeapon->StartFire();
+//}
+//
+//void AAllyCharacter::StopMovement()
+//{
+//    if (AAIController* AICon = Cast<AAIController>(GetController()))
+//        AICon->StopMovement();
+//}
+//
+//void AAllyCharacter::SetTargetEnemy(AActor* NewTarget)
+//{
+//    TargetEnemy = Cast<AEnemyCharacterBase>(NewTarget);
+//}
+//
+//float AAllyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+//{
+//    if (CurrentHealth <= 0.f) return 0.f;
+//
+//    const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+//    CurrentHealth -= ActualDamage;
+//
+//    UE_LOG(LogTemp, Warning, TEXT("%s took %f damage! HP: %f/%f"), *GetName(), ActualDamage, CurrentHealth, MaxHealth);
+//
+//    if (CurrentHealth <= 0.f)
+//        Die();
+//
+//    return ActualDamage;
+//}
+//
+//void AAllyCharacter::Die()
+//{
+//    UE_LOG(LogTemp, Warning, TEXT("Ally %s died!"), *GetName());
+//    Destroy();
+//}
+
+
+//#include "AllyCharacter.h"
+//#include "TimerManager.h"
+//#include "EngineUtils.h"
+//#include "Kismet/KismetMathLibrary.h"
+//#include "AAllyAIController.h"
+//#include "NavigationSystem.h"     // UNavigationSystemV1
+//#include "NavigationPath.h"       // FNavLocation
+//
+//AAllyCharacter::AAllyCharacter()
+//{
+//    PrimaryActorTick.bCanEverTick = true;
+//
+//    AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+//    AIControllerClass = AAllyAIController::StaticClass(); // ←専用AIControllerを使用
+//}
+//
+//void AAllyCharacter::BeginPlay()
+//{
+//    Super::BeginPlay();
+//
+//    CurrentHealth = MaxHealth;
+//
+//    if (WeaponClass)
+//    {
+//        EquippedWeapon = GetWorld()->SpawnActor<AWeaponBase>(WeaponClass);
+//        if (EquippedWeapon)
+//        {
+//            EquippedWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("WeaponSocket"));
+//            EquippedWeapon->SetOwner(this);
+//        }
+//    }
+//
+//    GetWorldTimerManager().SetTimer(TargetUpdateTimer, this, &AAllyCharacter::FindNearestEnemy, 0.5f, true);
+//}
+//
+//void AAllyCharacter::Tick(float DeltaTime)
+//{
+//    Super::Tick(DeltaTime);
+//
+//    if (!TargetEnemy || !IsValid(TargetEnemy) || !EquippedWeapon)
+//    {
+//        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+//        return;
+//    }
+//
+//    // 敵方向を向く
+//    FaceTarget(TargetEnemy);
+//
+//    float Distance = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
+//
+//    // 近づかれたら後退
+//    if (Distance < MaintainDistance)
+//    {
+//        FVector ToTarget = (TargetEnemy->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+//        AddMovementInput(-ToTarget, 1.0f); // ←直接後退
+//    }
+//
+//    // 射撃処理
+//    if (Distance <= FireRange)
+//    {
+//        if (!GetWorldTimerManager().IsTimerActive(FireTimerHandle))
+//        {
+//            GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AAllyCharacter::HandleFire, FireInterval, true);
+//        }
+//    }
+//    else
+//    {
+//        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+//    }
+//}
+//
+////void AAllyCharacter::MoveToSafeDistance(AActor* Target, float DesiredDistance)
+////{
+////    if (!Target) return;
+////
+////    FVector ToTarget = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+////    FVector Destination = GetActorLocation() - ToTarget * (DesiredDistance); // ←シンプルに維持距離分後退
+////
+////    if (AAllyAIController* AICon = Cast<AAllyAIController>(GetController()))
+////    {
+////        AICon->MoveToLocation(Destination, AcceptableRadius);
+////    }
+////}
+//
+//
+//
+//void AAllyCharacter::MoveToSafeDistance(AActor* Target, float DesiredDistance)
+//{
+//    if (!Target) return;
+//
+//    FVector ToTarget = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+//
+//    // NavMesh 上で後退方向に移動可能な地点を探す
+//    UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+//    if (NavSys)
+//    {
+//        FNavLocation ResultLocation;
+//        FVector ProposedLocation = GetActorLocation() - ToTarget * DesiredDistance;
+//
+//        // NavMesh 上の最も近い地点にスナップ
+//        if (NavSys->ProjectPointToNavigation(ProposedLocation, ResultLocation, FVector(100.f, 100.f, 300.f)))
+//        {
+//            if (AAllyAIController* AICon = Cast<AAllyAIController>(GetController()))
+//            {
+//                AICon->MoveToLocation(ResultLocation.Location, AcceptableRadius);
+//            }
+//        }
+//    }
+//}
+//
+//
+//void AAllyCharacter::FaceTarget(AActor* Target)
+//{
+//    if (!Target) return;
+//
+//    FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
+//    ToTarget.Z = 0.f;
+//    FRotator LookRotation = FRotationMatrix::MakeFromX(ToTarget).Rotator();
+//    SetActorRotation(FMath::RInterpTo(GetActorRotation(), LookRotation, GetWorld()->GetDeltaSeconds(), 5.f));
+//}
+//
+//void AAllyCharacter::FindNearestEnemy()
+//{
+//    float ClosestDistance = TNumericLimits<float>::Max();
+//    AEnemyCharacterBase* ClosestEnemy = nullptr;
+//
+//    for (TActorIterator<AEnemyCharacterBase> It(GetWorld()); It; ++It)
+//    {
+//        AEnemyCharacterBase* Enemy = *It;
+//        if (!Enemy) continue;
+//
+//        float Distance = FVector::Dist(GetActorLocation(), Enemy->GetActorLocation());
+//        if (Distance < ClosestDistance)
+//        {
+//            ClosestDistance = Distance;
+//            ClosestEnemy = Enemy;
+//        }
+//    }
+//
+//    TargetEnemy = ClosestEnemy;
+//}
+//
+//void AAllyCharacter::HandleFire()
+//{
+//    if (!EquippedWeapon) return;
+//
+//    if (EquippedWeapon->GetAmmo() <= 0)
+//    {
+//        EquippedWeapon->StartReload();
+//        return;
+//    }
+//
+//    EquippedWeapon->StartFire();
+//}
+//
+//void AAllyCharacter::StopMovement()
+//{
+//    if (AAllyAIController* AICon = Cast<AAllyAIController>(GetController()))
+//    {
+//        AICon->StopMovement();
+//    }
+//}
+//
+//void AAllyCharacter::SetTargetEnemy(AActor* NewTarget)
+//{
+//    TargetEnemy = Cast<AEnemyCharacterBase>(NewTarget);
+//}
+//
+//float AAllyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
+//    AController* EventInstigator, AActor* DamageCauser)
+//{
+//    if (CurrentHealth <= 0.f) return 0.f;
+//
+//    const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+//    CurrentHealth -= ActualDamage;
+//
+//    UE_LOG(LogTemp, Warning, TEXT("%s took %f damage! HP: %f/%f"),
+//        *GetName(), ActualDamage, CurrentHealth, MaxHealth);
+//
+//    if (CurrentHealth <= 0.f)
+//    {
+//        Die();
+//    }
+//
+//    return ActualDamage;
+//}
+//
+//void AAllyCharacter::Die()
+//{
+//    UE_LOG(LogTemp, Warning, TEXT("Ally %s died!"), *GetName());
+//    Destroy();
+//}
+
+
+
+
+//#include "AllyCharacter.h"
+//#include "AIController.h"
+//#include "WeaponBase.h"
+//#include "EnemyCharacterBase.h"
+//#include "TimerManager.h"
+//#include "EngineUtils.h"
+//#include "Kismet/KismetMathLibrary.h"
+//
+//AAllyCharacter::AAllyCharacter()
+//{
+//    PrimaryActorTick.bCanEverTick = true;
+//
+//    AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+//    AIControllerClass = AAIController::StaticClass();
+//}
+//
+//void AAllyCharacter::BeginPlay()
+//{
+//    Super::BeginPlay();
+//
+//    CurrentHealth = MaxHealth;
+//
+//    // 武器生成
+//    if (WeaponClass)
+//    {
+//        EquippedWeapon = GetWorld()->SpawnActor<AWeaponBase>(WeaponClass);
+//        if (EquippedWeapon)
+//        {
+//            EquippedWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("WeaponSocket"));
+//            EquippedWeapon->SetOwner(this);
+//        }
+//    }
+//
+//    // 敵検出タイマー
+//    GetWorldTimerManager().SetTimer(TargetUpdateTimer, this, &AAllyCharacter::FindNearestEnemy, 0.5f, true);
+//}
+//
+//void AAllyCharacter::Tick(float DeltaTime)
+//{
+//    Super::Tick(DeltaTime);
+//
+//    if (!TargetEnemy || !IsValid(TargetEnemy) || !EquippedWeapon)
+//    {
+//        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+//        return;
+//    }
+//
+//    // 敵方向を常に向く
+//    FaceTarget(TargetEnemy);
+//
+//    // 敵との距離をチェック
+//    float Distance = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
+//
+//    // 距離を維持して移動
+//    if (FMath::Abs(Distance - MaintainDistance) > AcceptableRadius)
+//    {
+//        MoveToSafeDistance(TargetEnemy, MaintainDistance);
+//    }
+//    else
+//    {
+//        StopMovement();
+//    }
+//
+//    // 射撃制御
+//    if (Distance <= FireRange)
+//    {
+//        if (!GetWorldTimerManager().IsTimerActive(FireTimerHandle))
+//        {
+//            GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AAllyCharacter::HandleFire, FireInterval, true);
+//        }
+//    }
+//    else
+//    {
+//        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+//    }
+//}
+//
+//void AAllyCharacter::MoveToSafeDistance(AActor* Target, float DesiredDistance)
+//{
+//    if (!Target) return;
+//
+//    FVector ToTarget = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+//    FVector Destination = Target->GetActorLocation() - ToTarget * DesiredDistance;
+//
+//    // 目的地に向かって移動
+//    if (AAIController* AICon = Cast<AAIController>(GetController()))
+//    {
+//        AICon->MoveToLocation(Destination, AcceptableRadius);
+//    }
+//}
+//
+//void AAllyCharacter::FaceTarget(AActor* Target)
+//{
+//    if (!Target) return;
+//
+//    FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
+//    ToTarget.Z = 0.f;
+//    FRotator LookRotation = FRotationMatrix::MakeFromX(ToTarget).Rotator();
+//    SetActorRotation(FMath::RInterpTo(GetActorRotation(), LookRotation, GetWorld()->GetDeltaSeconds(), 5.f));
+//}
+//
+//void AAllyCharacter::FindNearestEnemy()
+//{
+//    float ClosestDistance = TNumericLimits<float>::Max();
+//    AEnemyCharacterBase* ClosestEnemy = nullptr;
+//
+//    for (TActorIterator<AEnemyCharacterBase> It(GetWorld()); It; ++It)
+//    {
+//        AEnemyCharacterBase* Enemy = *It;
+//        if (!Enemy) continue;
+//
+//        float Distance = FVector::Dist(GetActorLocation(), Enemy->GetActorLocation());
+//        if (Distance < ClosestDistance)
+//        {
+//            ClosestDistance = Distance;
+//            ClosestEnemy = Enemy;
+//        }
+//    }
+//
+//    TargetEnemy = ClosestEnemy;
+//}
+//
+//void AAllyCharacter::HandleFire()
+//{
+//    if (!EquippedWeapon) return;
+//
+//    if (EquippedWeapon->GetAmmo() <= 0)
+//    {
+//        EquippedWeapon->StartReload();
+//        return;
+//    }
+//
+//    EquippedWeapon->StartFire();
+//}
+//
+//void AAllyCharacter::StopMovement()
+//{
+//    if (AAIController* AICon = Cast<AAIController>(GetController()))
+//    {
+//        AICon->StopMovement();
+//    }
+//}
+//
+//void AAllyCharacter::SetTargetEnemy(AActor* NewTarget)
+//{
+//    TargetEnemy = Cast<AEnemyCharacterBase>(NewTarget);
+//}
+//
+//float AAllyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
+//    AController* EventInstigator, AActor* DamageCauser)
+//{
+//    if (CurrentHealth <= 0.f) return 0.f;
+//
+//    const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+//    CurrentHealth -= ActualDamage;
+//
+//    UE_LOG(LogTemp, Warning, TEXT("%s took %f damage! HP: %f/%f"),
+//        *GetName(), ActualDamage, CurrentHealth, MaxHealth);
+//
+//    if (CurrentHealth <= 0.f)
+//    {
+//        Die();
+//    }
+//
+//    return ActualDamage;
+//}
+//
+//void AAllyCharacter::Die()
+//{
+//    UE_LOG(LogTemp, Warning, TEXT("Ally %s died!"), *GetName());
+//    Destroy();
+//}
 
 
 
