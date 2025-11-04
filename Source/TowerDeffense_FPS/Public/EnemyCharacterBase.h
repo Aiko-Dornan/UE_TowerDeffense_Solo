@@ -52,6 +52,7 @@ public:
 private:
     bool bCanAttack = true;
     bool bIsDead = false;
+    bool bNotifiedSpawner = false;
 
     FTimerHandle AttackCooldownTimerHandle;
     AMyHeroPlayer* PlayerCharacter;

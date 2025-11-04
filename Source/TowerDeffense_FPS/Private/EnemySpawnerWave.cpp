@@ -25,39 +25,52 @@ void AEnemySpawnerWave::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    // 現在ウェーブ中で、敵が全滅していたら次ウェーブ進行タイマーをセット
-    /*if (bWaveInProgress && AreAllEnemiesDead() && CurrentWave < LimitWave)
-    {
-        bWaveInProgress = false;
-        UE_LOG(LogTemp, Warning, TEXT("All enemies defeated! Next wave in %.1f seconds."), TimeAfterClear);
-
-        GetWorldTimerManager().ClearTimer(WaveTimerHandle);
-        GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeAfterClear, false);
-    }*/
-
     if (bWaveInProgress && AreAllEnemiesDead())
     {
         bWaveInProgress = false;
 
-        // 最終ウェーブならゲームクリア
+        UE_LOG(LogTemp, Warning, TEXT("Wave %d cleared!"), CurrentWave);
+
         if (CurrentWave >= LimitWave)
         {
-            UE_LOG(LogTemp, Warning, TEXT("Final wave cleared! Game clear!"));
+            UE_LOG(LogTemp, Warning, TEXT("Final wave cleared! Triggering GameClear()..."));
 
-            ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
-            if (GM)
+            if (ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
             {
-                GM->GameClear(); // GameClear() を呼び出す
+                GM->GameClear();
             }
 
-            return; // もう次のウェーブに進まない
+            return;
         }
 
-        // まだ残りウェーブがある場合は次のウェーブへ
-        UE_LOG(LogTemp, Warning, TEXT("All enemies defeated! Next wave in %.1f seconds."), TimeAfterClear);
-        GetWorldTimerManager().ClearTimer(WaveTimerHandle);
+        // 残りウェーブがある場合
+        UE_LOG(LogTemp, Warning, TEXT("Next wave in %.1f seconds."), TimeAfterClear);
         GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeAfterClear, false);
     }
+
+    //if (bWaveInProgress && AreAllEnemiesDead())
+    //{
+    //    bWaveInProgress = false;
+
+    //    // 最終ウェーブならゲームクリア
+    //    if (CurrentWave >= LimitWave)
+    //    {
+    //        UE_LOG(LogTemp, Warning, TEXT("Final wave cleared! Game clear!"));
+
+    //        ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+    //        if (GM)
+    //        {
+    //            GM->GameClear(); // GameClear() を呼び出す
+    //        }
+
+    //        return; // もう次のウェーブに進まない
+    //    }
+
+    //    // まだ残りウェーブがある場合は次のウェーブへ
+    //    UE_LOG(LogTemp, Warning, TEXT("All enemies defeated! Next wave in %.1f seconds."), TimeAfterClear);
+    //    GetWorldTimerManager().ClearTimer(WaveTimerHandle);
+    //    GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeAfterClear, false);
+    //}
 
 }
 void AEnemySpawnerWave::SpawnWave()
@@ -96,7 +109,9 @@ void AEnemySpawnerWave::SpawnWave()
 
    
 
-    int32 EnemyCountThisWave = InitialEnemyCount + (CurrentWave - 1) * EnemyIncreasePerWave;
+    //int32 EnemyCountThisWave = InitialEnemyCount + (CurrentWave - 1) * EnemyIncreasePerWave;
+   
+    int32 EnemyCountThisWave = SpawnPoints.Num() /** InitialEnemyCount*/;
 
     UE_LOG(LogTemp, Warning, TEXT("Wave %d started! Spawning %d enemies."), CurrentWave, EnemyCountThisWave);
 
@@ -122,8 +137,24 @@ void AEnemySpawnerWave::SpawnWave()
 
         if (SpawnedEnemy)
         {
+
+            SetLifeSpan(0.1f);
+
+             SpawnedEnemy->SpawnDefaultController();
+
+            if (SpawnedEnemy->GetController())
+            {
+                UE_LOG(LogTemp, Warning, TEXT("Enemy now has controller: %s"), *SpawnedEnemy->GetController()->GetName());
+            }
+            else
+            {
+                UE_LOG(LogTemp, Error, TEXT("Enemy has NO controller!"));
+                SpawnedEnemy->SpawnDefaultController();
+            }
+
+
             // AI を有効化
-            SpawnedEnemy->SpawnDefaultController();
+           
             SpawnedEnemies.Add(SpawnedEnemy);
         }
     }
@@ -141,91 +172,7 @@ void AEnemySpawnerWave::SpawnWave()
     // ウィジェットへ通知
     OnWaveChanged.Broadcast(CurrentWave); // 1引数の場合
 
-    //if (!EnemyClass) return;
-
-    //UWorld* World = GetWorld();
-    //if (!World) return;
-
-    //// 古い敵リストをクリア
-    //SpawnedEnemies.Empty();
-
-    //int32 EnemyCountThisWave = InitialEnemyCount + (CurrentWave - 1) * EnemyIncreasePerWave;
-
-    //UE_LOG(LogTemp, Warning, TEXT("Wave %d started! Spawning %d enemies."), CurrentWave, EnemyCountThisWave);
-
-    //for (int32 i = 0; i < EnemyCountThisWave; i++)
-    //{
-    //    FVector SpawnLocation = SpawnPoint->GetComponentLocation();
-    //    SpawnLocation += FVector(FMath::RandRange(-150, 150), FMath::RandRange(-150, 150), 0);
-    //    FRotator SpawnRotation = SpawnPoint->GetComponentRotation();
-
-    //    FActorSpawnParameters SpawnParams;
-    //    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-    //    AEnemyCharacterBase* SpawnedEnemy = World->SpawnActor<AEnemyCharacterBase>(
-    //        EnemyClass,
-    //        SpawnLocation,
-    //        SpawnRotation,
-    //        SpawnParams
-    //    );
-
-    //    if (SpawnedEnemy)
-    //    {
-    //        SpawnedEnemy->SpawnDefaultController();
-    //        SpawnedEnemies.Add(SpawnedEnemy);
-    //    }
-    //}
-
-    //bWaveInProgress = true;
-
-    //// 通常ウェーブタイマーもセット（時間で進む用）
-    //GetWorldTimerManager().ClearTimer(WaveTimerHandle);
-    //GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeBetweenWaves, false);
-
-
-    //if (!EnemyClass) return;
-
-    //UWorld* World = GetWorld();
-    //if (!World) return;
-
-    //int32 EnemyCountThisWave = InitialEnemyCount + (CurrentWave - 1) * EnemyIncreasePerWave;
-
-    //UE_LOG(LogTemp, Warning, TEXT("Wave %d started! Spawning %d enemies."), CurrentWave, EnemyCountThisWave);
-
-    //for (int32 i = 0; i < EnemyCountThisWave; i++)
-    //{
-    //    FVector SpawnLocation = SpawnPoint->GetComponentLocation();
-
-    //    // 敵を少しずつずらしてスポーン（重ならないように）
-    //    SpawnLocation += FVector(FMath::RandRange(-100, 100), FMath::RandRange(-100, 100), 0);
-
-    //    FRotator SpawnRotation = SpawnPoint->GetComponentRotation();
-
-    //    FActorSpawnParameters SpawnParams;
-    //    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-    //    AEnemyCharacterBase* SpawnedEnemy = World->SpawnActor<AEnemyCharacterBase>(
-    //        EnemyClass,
-    //        SpawnLocation,
-    //        SpawnRotation,
-    //        SpawnParams
-    //    );
-
-    //    if (SpawnedEnemy)
-    //    {
-    //        // AI を有効化（重要！）
-    //        SpawnedEnemy->SpawnDefaultController();
-    //    }
-    //}
-
-    //// 次のウェーブをセット
-    //GetWorldTimerManager().SetTimer(
-    //    WaveTimerHandle,
-    //    this,
-    //    &AEnemySpawnerWave::StartNextWave,
-    //    TimeBetweenWaves,
-    //    false
-    //);
+  
 }
 
 
@@ -239,7 +186,7 @@ void AEnemySpawnerWave::StartNextWave()
     }
 
     
-
+    //GenerateRandomSpawnPoints();
     CurrentWave++;
 
     //新ウェーブを通知
@@ -248,11 +195,38 @@ void AEnemySpawnerWave::StartNextWave()
     SpawnWave();
 }
 
+void AEnemySpawnerWave::NotifyEnemyDestroyed(AEnemyCharacterBase* DeadEnemy)
+{
+    SpawnedEnemies.Remove(DeadEnemy);
+
+    UE_LOG(LogTemp, Warning, TEXT("Enemy removed: %s | Remaining: %d"),
+        *DeadEnemy->GetName(), SpawnedEnemies.Num());
+
+    // 全滅チェック
+    if (SpawnedEnemies.Num() == 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("All enemies dead on wave %d!"), CurrentWave);
+
+        if (CurrentWave >= LimitWave)
+        {
+            if (ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+            {
+                GM->GameClear();
+            }
+        }
+        else
+        {
+            // 次のウェーブを開始
+            GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeAfterClear, false);
+        }
+    }
+}
+
 bool AEnemySpawnerWave::AreAllEnemiesDead() const
 {
     for (AEnemyCharacterBase* Enemy : SpawnedEnemies)
     {
-        if (IsValid(Enemy)) // nullptr か PendingKill でなければ生存
+        if (IsValid(Enemy))
         {
             return false;
         }
@@ -260,104 +234,121 @@ bool AEnemySpawnerWave::AreAllEnemiesDead() const
     return true;
 }
 
+
+//bool AEnemySpawnerWave::AreAllEnemiesDead() /*const*/
+//{
+//   
+//
+//    /* int32 AliveCount = 0;
+//
+//    for (int32 i = 0; i < SpawnedEnemies.Num(); i++)
+//    {
+//        AEnemyCharacterBase* Enemy = SpawnedEnemies[i];
+//        if (IsValid(Enemy))
+//        {
+//            AliveCount++;
+//            UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Enemy %d still alive: %s"), i, *Enemy->GetName());
+//        }
+//    }
+//
+//    UE_LOG(LogTemp, Warning, TEXT("[DEBUG] AreAllEnemiesDead -> AliveCount: %d"), AliveCount);
+//    return AliveCount == 0;*/
+//
+//    for (AEnemyCharacterBase* Enemy : SpawnedEnemies)
+//    {
+//        if (IsValid(Enemy)) // nullptr か PendingKill でなければ生存
+//        {
+//            return false;
+//        }
+//    }
+//    UE_LOG(LogTemp, Warning, TEXT("All Enemy Dead!!!!!!!!!!!!!!!!!!!1."));
+//    return true;
+//
+//   /* for (AEnemyCharacterBase* Enemy : SpawnedEnemies)
+//    {
+//        if (IsValid(Enemy))
+//        {
+//            return false;
+//        }
+//    }
+//    return true;*/
+//
+//}
+
 void AEnemySpawnerWave::GenerateRandomSpawnPoints()
 {
     SpawnPoints.Empty();
 
-    /*APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-    if (!PlayerPawn) return;*/
-
     ADefenseBase* Base = Cast<ADefenseBase>(UGameplayStatics::GetActorOfClass(GetWorld(), ADefenseBase::StaticClass()));
     if (!Base) return;
 
+    FVector BaseLocation = Base->GetActorLocation();
     int32 SpawnedCount = 0;
-    int32 MaxAttempts = 100;
+    int32 MaxAttempts = 1000;
     int32 Attempts = 0;
 
-    while (SpawnedCount < NumberOfSpawnPoints)
+    while (SpawnedCount < NumberOfSpawnPoints && Attempts < MaxAttempts)
     {
-        float RandX = FMath::FRandRange(SpawnAreaMin.X, SpawnAreaMax.X);
-        float RandY = FMath::FRandRange(SpawnAreaMin.Y, SpawnAreaMax.Y);
-        float RandZ = FMath::FRandRange(SpawnAreaMin.Z, SpawnAreaMax.Z);
-        FVector CandidateLocation(RandX, RandY, RandZ);
-
-        FVector BaseLocation = Base->GetActorLocation();
-        float DistToBase = FVector::Dist(BaseLocation, CandidateLocation);
-        if (DistToBase >= MinDistanceFromBase || Attempts >= MaxAttempts)
-        {
-            SpawnPoints.Add(CandidateLocation);
-            SpawnedCount++;
-        }
-        /*float DistToPlayer = FVector::Dist(PlayerPawn->GetActorLocation(), CandidateLocation);
-        if (DistToPlayer >= MinDistanceFromPlayer || Attempts >= MaxAttempts)
-        {
-            SpawnPoints.Add(CandidateLocation);
-            SpawnedCount++;
-        }*/
         Attempts++;
+
+        // 360度ランダム方向
+        float AngleDeg = FMath::FRandRange(0.f, 360.f);
+        float AngleRad = FMath::DegreesToRadians(AngleDeg);
+
+        float Distance = FMath::FRandRange(MinDistanceFromBase, MaxDistanceFromBase);
+
+        FVector Offset(FMath::Cos(AngleRad) * Distance, FMath::Sin(AngleRad) * Distance, 0.f);
+       
+
+        // 湧き位置
+        FVector SpawnLocation = BaseLocation + Offset;
+
+        // Zを地面に合わせるなど調整（必要なら LineTrace）
+        SpawnLocation.Z = BaseLocation.Z;
+
+        SpawnPoints.Add(SpawnLocation);
+        SpawnedCount++;
     }
 
-    //while (SpawnedCount < NumberOfSpawnPoints && Attempts < MaxAttempts)
-    //{
-    //    Attempts++;
-
-    //    float RandX = FMath::FRandRange(SpawnAreaMin.X, SpawnAreaMax.X);
-    //    float RandY = FMath::FRandRange(SpawnAreaMin.Y, SpawnAreaMax.Y);
-    //    float RandZ = FMath::FRandRange(SpawnAreaMin.Z, SpawnAreaMax.Z);
-    //    FVector CandidateLocation(RandX, RandY, RandZ);
-
-    //    if (FVector::Dist(PlayerPawn->GetActorLocation(), CandidateLocation) >= MinDistanceFromPlayer)
-    //    {
-    //        SpawnPoints.Add(CandidateLocation);
-    //        SpawnedCount++;
-    //        UE_LOG(LogTemp, Warning, TEXT("SpawnPoint %d: %s"), SpawnedCount, *CandidateLocation.ToString());
-    //    }
-
-    //    //// プレイヤーとの距離チェック
-    //    //if (FVector::Dist(PlayerPawn->GetActorLocation(), CandidateLocation) >= MinDistanceFromPlayer)
-    //    //{
-    //    //    SpawnPoints.Add(CandidateLocation);
-    //    //    SpawnedCount++;
-    //    //}
-    //}
-    if (SpawnedCount < NumberOfSpawnPoints)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("SpawnPoints generated: %d / %d"), SpawnedCount, NumberOfSpawnPoints);
-    }
-    /*if (SpawnedCount < NumberOfSpawnPoints)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("十分な距離を保てるスポーンポイントを生成できませんでした"));
-    }*/
-
-    //SpawnPoints.Empty();
-
-    //APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-    //if (!PlayerPawn) return;
-
-    //int32 SpawnedCount = 0;
-    //int32 MaxAttempts = 100; // 無限ループ防止
-    //int32 Attempts = 0;
-
-    //while (SpawnedCount < NumberOfSpawnPoints && Attempts < MaxAttempts)
-    //{
-    //    Attempts++;
-
-    //    // ランダム位置生成
-    //    float RandX = FMath::FRandRange(SpawnAreaMin.X, SpawnAreaMax.X);
-    //    float RandY = FMath::FRandRange(SpawnAreaMin.Y, SpawnAreaMax.Y);
-    //    float RandZ = FMath::FRandRange(SpawnAreaMin.Z, SpawnAreaMax.Z);
-    //    FVector CandidateLocation(RandX, RandY, RandZ);
-
-    //    // プレイヤーとの距離をチェック
-    //    if (FVector::Dist(PlayerPawn->GetActorLocation(), CandidateLocation) >= MinDistanceFromPlayer)
-    //    {
-    //        SpawnPoints.Add(CandidateLocation);
-    //        SpawnedCount++;
-    //    }
-    //}
-
-    //if (SpawnedCount < NumberOfSpawnPoints)
-    //{
-    //    UE_LOG(LogTemp, Warning, TEXT("十分な距離を保てるスポーンポイントを生成できませんでした"));
-    //}
+    UE_LOG(LogTemp, Warning, TEXT("SpawnPoints generated: %d / %d"), SpawnedCount, NumberOfSpawnPoints);
 }
+
+
+//void AEnemySpawnerWave::GenerateRandomSpawnPoints()
+//{
+//    SpawnPoints.Empty();
+//
+//   
+//
+//    ADefenseBase* Base = Cast<ADefenseBase>(UGameplayStatics::GetActorOfClass(GetWorld(), ADefenseBase::StaticClass()));
+//    if (!Base) return;
+//
+//    int32 SpawnedCount = 0;
+//    int32 MaxAttempts = 100;
+//    int32 Attempts = 0;
+//
+//    while (SpawnedCount < NumberOfSpawnPoints)
+//    {
+//        float RandX = FMath::FRandRange(SpawnAreaMin.X, SpawnAreaMax.X);
+//        float RandY = FMath::FRandRange(SpawnAreaMin.Y, SpawnAreaMax.Y);
+//        float RandZ = FMath::FRandRange(SpawnAreaMin.Z, SpawnAreaMax.Z);
+//        FVector CandidateLocation(RandX, RandY, RandZ);
+//
+//        FVector BaseLocation = Base->GetActorLocation();
+//        float DistToBase = FVector::Dist(BaseLocation, CandidateLocation);
+//        if (DistToBase >= MinDistanceFromBase || Attempts >= MaxAttempts)
+//        {
+//            SpawnPoints.Add(CandidateLocation);
+//            SpawnedCount++;
+//        }
+//        
+//        Attempts++;
+//    }
+//
+//   
+//    if (SpawnedCount < NumberOfSpawnPoints)
+//    {
+//        UE_LOG(LogTemp, Warning, TEXT("SpawnPoints generated: %d / %d"), SpawnedCount, NumberOfSpawnPoints);
+//    }
+// 
+//}

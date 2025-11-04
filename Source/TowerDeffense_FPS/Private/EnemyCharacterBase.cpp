@@ -24,7 +24,7 @@ AEnemyCharacterBase::AEnemyCharacterBase()
     MaxHealth = 100.0f;
     CurrentHealth = MaxHealth;
 
-    GetCharacterMovement()->MaxWalkSpeed = 600.f;
+    GetCharacterMovement()->MaxWalkSpeed = 400.f;
 
     AIControllerClass = AEnemyAIController::StaticClass();
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
@@ -35,6 +35,11 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 void AEnemyCharacterBase::BeginPlay()
 {
     Super::BeginPlay();
+
+    if (!GetController())
+    {
+        SpawnDefaultController();
+    }
 
     PlayerCharacter = Cast<AMyHeroPlayer>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
     CurrentHealth = MaxHealth;
@@ -350,12 +355,33 @@ void AEnemyCharacterBase::Die()
     // àÍíËéûä‘å„Ç…è¡ñ≈ÇµÇƒÇ‡ÇÊÇ¢
     //SetLifeSpan(2.0f);
 
-    // GameModeÇ…í ím
-    ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
-    if (GM)
+    //// GameModeÇ…í ím
+    //ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+    //if (GM)
+    //{
+    //    GM->OnEnemyDestroyed();
+    //}
+
+    // // SpawnerÇ÷íºê⁄í ím
+    //AEnemySpawnerWave* Spawner = Cast<AEnemySpawnerWave>(
+    //    UGameplayStatics::GetActorOfClass(GetWorld(), AEnemySpawnerWave::StaticClass())
+    //);
+    //if (Spawner)
+    //{
+    //    Spawner->NotifyEnemyDestroyed(this);
+    //}
+
+    if (!bNotifiedSpawner)
     {
-        GM->OnEnemyDestroyed();
+        bNotifiedSpawner = true;
+        if (AEnemySpawnerWave* Spawner = Cast<AEnemySpawnerWave>(
+            UGameplayStatics::GetActorOfClass(GetWorld(), AEnemySpawnerWave::StaticClass())))
+        {
+            Spawner->NotifyEnemyDestroyed(this);
+        }
     }
+
+    SetLifeSpan(0.2f);
 
     // Ç∑ÇÆÇ…è¡Ç∑èÍçáÇÕ
      Destroy();

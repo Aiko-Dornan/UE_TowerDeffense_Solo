@@ -23,6 +23,8 @@ public:
     // 敵が全滅しているか確認
     bool AreAllEnemiesDead() const;
 
+    void NotifyEnemyDestroyed(AEnemyCharacterBase* DeadEnemy);
+
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
@@ -93,6 +95,9 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "WaveSpawn")
     float MinDistanceFromBase = 1000.f; // 基地から最低距離
+
+    UPROPERTY(EditAnywhere, Category = "WaveSpawn")
+    float MaxDistanceFromBase = 1000.f; // 基地から最大距離
 
     UPROPERTY(EditAnywhere, Category = "WaveSpawn")
     FVector SpawnAreaMin; // スポーン可能範囲の最小座標
