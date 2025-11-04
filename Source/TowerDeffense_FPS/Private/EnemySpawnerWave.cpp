@@ -16,6 +16,12 @@ void AEnemySpawnerWave::BeginPlay()
 {
     Super::BeginPlay();
 
+    UE_LOG(LogTemp, Warning, TEXT("AEnemySpawnerWave::BeginPlay() called for: %s | IsPendingKill: %d | IsTemplate: %d"),
+        *GetName(),
+        IsPendingKillPending() ? 1 : 0,
+        HasAnyFlags(RF_ClassDefaultObject) ? 1 : 0);
+
+
     GenerateRandomSpawnPoints();
     // 最初のウェーブを開始
     SpawnWave();
@@ -138,7 +144,7 @@ void AEnemySpawnerWave::SpawnWave()
         if (SpawnedEnemy)
         {
 
-            SetLifeSpan(0.1f);
+        
 
              SpawnedEnemy->SpawnDefaultController();
 

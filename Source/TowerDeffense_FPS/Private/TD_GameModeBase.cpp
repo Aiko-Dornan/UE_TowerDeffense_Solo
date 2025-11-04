@@ -51,22 +51,32 @@ void ATD_GameModeBase::BeginPlay()
         FRotator SpawnRotation = FRotator::ZeroRotator;
 
         AEnemySpawnerWave* SpawnedEnemy = GetWorld()->SpawnActor<AEnemySpawnerWave>(EnemyWaveClass, SpawnLocation, SpawnRotation);
+
         if (SpawnedEnemy)
         {
-            UE_LOG(LogTemp, Warning, TEXT("Enemy spawned: %s"), *SpawnedEnemy->GetName());
-
-            // Spawn後にAIControllerをアタッチ
-           /* SpawnedEnemy->SpawnDefaultController();
-
-            if (SpawnedEnemy->GetController())
-            {
-                UE_LOG(LogTemp, Warning, TEXT("Enemy now has controller: %s"), *SpawnedEnemy->GetController()->GetName());
-            }
-            else
-            {
-                UE_LOG(LogTemp, Error, TEXT("Enemy has NO controller!"));
-            }*/
+            // ここでのみ関数を呼ぶ
+            //SpawnedEnemy->StartWave();
         }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Spawn failed!"));
+        }
+        //if (SpawnedEnemy)
+        //{
+        //    UE_LOG(LogTemp, Warning, TEXT("Enemy Wave spawned: %s"), *SpawnedEnemy->GetName());
+
+        //    // Spawn後にAIControllerをアタッチ
+        //   /* SpawnedEnemy->SpawnDefaultController();
+
+        //    if (SpawnedEnemy->GetController())
+        //    {
+        //        UE_LOG(LogTemp, Warning, TEXT("Enemy now has controller: %s"), *SpawnedEnemy->GetController()->GetName());
+        //    }
+        //    else
+        //    {
+        //        UE_LOG(LogTemp, Error, TEXT("Enemy has NO controller!"));
+        //    }*/
+        //}
 
        
     }

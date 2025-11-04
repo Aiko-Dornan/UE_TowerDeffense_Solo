@@ -6,6 +6,7 @@
 
 class AEnemyAIController;
 class AMyHeroPlayer;
+class ADefenseBase;
 
 UCLASS()
 class TOWERDEFFENSE_FPS_API AEnemyCharacterBase : public ACharacter
@@ -56,5 +57,7 @@ private:
 
     FTimerHandle AttackCooldownTimerHandle;
     AMyHeroPlayer* PlayerCharacter;
+    ADefenseBase* BaseStructure;
+
     AActor* CurrentTarget;  // Œ»İ‘_‚Á‚Ä‚¢‚é‘ÎÛ
 };

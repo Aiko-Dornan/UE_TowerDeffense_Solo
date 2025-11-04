@@ -13,20 +13,33 @@ ADefenseStructure::ADefenseStructure()
     RootComponent = MeshComp;
 
     // UŒ‚‚ðŽó‚¯‚ç‚ê‚é‚æ‚¤‚É‚·‚é
-    MeshComp->SetCollisionProfileName(TEXT("BlockAll"));
+    MeshComp->SetCollisionProfileName(TEXT("BlockAllDynamic"));
     MeshComp->SetNotifyRigidBodyCollision(true);
+
+    MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    MeshComp->SetCollisionObjectType(ECC_WorldDynamic);
+    MeshComp->SetCollisionResponseToAllChannels(ECR_Block);
+    MeshComp->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 }
 
 void ADefenseStructure::BeginPlay()
 {
     Super::BeginPlay();
     CurrentHealth = MaxHealth;
+
+    // Damage ƒCƒxƒ“ƒg‚ðŽó‚¯Žæ‚ê‚é‚æ‚¤‚É‚·‚é
+    SetCanBeDamaged(true);
+
+    UE_LOG(LogTemp, Warning, TEXT("%s can take damage: %d"), *GetName(), CanBeDamaged());
+
 }
 
 float ADefenseStructure::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
     AController* EventInstigator, AActor* DamageCauser)
 {
     if (bIsDestroyed) return 0.f;
+
+    UE_LOG(LogTemp, Warning, TEXT("TakeDamage called on %s!"), *GetName());
 
     const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
     CurrentHealth -= ActualDamage;
