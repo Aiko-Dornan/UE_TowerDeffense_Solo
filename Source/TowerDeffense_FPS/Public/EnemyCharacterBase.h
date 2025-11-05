@@ -4,9 +4,23 @@
 #include "GameFramework/Character.h"
 #include "EnemyCharacterBase.generated.h"
 
-class AEnemyAIController;
-class AMyHeroPlayer;
 class ADefenseBase;
+class ADefenseStructure;
+class AMyHeroPlayer;
+class AAllyCharacter;
+class AEnemyAIController;
+
+USTRUCT(BlueprintType)
+struct FTargetCandidate
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadWrite)
+    AActor* Actor = nullptr;
+
+    UPROPERTY(BlueprintReadWrite)
+    float Score = 0.f;
+};
 
 UCLASS()
 class TOWERDEFFENSE_FPS_API AEnemyCharacterBase : public ACharacter
@@ -16,48 +30,181 @@ class TOWERDEFFENSE_FPS_API AEnemyCharacterBase : public ACharacter
 public:
     AEnemyCharacterBase();
 
-    virtual void Tick(float DeltaTime) override;
-    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
-        AController* EventInstigator, AActor* DamageCauser) override;
-
-    void PerformAttack();
-
-    AActor* ChooseTarget();  // ターゲット選択関数
-
 protected:
     virtual void BeginPlay() override;
-    
-    void ResetAttack();
-    void Die();  // 死亡処理
 
 public:
-    // 攻撃設定
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-    float AttackRange;
+    virtual void Tick(float DeltaTime) override;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-    float AttackCooldown;
+    // --- オーバーラップイベント ---
+    UFUNCTION()
+    void OnEnemyBeginOverlap(AActor* OverlappedActor, AActor* OtherActor);
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-    float AttackDamage = 10.0f;
+    // --- 建物破壊通知を受ける ---
+    UFUNCTION()
+    void OnTargetDestroyed(AActor* DestroyedActor);
 
-    // === HP関連 ===
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy Stats")
-    float MaxHealth = 100.0f;
+    // --- ターゲット選定 ---
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+    AActor* ChooseTargetBP();
+    virtual AActor* ChooseTargetBP_Implementation();
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy Stats")
-    float CurrentHealth;
+    AActor* ChooseTarget_Default();
 
+    void PerformAttack();
+    void ResetAttack();
 
+    float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+    void Die();
+
+    float GetEffectiveAttackRange(AActor* Target) const;
+
+    //void UpdateTarget();
+
+        // --- ターゲット優先度を変数化 ---
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
+    float PlayerPriority = 100.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
+    float AllyPriority = 80.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
+    float BasePriority = 50.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
+    float StructurePriority = 60.f;
 
 private:
-    bool bCanAttack = true;
+    UPROPERTY()
+    AActor* CurrentTarget = nullptr;
+
+    UPROPERTY()
+    AActor* PreviousTarget = nullptr; // 建物破壊後に戻る用
+
     bool bIsDead = false;
+    bool bCanAttack = true;
     bool bNotifiedSpawner = false;
 
-    FTimerHandle AttackCooldownTimerHandle;
-    AMyHeroPlayer* PlayerCharacter;
-    ADefenseBase* BaseStructure;
+    float AttackRange;
+    float AttackCooldown;
+    float AttackDamage;
 
-    AActor* CurrentTarget;  // 現在狙っている対象
+    float MaxHealth;
+    float CurrentHealth;
+
+    FTimerHandle AttackCooldownTimerHandle;
+
+    UPROPERTY()
+    AMyHeroPlayer* PlayerCharacter = nullptr;
+
+    UPROPERTY()
+    ADefenseBase* BaseStructure = nullptr;
+
+    // AEnemyCharacterBase.h
+private:
+    FTimerHandle TargetUpdateTimerHandle;
+    float TargetUpdateInterval = 0.5f; // 0.5秒ごとにターゲット更新
+
+
 };
+
+
+
+//#pragma once
+//
+//#include "CoreMinimal.h"
+//#include "GameFramework/Character.h"
+//#include "EnemyCharacterBase.generated.h"
+//
+//class AEnemyAIController;
+//class AMyHeroPlayer;
+//class ADefenseBase;
+//
+//UCLASS()
+//class TOWERDEFFENSE_FPS_API AEnemyCharacterBase : public ACharacter
+//{
+//    GENERATED_BODY()
+//
+//public:
+//    AEnemyCharacterBase();
+//
+//    virtual void Tick(float DeltaTime) override;
+//    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+//        AController* EventInstigator, AActor* DamageCauser) override;
+//
+//    void PerformAttack();
+//    float GetEffectiveAttackRange(AActor* Target) const;
+//
+//    // --- Blueprintでオーバーライド可能なターゲット選定 ---
+//    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "AI|Targeting")
+//    AActor* ChooseTargetBP();
+//    virtual AActor* ChooseTargetBP_Implementation();
+//
+//    AActor* ChooseTarget();  // ターゲット選択関数
+//
+//protected:
+//    virtual void BeginPlay() override;
+//    
+//    void ResetAttack();
+//    void Die();  // 死亡処理
+//
+//public:
+//    // 攻撃設定
+//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+//    float AttackRange;
+//
+//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+//    float AttackCooldown;
+//
+//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+//    float AttackDamage = 10.0f;
+//
+//    // === HP関連 ===
+//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy Stats")
+//    float MaxHealth = 100.0f;
+//
+//    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy Stats")
+//    float CurrentHealth;
+//
+//    //1回攻撃したら自滅するフラグ
+//    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy Stats")
+//    bool KillMeFlag;
+//
+//    // --- ターゲット優先度を変数化 ---
+//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
+//    float PlayerPriority = 100.f;
+//
+//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
+//    float AllyPriority = 80.f;
+//
+//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
+//    float BasePriority = 50.f;
+//
+//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
+//    float StructurePriority = 60.f;
+//
+//    USTRUCT(BlueprintType)
+//        struct FTargetCandidate
+//    {
+//        GENERATED_BODY()
+//
+//        UPROPERTY(BlueprintReadWrite)
+//        AActor* Actor = nullptr;
+//
+//        UPROPERTY(BlueprintReadWrite)
+//        float Score = 0.f;
+//    };
+//
+//
+//private:
+//    bool bCanAttack = true;
+//    bool bIsDead = false;
+//    bool bNotifiedSpawner = false;
+//
+//    FTimerHandle AttackCooldownTimerHandle;
+//    AMyHeroPlayer* PlayerCharacter;
+//    ADefenseBase* BaseStructure;
+//
+//    AActor* CurrentTarget;  // 現在狙っている対象
+//};

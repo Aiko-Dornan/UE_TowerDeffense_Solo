@@ -1,18 +1,20 @@
 #include "EnemyCharacterBase.h"
 #include "EnemyAIController.h"
 #include "MyHeroPlayer.h"
-#include"AllyCharacter.h"
-#include"DefenseBase.h"
-#include"TD_GameModeBase.h"
+#include "AllyCharacter.h"
+#include "DefenseBase.h"
+#include "TD_GameModeBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
 #include "UObject/WeakObjectPtr.h"
-
 #include "DefenseStructure.h"
 #include "NavigationSystem.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "EnemySpawnerWave.h"
+
+// ==================== コンストラクタ ====================
 
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
@@ -24,120 +26,358 @@ AEnemyCharacterBase::AEnemyCharacterBase()
     MaxHealth = 100.0f;
     CurrentHealth = MaxHealth;
 
-    GetCharacterMovement()->MaxWalkSpeed = 200.f;
+    GetCharacterMovement()->MaxWalkSpeed = 300.f;
 
     AIControllerClass = AEnemyAIController::StaticClass();
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
-
-
 }
+
+// ==================== BeginPlay ====================
 
 void AEnemyCharacterBase::BeginPlay()
 {
     Super::BeginPlay();
 
-    while(!GetController())
+    OnActorBeginOverlap.AddDynamic(this, &AEnemyCharacterBase::OnEnemyBeginOverlap);
+
+    while (!GetController())
     {
         SpawnDefaultController();
     }
 
     PlayerCharacter = Cast<AMyHeroPlayer>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
 
-    BaseStructure= Cast<ADefenseBase>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
+    TArray<AActor*> FoundBases;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+    if (FoundBases.Num() > 0)
+    {
+        BaseStructure = Cast<ADefenseBase>(FoundBases[0]);
+    }
 
     CurrentHealth = MaxHealth;
+
+    //  最初のターゲットを設定（これが抜けていた）
+    CurrentTarget = ChooseTarget_Default();
+
+    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+    {
+        if (IsValid(CurrentTarget))
+        {
+            AI->SetFocus(CurrentTarget);
+            AI->MoveToActor(CurrentTarget, 5.f);
+        }
+    }
+
+    // ターゲット更新タイマーを開始
+    //GetWorldTimerManager().SetTimer(TargetUpdateTimerHandle, this, &AEnemyCharacterBase::UpdateTarget, TargetUpdateInterval, true);
+
 }
+
+
+
+
+//void AEnemyCharacterBase::BeginPlay()
+//{
+//    Super::BeginPlay();
+//
+//    OnActorBeginOverlap.AddDynamic(this, &AEnemyCharacterBase::OnEnemyBeginOverlap);
+//
+//    while (!GetController())
+//    {
+//        SpawnDefaultController();
+//    }
+//
+//    PlayerCharacter = Cast<AMyHeroPlayer>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
+//
+//    TArray<AActor*> FoundBases;
+//    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+//    if (FoundBases.Num() > 0)
+//    {
+//        BaseStructure = Cast<ADefenseBase>(FoundBases[0]);
+//    }
+//
+//    CurrentHealth = MaxHealth;
+//}
+
+// ==================== Tick ====================
 
 void AEnemyCharacterBase::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+    if (bIsDead) return;
 
-    if (bIsDead || !PlayerCharacter) return;
+    // --- ターゲットが存在しないか壊れていたら選び直し ---
+    /*if (!IsValid(CurrentTarget))
+    {
+        CurrentTarget = ChooseTarget_Default();
+        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+        {
+            if (IsValid(CurrentTarget))
+            {
+                AI->SetFocus(CurrentTarget);
+                AI->MoveToActor(CurrentTarget, 5.f);
+            }
+        }
+    }*/
 
-    // 1. 攻撃対象を選ぶ
-    AActor* Target = ChooseTarget();
+    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+    {
+        AI->SetFocus(CurrentTarget);
+        AI->MoveToActor(CurrentTarget, 5.f);
+    }
 
-    if (!Target) return;
+    CurrentTarget = ChooseTarget_Default();
 
-    CurrentTarget = Target;
+    if (!IsValid(CurrentTarget)) return;
 
+    const float Distance = FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
+    float EffectiveAttackRange = GetEffectiveAttackRange(CurrentTarget);
 
-    // 2. 距離チェック
-    const float Distance = FVector::Dist(GetActorLocation(), Target->GetActorLocation());
-
-    //float Distance = FVector::Dist(GetActorLocation(), PlayerCharacter->GetActorLocation());
-    if (Distance <= AttackRange)
+    if (Distance <= EffectiveAttackRange)
     {
         PerformAttack();
     }
-
-    
-
+    else
+    {
+        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+        {
+            AI->MoveToActor(CurrentTarget, 5.f);
+        }
+    }
 }
 
-AActor* AEnemyCharacterBase::ChooseTarget()
+//void AEnemyCharacterBase::Tick(float DeltaTime)
+//{
+//    Super::Tick(DeltaTime);
+//
+//    if (bIsDead || !IsValid(CurrentTarget)) return;
+//
+//    const float Distance = FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
+//    const float EffectiveAttackRange = GetEffectiveAttackRange(CurrentTarget);
+//
+//    if (Distance <= EffectiveAttackRange)
+//    {
+//        PerformAttack();
+//    }
+//}
+
+
+//void AEnemyCharacterBase::UpdateTarget()
+//{
+//    if (bIsDead) return;
+//
+//    // 現在ターゲットが生きていない場合、または再評価
+//    if (!IsValid(CurrentTarget) || CurrentTarget->IsPendingKillPending())
+//    {
+//        CurrentTarget = ChooseTarget_Default();
+//        return;
+//    }
+//
+//    // 現在のターゲットが基地や建物の場合、近くに優先度の高いターゲット（プレイヤーや味方）がいたら切り替え
+//    if (CurrentTarget->IsA(ADefenseBase::StaticClass()) || CurrentTarget->IsA(ADefenseStructure::StaticClass()))
+//    {
+//        AActor* NewTarget = ChooseTarget_Default();
+//        if (NewTarget && NewTarget != CurrentTarget)
+//        {
+//            CurrentTarget = NewTarget;
+//        }
+//    }
+//}
+
+
+//void AEnemyCharacterBase::Tick(float DeltaTime)
+//{
+//    Super::Tick(DeltaTime);
+//
+//    if (bIsDead) return;
+//
+//    // ターゲットがいなければ選び直す
+//    if (!IsValid(CurrentTarget))
+//    {
+//        CurrentTarget = ChooseTarget_Default();
+//    }
+//
+//    if (!IsValid(CurrentTarget)) return;
+//
+//    const float Distance = FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
+//    float EffectiveAttackRange = GetEffectiveAttackRange(CurrentTarget);
+//
+//    if (Distance <= EffectiveAttackRange)
+//    {
+//        PerformAttack();
+//    }
+//    else
+//    {
+//        // 攻撃範囲外 → ターゲットへ移動
+//        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+//        {
+//            AI->MoveToActor(CurrentTarget, 5.f);
+//        }
+//    }
+//}
+
+// ==================== オーバーラップイベント ====================
+
+void AEnemyCharacterBase::OnEnemyBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
 {
-    // --- プレイヤーと味方キャラを取得 ---
-    TArray<AActor*> PotentialTargets;
-    if (PlayerCharacter)
+    if (bIsDead || !IsValid(OtherActor)) return;
+
+    // --- 防衛建物にぶつかったらターゲット変更 ---
+    if (ADefenseStructure* HitStructure = Cast<ADefenseStructure>(OtherActor))
     {
-        PotentialTargets.Add(PlayerCharacter);
+        if (CurrentTarget == HitStructure) return;
+
+        /*UE_LOG(LogTemp, Warning, TEXT("%s collided with structure %s -> targeting it!"),
+            *GetName(), *HitStructure->GetName());*/
+
+        PreviousTarget = CurrentTarget;
+        CurrentTarget = HitStructure;
+
+        // 建物が破壊されたら通知を受け取る
+        HitStructure->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
+
+        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+        {
+            AI->SetFocus(HitStructure);
+            AI->MoveToActor(HitStructure, 5.f);
+        }
+        return;
     }
 
-    TArray<AActor*> FoundAllies;
-    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAllyCharacter::StaticClass(), FoundAllies);
-    PotentialTargets.Append(FoundAllies);
-
-    // --- 基地を取得 ---
-    TArray<AActor*> FoundBases;
-    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
-    AActor* DefenseBase = (FoundBases.Num() > 0) ? FoundBases[0] : nullptr;
-
-    // --- まず最優先はプレイヤーや味方 ---
-    AActor* NearestAllyOrPlayer = nullptr;
-    float NearestDistance = FLT_MAX;
-
-    for (AActor* Ally : PotentialTargets)
+    // --- プレイヤーや味方、基地など ---
+    if (AMyHeroPlayer* Player = Cast<AMyHeroPlayer>(OtherActor))
     {
-        if (!IsValid(Ally)) continue;
+        CurrentTarget = Player;
+        return;
+    }
 
-        float Dist = FVector::Dist(GetActorLocation(), Ally->GetActorLocation());
-        if (Dist < NearestDistance)
+    if (AAllyCharacter* Ally = Cast<AAllyCharacter>(OtherActor))
+    {
+        CurrentTarget = Ally;
+        return;
+    }
+
+    if (ADefenseBase* Base = Cast<ADefenseBase>(OtherActor))
+    {
+        CurrentTarget = Base;
+        return;
+    }
+}
+
+// ==================== ターゲット破壊通知 ====================
+
+void AEnemyCharacterBase::OnTargetDestroyed(AActor* DestroyedActor)
+{
+    if (bIsDead) return;
+
+    UE_LOG(LogTemp, Warning, TEXT("%s detected target destroyed: %s"),
+        *GetName(), *DestroyedActor->GetName());
+
+    if (CurrentTarget == DestroyedActor)
+    {
+        CurrentTarget = nullptr;
+
+        // 元ターゲットに戻す or 新規選定
+        if (IsValid(PreviousTarget))
         {
-            NearestDistance = Dist;
-            NearestAllyOrPlayer = Ally;
+            CurrentTarget = PreviousTarget;
+        }
+        else
+        {
+            CurrentTarget = ChooseTarget_Default();
+        }
+
+        PreviousTarget = nullptr;
+
+        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+        {
+            if (CurrentTarget)
+            {
+                AI->SetFocus(CurrentTarget);
+                AI->MoveToActor(CurrentTarget, 5.f);
+            }
+        }
+    }
+}
+
+// ==================== ターゲット選定（Blueprint拡張対応） ====================
+
+AActor* AEnemyCharacterBase::ChooseTargetBP_Implementation()
+{
+    return ChooseTarget_Default();
+}
+
+AActor* AEnemyCharacterBase::ChooseTarget_Default()
+{
+    const float MaxConsiderRange = 4000.f; // これ以上離れたものは無視
+    const float BlockCheckAngle = 45.f;    // ±45度の範囲を「進行ルート上」とみなす
+
+    TArray<FTargetCandidate> Candidates;
+
+    // --- プレイヤー ---
+    if (IsValid(PlayerCharacter))
+    {
+        const float Dist = FVector::Dist(GetActorLocation(), PlayerCharacter->GetActorLocation());
+        if (Dist < MaxConsiderRange)
+        {
+            FTargetCandidate Candidate;
+            Candidate.Actor = PlayerCharacter;
+            Candidate.Score = PlayerPriority * FMath::Clamp(1.f - (Dist / MaxConsiderRange), 0.f, 1.f);
+            Candidates.Add(Candidate);
         }
     }
 
-    const float PlayerPriorityRange = 2000.f; // プレイヤー/味方優先範囲
-    if (NearestAllyOrPlayer && NearestDistance <= PlayerPriorityRange)
+    // --- 味方キャラ ---
+    TArray<AActor*> FoundAllies;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAllyCharacter::StaticClass(), FoundAllies);
+    for (AActor* Ally : FoundAllies)
     {
-        return NearestAllyOrPlayer;
+        if (!IsValid(Ally)) continue;
+        const float Dist = FVector::Dist(GetActorLocation(), Ally->GetActorLocation());
+        if (Dist < MaxConsiderRange)
+        {
+            FTargetCandidate Candidate;
+            Candidate.Actor = Ally;
+            Candidate.Score = AllyPriority * FMath::Clamp(1.f - (Dist / MaxConsiderRange), 0.f, 1.f);
+            Candidates.Add(Candidate);
+        }
     }
 
-    // --- 次に基地 ---
-    if (DefenseBase)
+    // --- 基地 ---
+    ADefenseBase* DefenseBase = nullptr;
     {
-        // --- 基地への進行ルート上で邪魔な防衛建物がある場合は優先 ---
-        ADefenseStructure* BlockingStructure = nullptr;
-        float NearestStructureDist = FLT_MAX;
+        TArray<AActor*> FoundBases;
+        UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+        if (FoundBases.Num() > 0)
+        {
+            DefenseBase = Cast<ADefenseBase>(FoundBases[0]);
+            if (IsValid(DefenseBase))
+            {
+                const float Dist = FVector::Dist(GetActorLocation(), DefenseBase->GetActorLocation());
+                FTargetCandidate Candidate;
+                Candidate.Actor = DefenseBase;
+                Candidate.Score = BasePriority * FMath::Clamp(1.f - (Dist / (MaxConsiderRange * 1.2f)), 0.f, 1.f);
+                Candidates.Add(Candidate);
+            }
+        }
+    }
 
+    // --- 防衛建物（進行ルート上のみ） ---
+    if (IsValid(DefenseBase))
+    {
         TArray<AActor*> FoundStructures;
         UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseStructure::StaticClass(), FoundStructures);
 
+        FVector ToBaseDir = (DefenseBase->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+
         for (AActor* StructureActor : FoundStructures)
         {
-            ADefenseStructure* Structure = Cast<ADefenseStructure>(StructureActor);
-            if (!Structure || !IsValid(Structure)) continue;
+            if (!IsValid(StructureActor)) continue;
 
-            FVector ToStructure = Structure->GetActorLocation() - GetActorLocation();
-            FVector ToBase = DefenseBase->GetActorLocation() - GetActorLocation();
+            FVector ToStructureDir = (StructureActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+            float Angle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(ToBaseDir, ToStructureDir)));
 
-            float Dot = FVector::DotProduct(ToStructure.GetSafeNormal(), ToBase.GetSafeNormal());
-            float Angle = FMath::RadiansToDegrees(FMath::Acos(Dot));
-
-            // ±60度以内なら基地への進行ルート上とみなす
-            if (Angle < 60.f)
+            if (Angle < BlockCheckAngle)
             {
                 FHitResult Hit;
                 FCollisionQueryParams Params;
@@ -146,302 +386,61 @@ AActor* AEnemyCharacterBase::ChooseTarget()
                 bool bHit = GetWorld()->LineTraceSingleByChannel(
                     Hit,
                     GetActorLocation() + FVector(0, 0, 50.f),
-                    Structure->GetActorLocation() + FVector(0, 0, 50.f),
+                    StructureActor->GetActorLocation() + FVector(0, 0, 50.f),
                     ECC_Visibility, Params);
 
-                if (bHit && Hit.GetActor() == Structure)
+                if (bHit && Hit.GetActor() == StructureActor)
                 {
-                    float Dist = FVector::Dist(GetActorLocation(), Structure->GetActorLocation());
-                    if (Dist < NearestStructureDist)
-                    {
-                        BlockingStructure = Structure;
-                        NearestStructureDist = Dist;
-                    }
+                    const float Dist = FVector::Dist(GetActorLocation(), StructureActor->GetActorLocation());
+                    FTargetCandidate Candidate;
+                    Candidate.Actor = StructureActor;
+                    Candidate.Score = StructurePriority * FMath::Clamp(1.f - (Dist / (MaxConsiderRange * 0.5f)), 0.f, 1.f);
+                    Candidates.Add(Candidate);
                 }
             }
         }
-
-        // 進行ルート上の防衛建物がある場合は優先
-        if (BlockingStructure)
-        {
-            return BlockingStructure;
-        }
-
-        // 防衛建物がなければ基地をターゲット
-        return DefenseBase;
     }
 
-    // --- 最後に、防衛用建物（基地やプレイヤーへの進行ルート上でない場合は無視される） ---
-    return nullptr;
+    // --- スコア順でソート ---
+    Candidates.Sort([](const FTargetCandidate& A, const FTargetCandidate& B)
+        {
+            return A.Score > B.Score;
+        });
+
+    // --- デバッグ出力 ---
+    if (Candidates.Num() > 0)
+    {
+        //UE_LOG(LogTemp, Log, TEXT("Target: %s (Score=%.2f)"),
+            //*Candidates[0].Actor->GetName(), Candidates[0].Score);
+    }
+
+    return Candidates.Num() > 0 ? Candidates[0].Actor : nullptr;
 }
 
 
-
-
-
-
-
-//AActor* AEnemyCharacterBase::ChooseTarget()
-//{
-//   
-//
-//
-//    // 1. プレイヤー・味方キャラ・防衛対象をリストアップ
-//    TArray<AActor*> PotentialTargets;
-//    if (PlayerCharacter)
-//    {
-//        PotentialTargets.Add(PlayerCharacter);
-//    }
-//
-//    TArray<AActor*> FoundAllies;
-//    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAllyCharacter::StaticClass(), FoundAllies);
-//    PotentialTargets.Append(FoundAllies);
-//
-//    // 防衛対象（基地）
-//    TArray<AActor*> FoundBases;
-//    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
-//
-//    AActor* DefenseBase = (FoundBases.Num() > 0) ? FoundBases[0] : nullptr;
-//
-//    // --- まず防衛対象の方向に壊れるオブジェクトがあるかチェック ---
-//    TArray<AActor*> FoundStructures;
-//    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseStructure::StaticClass(), FoundStructures);
-//
-//    ADefenseStructure* BlockingStructure = nullptr;
-//    float NearestStructureDist = FLT_MAX;
-//
-// 
-//
-//    for (AActor* StructureActor : FoundStructures)
-//    {
-//        ADefenseStructure* Structure = Cast<ADefenseStructure>(StructureActor);
-//        if (!Structure || !IsValid(Structure)) continue;
-//
-//        //FVector ToStructure = Structure->GetActorLocation() - GetActorLocation();
-//        //FVector ToBase = DefenseBase ? DefenseBase->GetActorLocation() - GetActorLocation() : FVector::ZeroVector();
-//
-//        //// 同じ方向にあるか（おおよそ同じ角度）
-//        //float Angle = FMath::RadiansToDegrees(acosf(FVector::DotProduct(ToStructure.GetSafeNormal(), ToBase.GetSafeNormal())));
-//
-//        FVector ToStructure = Structure->GetActorLocation() - GetActorLocation();
-//        FVector ToBase = DefenseBase ? (DefenseBase->GetActorLocation() - GetActorLocation()) : FVector::ZeroVector;
-//
-//        // 同じ方向にあるか（おおよそ同じ角度）
-//        float Dot = FVector::DotProduct(ToStructure.GetSafeNormal(), ToBase.GetSafeNormal());
-//        float Angle = FMath::RadiansToDegrees(FMath::Acos(Dot));
-//
-//        if (Angle < 60.f) // ±30度以内をルート上とみなす
-//        {
-//            float Dist = ToStructure.Size();
-//            // 壁などが近い場合優先
-//            if (Dist < NearestStructureDist)
-//            {
-//                // ライン・オブ・サイトで確認
-//                FHitResult Hit;
-//                FCollisionQueryParams Params;
-//                Params.AddIgnoredActor(this);
-//
-//                bool bHit = GetWorld()->LineTraceSingleByChannel(Hit,
-//                    GetActorLocation() + FVector(0, 0, 50.f),
-//                    Structure->GetActorLocation() + FVector(0, 0, 50.f),
-//                    ECC_Visibility, Params);
-//
-//                if (bHit && Hit.GetActor() == Structure)
-//                {
-//                    BlockingStructure = Structure;
-//                    NearestStructureDist = Dist;
-//                }
-//            }
-//        }
-//    }
-//
-//    // --- 壊れるオブジェクトがルート上にあればそれを攻撃 ---
-//    if (BlockingStructure)
-//    {
-//        return BlockingStructure;
-//    }
-//
-//    // --- 味方キャラが近い場合はそちらを攻撃 ---
-//    AActor* NearestAlly = nullptr;
-//    float NearestDistance = FLT_MAX;
-//
-//    for (AActor* Ally : PotentialTargets)
-//    {
-//        if (!IsValid(Ally)) continue;
-//        float Dist = FVector::Dist(GetActorLocation(), Ally->GetActorLocation());
-//        if (Dist < NearestDistance)
-//        {
-//            NearestDistance = Dist;
-//            NearestAlly = Ally;
-//        }
-//    }
-//
-//    if (NearestAlly)
-//    {
-//        return NearestAlly;
-//    }
-//
-//    // --- 最後に基地をターゲットに ---
-//    return DefenseBase;
-//
-//   // // 1. 味方キャラクターをすべて取得
-//   // TArray<AActor*> AllAllies;
-//
-//   // // プレイヤー
-//   // if (PlayerCharacter)
-//   // {
-//   //     AllAllies.Add(PlayerCharacter);
-//   // }
-//
-//   // // 他の味方キャラクター
-//   // TArray<AActor*> FoundAllies;
-//   // UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAllyCharacter::StaticClass(), FoundAllies);
-//   // AllAllies.Append(FoundAllies);
-//
-//   // // 2. 最も近い味方を探索
-//   // AActor* NearestAlly = nullptr;
-//   // float NearestDistance = FLT_MAX;
-//
-//   // for (AActor* Ally : AllAllies)
-//   // {
-//   //     if (!IsValid(Ally)) continue;
-//
-//   //     float Dist = FVector::Dist(GetActorLocation(), Ally->GetActorLocation());
-//   //     if (Dist < NearestDistance)
-//   //     {
-//   //         NearestDistance = Dist;
-//   //         NearestAlly = Ally;
-//   //     }
-//   // }
-//
-//   // if (NearestAlly)
-//   // {
-//   //     return NearestAlly; // 最も近い味方をターゲットに
-//   // }
-//
-//
-//
-//   // // 3. 味方がいなければ防衛対象（基地）を探す
-//   // TArray<AActor*> FoundBases;
-//   // UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
-//
-//   // if (FoundBases.Num() > 0)
-//   // {
-//   //     return FoundBases[0];
-//   // }
-//
-//
-//
-//   //// TArray<AActor*> FoundAllies;
-//   //// UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAllyCharacter::StaticClass(), FoundAllies);
-//
-//   //// if (FoundAllies.Num() > 0)
-//   //// {
-//   ////     return FoundAllies[0]; // 最初の味方を選択
-//   //// }
-//
-//   //// // 優先度1：プレイヤーが近いならプレイヤーを狙う
-//   //// if (IsValid(PlayerCharacter))
-//   //// {
-//   ////     const float DistanceToPlayer = FVector::Dist(GetActorLocation(), PlayerCharacter->GetActorLocation());
-//   ////     if (DistanceToPlayer <= 800.f) // 例: 8m以内なら優先
-//   ////     {
-//   ////         return PlayerCharacter;
-//   ////     }
-//   //// }
-//
-//   ////  // 2. 味方キャラクターを検索して距離最短のものを選択
-//   ////// TArray<AActor*> FoundAllies;
-//   //// UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAllyCharacter::StaticClass(), FoundAllies);
-//
-//   //// AActor* ClosestAlly = nullptr;
-//   //// float ClosestDistance = FLT_MAX;
-//
-//   //// for (AActor* Ally : FoundAllies)
-//   //// {
-//   ////     // 自分自身は除外
-//   ////     //if (Ally == this) continue;
-//
-//   ////     // 生存チェック
-//   ////     AAllyCharacter* AllyChar = Cast<AAllyCharacter>(Ally);
-//   ////     if (!AllyChar || IsValid(AllyChar)) continue;
-//
-//   ////     const float DistanceToAlly = FVector::Dist(GetActorLocation(), Ally->GetActorLocation());
-//
-//   ////     // 800cm以内の味方だけ対象
-//   ////     if (DistanceToAlly <= 2000.f && DistanceToAlly < ClosestDistance)
-//   ////     {
-//   ////         ClosestDistance = DistanceToAlly;
-//   ////         ClosestAlly = Ally;
-//   ////     }
-//   //// }
-//
-//   //// if (ClosestAlly)
-//   //// {
-//   ////     return ClosestAlly;
-//   //// }
-//
-//   //// // 優先度2：防衛対象（基地）を探す
-//   //// TArray<AActor*> FoundBases;
-//   //// UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
-//
-//   //// if (FoundBases.Num() > 0)
-//   //// {
-//   ////     return FoundBases[0]; // 最初の基地をターゲットに
-//   //// }
-//
-//   // return nullptr;
-//}
+// ==================== 攻撃処理 ====================
 
 void AEnemyCharacterBase::PerformAttack()
 {
-
     if (!bCanAttack || bIsDead || !CurrentTarget) return;
 
     bCanAttack = false;
 
-    UE_LOG(LogTemp, Warning, TEXT("%s attacks %s!"), *GetName(), *CurrentTarget->GetName());
+    UE_LOG(LogTemp, Warning, TEXT("%s attacks %s!"),
+        *GetName(), *CurrentTarget->GetName());
 
     UGameplayStatics::ApplyDamage(CurrentTarget, AttackDamage, GetController(), this, nullptr);
 
-    ADefenseBase* Base = Cast<ADefenseBase>(CurrentTarget);
-    if (Base)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Base HP after attack: %f"), Base->CurrentHealth);
-    }
-
-    GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
-
-
-    //if (!bCanAttack || !PlayerCharacter || bIsDead) return;
-
-    //AActor* Target = PlayerCharacter;
-    //if (!Target)
-    //{
-    //    // 防衛対象を検索（プレイヤーがいない場合）
-    //    TArray<AActor*> FoundBases;
-    //    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
-    //    if (FoundBases.Num() > 0)
-    //    {
-    //        Target = FoundBases[0];
-    //    }
-    //}
-
-    //if (!Target) return;
-
-    //bCanAttack = false;
-
-    //UE_LOG(LogTemp, Warning, TEXT("Enemy attacks target: %s"), *Target->GetName());
-
-    //UGameplayStatics::ApplyDamage(PlayerCharacter, AttackDamage, GetController(), this, nullptr);
-
-    //GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
+    GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
+        &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
 }
 
 void AEnemyCharacterBase::ResetAttack()
 {
     bCanAttack = true;
 }
+
+// ==================== 被ダメージ処理 ====================
 
 float AEnemyCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
     AController* EventInstigator, AActor* DamageCauser)
@@ -462,34 +461,14 @@ float AEnemyCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& Da
     return ActualDamage;
 }
 
+// ==================== 死亡処理 ====================
+
 void AEnemyCharacterBase::Die()
 {
     if (bIsDead) return;
     bIsDead = true;
 
     UE_LOG(LogTemp, Warning, TEXT("Enemy %s died!"), *GetName());
-
-    // TODO: アニメーションやエフェクトを追加したい場合はここで再生
-    // PlayAnimMontage(DeathAnimMontage);
-
-    // 一定時間後に消滅してもよい
-    //SetLifeSpan(2.0f);
-
-    //// GameModeに通知
-    //ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
-    //if (GM)
-    //{
-    //    GM->OnEnemyDestroyed();
-    //}
-
-    // // Spawnerへ直接通知
-    //AEnemySpawnerWave* Spawner = Cast<AEnemySpawnerWave>(
-    //    UGameplayStatics::GetActorOfClass(GetWorld(), AEnemySpawnerWave::StaticClass())
-    //);
-    //if (Spawner)
-    //{
-    //    Spawner->NotifyEnemyDestroyed(this);
-    //}
 
     if (!bNotifiedSpawner)
     {
@@ -501,8 +480,467 @@ void AEnemyCharacterBase::Die()
         }
     }
 
-    SetLifeSpan(0.2f);
-
-    // すぐに消す場合は
-     Destroy();
+    Destroy();
 }
+
+// ==================== 攻撃レンジ設定 ====================
+
+float AEnemyCharacterBase::GetEffectiveAttackRange(AActor* Target) const
+{
+    if (Target->IsA(ADefenseBase::StaticClass()))
+    {
+        return 400.f; // 基地には広いレンジ
+    }
+    else if (Target->IsA(ADefenseStructure::StaticClass()))
+    {
+        return 200.f; // 建物はやや広め
+    }
+    else if (Target->IsA(AAllyCharacter::StaticClass()) || Target->IsA(AMyHeroPlayer::StaticClass()))
+    {
+        return 150.f;
+    }
+
+    return AttackRange;
+}
+
+
+//#include "EnemyCharacterBase.h"
+//#include "EnemyAIController.h"
+//#include "MyHeroPlayer.h"
+//#include"AllyCharacter.h"
+//#include"DefenseBase.h"
+//#include"TD_GameModeBase.h"
+//#include "Kismet/GameplayStatics.h"
+//#include "GameFramework/CharacterMovementComponent.h"
+//#include "TimerManager.h"
+//#include "UObject/WeakObjectPtr.h"
+//
+//#include "DefenseStructure.h"
+//#include "NavigationSystem.h"
+//#include "DrawDebugHelpers.h"
+//#include "Kismet/KismetMathLibrary.h"
+//
+//AEnemyCharacterBase::AEnemyCharacterBase()
+//{
+//    PrimaryActorTick.bCanEverTick = true;
+//
+//    AttackRange = 150.0f;
+//    AttackCooldown = 2.0f;
+//    AttackDamage = 10.0f;
+//    MaxHealth = 100.0f;
+//    CurrentHealth = MaxHealth;
+//
+//    GetCharacterMovement()->MaxWalkSpeed = 200.f;
+//
+//    AIControllerClass = AEnemyAIController::StaticClass();
+//    AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+//
+//
+//}
+//
+//void AEnemyCharacterBase::BeginPlay()
+//{
+//    Super::BeginPlay();
+//
+//    while(!GetController())
+//    {
+//        SpawnDefaultController();
+//    }
+//
+//    PlayerCharacter = Cast<AMyHeroPlayer>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
+//
+//    TArray<AActor*> FoundBases;
+//    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+//    if (FoundBases.Num() > 0)
+//    {
+//        BaseStructure = Cast<ADefenseBase>(FoundBases[0]);
+//    }
+//
+//    CurrentHealth = MaxHealth;
+//}
+//
+//void AEnemyCharacterBase::Tick(float DeltaTime)
+//{
+//    Super::Tick(DeltaTime);
+//
+//    if (bIsDead || !PlayerCharacter) return;
+//
+//    // 1. 攻撃対象を選ぶ
+//    AActor* Target = ChooseTarget();
+//
+//    if (!Target) return;
+//
+//    CurrentTarget = Target;
+//
+//
+//    // 2. 距離チェック
+//    const float Distance = FVector::Dist(GetActorLocation(), Target->GetActorLocation());
+//
+//    // ターゲットのタイプによって攻撃レンジを変える
+//
+//    float EffectiveAttackRange = GetEffectiveAttackRange(Target);
+//
+//    if (Distance <= EffectiveAttackRange)
+//    {
+//        PerformAttack();
+//    }
+//
+//    ////float Distance = FVector::Dist(GetActorLocation(), PlayerCharacter->GetActorLocation());
+//    //if (Distance <= AttackRange)
+//    //{
+//    //    PerformAttack();
+//    //}
+//
+//    
+//
+//}
+//
+//// --- BlueprintNativeEvent のデフォルト実装 ---
+//AActor* AEnemyCharacterBase::ChooseTargetBP_Implementation()
+//{
+//    return ChooseTarget(); // デフォルトはC++のChooseTarget()に委譲
+//}
+//
+//AActor* AEnemyCharacterBase::ChooseTarget()
+//{
+//    // --- プレイヤーと味方キャラを取得 ---
+//    TArray<AActor*> PotentialTargets;
+//    if (PlayerCharacter)
+//    {
+//        PotentialTargets.Add(PlayerCharacter);
+//    }
+//
+//    TArray<AActor*> FoundAllies;
+//    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAllyCharacter::StaticClass(), FoundAllies);
+//    PotentialTargets.Append(FoundAllies);
+//
+//    // --- 基地を取得 ---
+//    TArray<AActor*> FoundBases;
+//    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+//    AActor* DefenseBase = (FoundBases.Num() > 0) ? FoundBases[0] : nullptr;
+//
+//    // --- 候補とスコアを格納 ---
+//    TArray<FTargetCandidate> Candidates;
+//
+//    // プレイヤー/味方優先
+//    const float PlayerPriorityRange = 2000.f;
+//
+//    for (AActor* Target : PotentialTargets)
+//    {
+//        if (!IsValid(Target)) continue;
+//
+//        float Dist = FVector::Dist(GetActorLocation(), Target->GetActorLocation());
+//        if (Dist <= PlayerPriorityRange)
+//        {
+//            // 候補に追加
+//            FTargetCandidate Candidate;
+//            Candidate.Actor = Target;
+//            Candidate.Score = 100.f / (Dist + 1.f); // 距離でスコア調整
+//            Candidates.Add(Candidate);
+//        }
+//    }
+//
+//    // 基地へのルート上の防衛建物優先
+//    if (DefenseBase)
+//    {
+//        TArray<AActor*> FoundStructures;
+//        UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseStructure::StaticClass(), FoundStructures);
+//
+//        ADefenseStructure* BlockingStructure = nullptr;
+//        float NearestStructureDist = FLT_MAX;
+//
+//        for (AActor* StructureActor : FoundStructures)
+//        {
+//            ADefenseStructure* Structure = Cast<ADefenseStructure>(StructureActor);
+//            if (!Structure || !IsValid(Structure)) continue;
+//
+//            FVector ToStructure = Structure->GetActorLocation() - GetActorLocation();
+//            FVector ToBase = DefenseBase->GetActorLocation() - GetActorLocation();
+//
+//            float Dot = FVector::DotProduct(ToStructure.GetSafeNormal(), ToBase.GetSafeNormal());
+//            float Angle = FMath::RadiansToDegrees(FMath::Acos(Dot));
+//
+//            if (Angle < 60.f) // ±60度以内ならルート上
+//            {
+//                FHitResult Hit;
+//                FCollisionQueryParams Params;
+//                Params.AddIgnoredActor(this);
+//
+//                bool bHit = GetWorld()->LineTraceSingleByChannel(
+//                    Hit,
+//                    GetActorLocation() + FVector(0, 0, 50.f),
+//                    Structure->GetActorLocation() + FVector(0, 0, 50.f),
+//                    ECC_Visibility,
+//                    Params
+//                );
+//
+//                if (bHit && Hit.GetActor() == Structure)
+//                {
+//                    float Dist = FVector::Dist(GetActorLocation(), Structure->GetActorLocation());
+//                    if (Dist < NearestStructureDist)
+//                    {
+//                        BlockingStructure = Structure;
+//                        NearestStructureDist = Dist;
+//                    }
+//                }
+//            }
+//        }
+//
+//        if (BlockingStructure)
+//        {
+//            FTargetCandidate Candidate;
+//            Candidate.Actor = BlockingStructure;
+//            Candidate.Score = 80.f / (NearestStructureDist + 1.f);
+//            Candidates.Add(Candidate);
+//        }
+//        else
+//        {
+//            // 防衛建物がなければ基地
+//            FTargetCandidate Candidate;
+//            Candidate.Actor = DefenseBase;
+//            Candidate.Score = 50.f; // 基地の基本スコア
+//            Candidates.Add(Candidate);
+//        }
+//    }
+//
+//    // --- スコア順でソート ---
+//    Candidates.Sort([](const FTargetCandidate& A, const FTargetCandidate& B)
+//        {
+//            return A.Score > B.Score;
+//        });
+//
+//    // --- 最もスコアの高いターゲットを返す ---
+//    return Candidates.Num() > 0 ? Candidates[0].Actor : nullptr;
+//}
+//
+//
+////AActor* AEnemyCharacterBase::ChooseTarget()
+////{
+////    // --- プレイヤーと味方キャラを取得 ---
+////    TArray<AActor*> PotentialTargets;
+////    if (PlayerCharacter)
+////    {
+////        PotentialTargets.Add(PlayerCharacter);
+////    }
+////
+////    TArray<AActor*> FoundAllies;
+////    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAllyCharacter::StaticClass(), FoundAllies);
+////    PotentialTargets.Append(FoundAllies);
+////
+////    // --- 基地を取得 ---
+////    TArray<AActor*> FoundBases;
+////    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+////    AActor* DefenseBase = (FoundBases.Num() > 0) ? FoundBases[0] : nullptr;
+////
+////    // --- まず最優先はプレイヤーや味方 ---
+////    AActor* NearestAllyOrPlayer = nullptr;
+////    float NearestDistance = FLT_MAX;
+////
+////    for (AActor* Ally : PotentialTargets)
+////    {
+////        if (!IsValid(Ally)) continue;
+////
+////        float Dist = FVector::Dist(GetActorLocation(), Ally->GetActorLocation());
+////        if (Dist < NearestDistance)
+////        {
+////            NearestDistance = Dist;
+////            NearestAllyOrPlayer = Ally;
+////        }
+////    }
+////
+////    const float PlayerPriorityRange = 2000.f; // プレイヤー/味方優先範囲
+////    if (NearestAllyOrPlayer && NearestDistance <= PlayerPriorityRange)
+////    {
+////        return NearestAllyOrPlayer;
+////    }
+////
+////    // --- 次に基地 ---
+////    if (DefenseBase)
+////    {
+////        // --- 基地への進行ルート上で邪魔な防衛建物がある場合は優先 ---
+////        ADefenseStructure* BlockingStructure = nullptr;
+////        float NearestStructureDist = FLT_MAX;
+////
+////        TArray<AActor*> FoundStructures;
+////        UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseStructure::StaticClass(), FoundStructures);
+////
+////        for (AActor* StructureActor : FoundStructures)
+////        {
+////            ADefenseStructure* Structure = Cast<ADefenseStructure>(StructureActor);
+////            if (!Structure || !IsValid(Structure)) continue;
+////
+////            FVector ToStructure = Structure->GetActorLocation() - GetActorLocation();
+////            FVector ToBase = DefenseBase->GetActorLocation() - GetActorLocation();
+////
+////            float Dot = FVector::DotProduct(ToStructure.GetSafeNormal(), ToBase.GetSafeNormal());
+////            float Angle = FMath::RadiansToDegrees(FMath::Acos(Dot));
+////
+////            // ±60度以内なら基地への進行ルート上とみなす
+////            if (Angle < 60.f)
+////            {
+////                FHitResult Hit;
+////                FCollisionQueryParams Params;
+////                Params.AddIgnoredActor(this);
+////
+////                bool bHit = GetWorld()->LineTraceSingleByChannel(
+////                    Hit,
+////                    GetActorLocation() + FVector(0, 0, 50.f),
+////                    Structure->GetActorLocation() + FVector(0, 0, 50.f),
+////                    ECC_Visibility, Params);
+////
+////                if (bHit && Hit.GetActor() == Structure)
+////                {
+////                    float Dist = FVector::Dist(GetActorLocation(), Structure->GetActorLocation());
+////                    if (Dist < NearestStructureDist)
+////                    {
+////                        BlockingStructure = Structure;
+////                        NearestStructureDist = Dist;
+////                    }
+////                }
+////            }
+////        }
+////
+////        // 進行ルート上の防衛建物がある場合は優先
+////        if (BlockingStructure)
+////        {
+////            return BlockingStructure;
+////        }
+////
+////        // 防衛建物がなければ基地をターゲット
+////        return DefenseBase;
+////    }
+////
+////    // --- 最後に、防衛用建物（基地やプレイヤーへの進行ルート上でない場合は無視される） ---
+////    return nullptr;
+////}
+//
+//float AEnemyCharacterBase::GetEffectiveAttackRange(AActor* Target) const
+//{
+//    if (Target->IsA(ADefenseBase::StaticClass()))
+//    {
+//        return 400.f; // 基地には広いレンジ
+//    }
+//    else if (Target->IsA(AAllyCharacter::StaticClass()))
+//    {
+//        return 150.f; // 味方ユニットには中距離
+//    }
+//    else if (Target->IsA(AMyHeroPlayer::StaticClass()))
+//    {
+//        return 150.f;
+//    }
+//
+//    return AttackRange; // デフォルト
+//}
+//
+//void AEnemyCharacterBase::PerformAttack()
+//{
+//
+//    if (!bCanAttack || bIsDead || !CurrentTarget) return;
+//
+//    bCanAttack = false;
+//
+//    UE_LOG(LogTemp, Warning, TEXT("%s attacks %s!"), *GetName(), *CurrentTarget->GetName());
+//
+//    UGameplayStatics::ApplyDamage(CurrentTarget, AttackDamage, GetController(), this, nullptr);
+//
+//    if (KillMeFlag)
+//    {
+//        Die();
+//    }
+//
+//    GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
+//
+//
+//    //if (!bCanAttack || !PlayerCharacter || bIsDead) return;
+//
+//    //AActor* Target = PlayerCharacter;
+//    //if (!Target)
+//    //{
+//    //    // 防衛対象を検索（プレイヤーがいない場合）
+//    //    TArray<AActor*> FoundBases;
+//    //    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+//    //    if (FoundBases.Num() > 0)
+//    //    {
+//    //        Target = FoundBases[0];
+//    //    }
+//    //}
+//
+//    //if (!Target) return;
+//
+//    //bCanAttack = false;
+//
+//    //UE_LOG(LogTemp, Warning, TEXT("Enemy attacks target: %s"), *Target->GetName());
+//
+//    //UGameplayStatics::ApplyDamage(PlayerCharacter, AttackDamage, GetController(), this, nullptr);
+//
+//    //GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
+//}
+//
+//void AEnemyCharacterBase::ResetAttack()
+//{
+//    bCanAttack = true;
+//}
+//
+//float AEnemyCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
+//    AController* EventInstigator, AActor* DamageCauser)
+//{
+//    if (bIsDead) return 0.f;
+//
+//    const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+//
+//    CurrentHealth -= ActualDamage;
+//    UE_LOG(LogTemp, Warning, TEXT("%s took %f damage! HP: %f/%f"),
+//        *GetName(), ActualDamage, CurrentHealth, MaxHealth);
+//
+//    if (CurrentHealth <= 0.0f)
+//    {
+//        Die();
+//    }
+//
+//    return ActualDamage;
+//}
+//
+//void AEnemyCharacterBase::Die()
+//{
+//    if (bIsDead) return;
+//    bIsDead = true;
+//
+//    UE_LOG(LogTemp, Warning, TEXT("Enemy %s died!"), *GetName());
+//
+//    // TODO: アニメーションやエフェクトを追加したい場合はここで再生
+//    // PlayAnimMontage(DeathAnimMontage);
+//
+//    // 一定時間後に消滅してもよい
+//    //SetLifeSpan(2.0f);
+//
+//    //// GameModeに通知
+//    //ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+//    //if (GM)
+//    //{
+//    //    GM->OnEnemyDestroyed();
+//    //}
+//
+//    // // Spawnerへ直接通知
+//    //AEnemySpawnerWave* Spawner = Cast<AEnemySpawnerWave>(
+//    //    UGameplayStatics::GetActorOfClass(GetWorld(), AEnemySpawnerWave::StaticClass())
+//    //);
+//    //if (Spawner)
+//    //{
+//    //    Spawner->NotifyEnemyDestroyed(this);
+//    //}
+//
+//    if (!bNotifiedSpawner)
+//    {
+//        bNotifiedSpawner = true;
+//        if (AEnemySpawnerWave* Spawner = Cast<AEnemySpawnerWave>(
+//            UGameplayStatics::GetActorOfClass(GetWorld(), AEnemySpawnerWave::StaticClass())))
+//        {
+//            Spawner->NotifyEnemyDestroyed(this);
+//        }
+//    }
+//
+//    SetLifeSpan(0.2f);
+//
+//    // すぐに消す場合は
+//     Destroy();
+//}

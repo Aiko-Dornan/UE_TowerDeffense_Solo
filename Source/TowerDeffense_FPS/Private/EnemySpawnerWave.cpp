@@ -146,7 +146,7 @@ void AEnemySpawnerWave::SpawnWave()
 
         
 
-             SpawnedEnemy->SpawnDefaultController();
+           /*  SpawnedEnemy->SpawnDefaultController();
 
             if (SpawnedEnemy->GetController())
             {
@@ -156,7 +156,7 @@ void AEnemySpawnerWave::SpawnWave()
             {
                 UE_LOG(LogTemp, Error, TEXT("Enemy has NO controller!"));
                 SpawnedEnemy->SpawnDefaultController();
-            }
+            }*/
 
 
             // AI ‚ð—LŒø‰»

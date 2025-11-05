@@ -42,7 +42,7 @@ void AEnemyAIController::Tick(float DeltaSeconds)
     AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(GetPawn());
     if (!Enemy) return;
 
-    AActor* Target = Enemy->ChooseTarget();
+    AActor* Target = Enemy->ChooseTarget_Default();
     if (Target)
     {
         MoveToActor(Target, 50.f);
