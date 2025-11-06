@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 
 
+
 ATD_GameModeBase::ATD_GameModeBase()
 {
     static ConstructorHelpers::FClassFinder<APawn> PlayerPawnClassFinder(TEXT("/Game/BluePrint/MyMyHeroPlayer"));
@@ -102,6 +103,12 @@ void ATD_GameModeBase::BeginPlay()
             EnemySpawnerRef->OnWaveChanged.AddDynamic(WaveWidgetInstance, &UWaveWidget::UpdateWaveText);
         }
     }
+
+    /*UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+    if (NavSys)
+    {
+        NavSys->Build();
+    }*/
 
 }
 

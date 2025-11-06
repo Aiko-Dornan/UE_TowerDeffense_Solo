@@ -33,6 +33,17 @@ public:
 protected:
     virtual void BeginPlay() override;
 
+    float DefaultConsiderRange = 4000.f;
+    float ExtendedConsiderRange = 12000.f; // ’â~’†‚Ì’Tõ‹——£
+    float StopCheckInterval = 1.0f;        // ’â~ƒ`ƒFƒbƒNŠÔŠu
+    float StopThresholdSpeed = 10.f;       // ‘¬“x‚ª‚±‚ÌˆÈ‰º‚È‚ç’â~’†
+    float StopDurationToExtend = 2.0f;     // ‰½•b’â~‚µ‚½‚ç‹——£‚ğL‚°‚é‚©
+
+    float TimeSinceLastMove = 0.f;
+    bool bIsRecognitionExtended = false;
+
+    void CheckIfStopped();
+
 public:
     virtual void Tick(float DeltaTime) override;
 
@@ -50,6 +61,8 @@ public:
     virtual AActor* ChooseTargetBP_Implementation();
 
     AActor* ChooseTarget_Default();
+
+    void UpdateTarget();
 
     void PerformAttack();
     void ResetAttack();
@@ -93,6 +106,8 @@ private:
     float MaxHealth;
     float CurrentHealth;
 
+    
+
     FTimerHandle AttackCooldownTimerHandle;
 
     UPROPERTY()
@@ -104,8 +119,9 @@ private:
     // AEnemyCharacterBase.h
 private:
     FTimerHandle TargetUpdateTimerHandle;
-    float TargetUpdateInterval = 0.5f; // 0.5•b‚²‚Æ‚Éƒ^[ƒQƒbƒgXV
+    float TargetUpdateInterval = 3.0f; // 0.5•b‚²‚Æ‚Éƒ^[ƒQƒbƒgXV
 
+    FTimerHandle StopCheckTimerHandle;
 
 };
 

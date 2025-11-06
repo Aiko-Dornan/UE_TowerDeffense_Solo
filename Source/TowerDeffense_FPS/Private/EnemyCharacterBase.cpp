@@ -47,29 +47,66 @@ void AEnemyCharacterBase::BeginPlay()
 
     PlayerCharacter = Cast<AMyHeroPlayer>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
 
-    TArray<AActor*> FoundBases;
-    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
-    if (FoundBases.Num() > 0)
+    while(!IsValid(BaseStructure))
     {
-        BaseStructure = Cast<ADefenseBase>(FoundBases[0]);
+        TArray<AActor*> FoundBases;
+        UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+        if (FoundBases.Num() > 0)
+        {
+            BaseStructure = Cast<ADefenseBase>(FoundBases[0]);
+        }
     }
 
     CurrentHealth = MaxHealth;
 
-    //  最初のターゲットを設定（これが抜けていた）
-    CurrentTarget = ChooseTarget_Default();
+    // 最初のターゲットは必ず基地
+    if (IsValid(BaseStructure))
+    {
+        //UE_LOG(LogTemp, Warning, TEXT("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"));
+
+        CurrentTarget = BaseStructure;
+
+        
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+        // 基地が存在しない場合は距離判定ターゲットを探す
+        CurrentTarget = ChooseTarget_Default();
+    }
 
     if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
     {
-        if (IsValid(CurrentTarget))
-        {
-            AI->SetFocus(CurrentTarget);
-            AI->MoveToActor(CurrentTarget, 5.f);
-        }
+        AI->SetFocus(BaseStructure);
+        AI->MoveToActor(BaseStructure, 5.f);
     }
 
+    ////  最初のターゲットを設定（これが抜けていた）
+    //CurrentTarget = ChooseTarget_Default();
+    ////CurrentTarget = BaseStructure;
+
+    //if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+    //{
+    //    if (IsValid(CurrentTarget))
+    //    {
+    //        AI->SetFocus(CurrentTarget);
+    //        AI->MoveToActor(CurrentTarget, 5.f);
+    //    }
+    //}
+
+    // 定期的に停止判定を実施
+    GetWorldTimerManager().SetTimerForNextTick([this]()
+        {
+            GetWorldTimerManager().SetTimer(
+                StopCheckTimerHandle,
+                this,
+                &AEnemyCharacterBase::CheckIfStopped,
+                StopCheckInterval,
+                true);
+        });
+
     // ターゲット更新タイマーを開始
-    //GetWorldTimerManager().SetTimer(TargetUpdateTimerHandle, this, &AEnemyCharacterBase::UpdateTarget, TargetUpdateInterval, true);
+    GetWorldTimerManager().SetTimer(TargetUpdateTimerHandle, this, &AEnemyCharacterBase::UpdateTarget, TargetUpdateInterval, true);
 
 }
 
@@ -106,10 +143,50 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
     if (bIsDead) return;
 
-    // --- ターゲットが存在しないか壊れていたら選び直し ---
-    /*if (!IsValid(CurrentTarget))
+    //CurrentTarget = ChooseTarget_Default();
+
+    //if (!IsValid(CurrentTarget))
+    //{
+    //    CurrentTarget = ChooseTarget_Default();
+
+    //    // それでも見つからない場合、基地をターゲットにする
+    //    if (!IsValid(CurrentTarget) && IsValid(BaseStructure))
+    //    {
+    //        UE_LOG(LogTemp, Warning, TEXT("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+    //        CurrentTarget = BaseStructure;
+
+    //        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+    //        {
+    //            
+    //                AI->SetFocus(BaseStructure);
+    //                AI->MoveToActor(BaseStructure, 5.f);
+    //            
+    //        }
+    //        
+    //    }
+
+    //    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+    //    {
+    //        if (IsValid(CurrentTarget))
+    //        {
+    //            AI->SetFocus(CurrentTarget);
+    //            AI->MoveToActor(CurrentTarget, 5.f);
+    //        }
+    //    }
+    //}
+   
+       // ターゲットが存在しない or 無効なら基地へ戻す
+    if (!IsValid(CurrentTarget))
     {
-        CurrentTarget = ChooseTarget_Default();
+        if (IsValid(BaseStructure))
+        {
+            CurrentTarget = BaseStructure;
+        }
+        else
+        {
+            CurrentTarget = ChooseTarget_Default();
+        }
+
         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
         {
             if (IsValid(CurrentTarget))
@@ -118,15 +195,29 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
                 AI->MoveToActor(CurrentTarget, 5.f);
             }
         }
-    }*/
+    }
 
-    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+    //// --- ターゲットが存在しないか壊れていたら選び直し ---
+    //if (!IsValid(CurrentTarget))
+    //{
+    //    CurrentTarget = ChooseTarget_Default();
+    //    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+    //    {
+    //        if (IsValid(CurrentTarget))
+    //        {
+    //            AI->SetFocus(CurrentTarget);
+    //            AI->MoveToActor(CurrentTarget, 5.f);
+    //        }
+    //    }
+    //}
+
+    /*if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
     {
         AI->SetFocus(CurrentTarget);
         AI->MoveToActor(CurrentTarget, 5.f);
     }
 
-    CurrentTarget = ChooseTarget_Default();
+    CurrentTarget = ChooseTarget_Default();*/
 
     if (!IsValid(CurrentTarget)) return;
 
@@ -162,27 +253,37 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
 //}
 
 
-//void AEnemyCharacterBase::UpdateTarget()
-//{
-//    if (bIsDead) return;
-//
-//    // 現在ターゲットが生きていない場合、または再評価
-//    if (!IsValid(CurrentTarget) || CurrentTarget->IsPendingKillPending())
-//    {
-//        CurrentTarget = ChooseTarget_Default();
-//        return;
-//    }
-//
-//    // 現在のターゲットが基地や建物の場合、近くに優先度の高いターゲット（プレイヤーや味方）がいたら切り替え
-//    if (CurrentTarget->IsA(ADefenseBase::StaticClass()) || CurrentTarget->IsA(ADefenseStructure::StaticClass()))
-//    {
-//        AActor* NewTarget = ChooseTarget_Default();
-//        if (NewTarget && NewTarget != CurrentTarget)
-//        {
-//            CurrentTarget = NewTarget;
-//        }
-//    }
-//}
+void AEnemyCharacterBase::UpdateTarget()
+{
+    if (bIsDead) return;
+
+    // 現在ターゲットが生きていない場合、または再評価
+    if (!IsValid(CurrentTarget) || CurrentTarget->IsPendingKillPending())
+    {
+        CurrentTarget = ChooseTarget_Default();
+        return;
+    }
+
+    // 現在のターゲットが基地や建物の場合、近くに優先度の高いターゲット（プレイヤーや味方）がいたら切り替え
+    if (CurrentTarget->IsA(ADefenseBase::StaticClass()) || CurrentTarget->IsA(ADefenseStructure::StaticClass()))
+    {
+        AActor* NewTarget = ChooseTarget_Default();
+        if (NewTarget && NewTarget != CurrentTarget)
+        {
+            CurrentTarget = NewTarget;
+        }
+    }
+
+    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+    {
+        if (IsValid(CurrentTarget))
+        {
+            AI->SetFocus(CurrentTarget);
+            AI->MoveToActor(CurrentTarget, 5.f);
+        }
+    }
+
+}
 
 
 //void AEnemyCharacterBase::Tick(float DeltaTime)
@@ -309,8 +410,11 @@ AActor* AEnemyCharacterBase::ChooseTargetBP_Implementation()
 
 AActor* AEnemyCharacterBase::ChooseTarget_Default()
 {
-    const float MaxConsiderRange = 4000.f; // これ以上離れたものは無視
-    const float BlockCheckAngle = 45.f;    // ±45度の範囲を「進行ルート上」とみなす
+    // 停止中なら認識範囲を2倍に
+    const float MaxConsiderRangeBase = bIsRecognitionExtended ? ExtendedConsiderRange : DefaultConsiderRange;
+    const float MaxConsiderRange = 4000.0f;
+
+    const float BlockCheckAngle = 45.f;
 
     TArray<FTargetCandidate> Candidates;
 
@@ -343,7 +447,7 @@ AActor* AEnemyCharacterBase::ChooseTarget_Default()
         }
     }
 
-    // --- 基地 ---
+    // --- 基地（常に取得）---
     ADefenseBase* DefenseBase = nullptr;
     {
         TArray<AActor*> FoundBases;
@@ -356,13 +460,13 @@ AActor* AEnemyCharacterBase::ChooseTarget_Default()
                 const float Dist = FVector::Dist(GetActorLocation(), DefenseBase->GetActorLocation());
                 FTargetCandidate Candidate;
                 Candidate.Actor = DefenseBase;
-                Candidate.Score = BasePriority * FMath::Clamp(1.f - (Dist / (MaxConsiderRange * 1.2f)), 0.f, 1.f);
+                Candidate.Score = BasePriority * FMath::Clamp(1.f - (Dist / (MaxConsiderRangeBase * 1.2f)), 0.f, 1.f);
                 Candidates.Add(Candidate);
             }
         }
     }
 
-    // --- 防衛建物（進行ルート上のみ） ---
+    // --- 防衛建物（進行ルート上のみ）---
     if (IsValid(DefenseBase))
     {
         TArray<AActor*> FoundStructures;
@@ -401,21 +505,172 @@ AActor* AEnemyCharacterBase::ChooseTarget_Default()
         }
     }
 
-    // --- スコア順でソート ---
+    // --- ソート ---
     Candidates.Sort([](const FTargetCandidate& A, const FTargetCandidate& B)
         {
             return A.Score > B.Score;
         });
 
-    // --- デバッグ出力 ---
+    // --- フォールバック処理 ---
     if (Candidates.Num() > 0)
     {
-        //UE_LOG(LogTemp, Log, TEXT("Target: %s (Score=%.2f)"),
-            //*Candidates[0].Actor->GetName(), Candidates[0].Score);
+        return Candidates[0].Actor;
     }
 
-    return Candidates.Num() > 0 ? Candidates[0].Actor : nullptr;
+    //// ターゲットが一切見つからない場合は必ず基地をターゲットにする
+    //if (!IsValid(BaseStructure))
+    //{
+    //    TArray<AActor*> FoundBases;
+    //    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+    //    if (FoundBases.Num() > 0)
+    //    {
+    //        BaseStructure = Cast<ADefenseBase>(FoundBases[0]);
+    //    }
+    //}
+
+    //return IsValid(BaseStructure) ? BaseStructure : nullptr;
+
+    return Candidates[0].Actor;
 }
+
+void AEnemyCharacterBase::CheckIfStopped()
+{
+    if (bIsDead) return;
+
+    const float Speed = GetVelocity().Size();
+    if (CurrentTarget!=BaseStructure) {
+
+        if (Speed < StopThresholdSpeed)
+        {
+            TimeSinceLastMove += StopCheckInterval;
+
+            // 一定時間停止していたら認識距離を拡張
+            if (TimeSinceLastMove >= StopDurationToExtend && !bIsRecognitionExtended)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("%s stopped  extending recognition range!"), *GetName());
+                bIsRecognitionExtended = true;
+            }
+        }
+        else
+        {
+            // 動いてるならリセット
+            TimeSinceLastMove = 0.f;
+            bIsRecognitionExtended = false;
+        }
+
+    }
+    
+}
+
+//AActor* AEnemyCharacterBase::ChooseTarget_Default()
+//{
+//    const float MaxConsiderRange = 6000.f; // これ以上離れたものは無視
+//    const float BlockCheckAngle = 45.f;    // ±45度の範囲を「進行ルート上」とみなす
+//
+//    TArray<FTargetCandidate> Candidates;
+//
+//    // --- プレイヤー ---
+//    if (IsValid(PlayerCharacter))
+//    {
+//        const float Dist = FVector::Dist(GetActorLocation(), PlayerCharacter->GetActorLocation());
+//        if (Dist < MaxConsiderRange)
+//        {
+//            FTargetCandidate Candidate;
+//            Candidate.Actor = PlayerCharacter;
+//            Candidate.Score = PlayerPriority * FMath::Clamp(1.f - (Dist / MaxConsiderRange), 0.f, 1.f);
+//            Candidates.Add(Candidate);
+//        }
+//    }
+//
+//    // --- 味方キャラ ---
+//    TArray<AActor*> FoundAllies;
+//    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAllyCharacter::StaticClass(), FoundAllies);
+//    for (AActor* Ally : FoundAllies)
+//    {
+//        if (!IsValid(Ally)) continue;
+//        const float Dist = FVector::Dist(GetActorLocation(), Ally->GetActorLocation());
+//        if (Dist < MaxConsiderRange)
+//        {
+//            FTargetCandidate Candidate;
+//            Candidate.Actor = Ally;
+//            Candidate.Score = AllyPriority * FMath::Clamp(1.f - (Dist / MaxConsiderRange), 0.f, 1.f);
+//            Candidates.Add(Candidate);
+//        }
+//    }
+//
+//    // --- 基地 ---
+//    ADefenseBase* DefenseBase = nullptr;
+//    {
+//        TArray<AActor*> FoundBases;
+//        UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+//        if (FoundBases.Num() > 0)
+//        {
+//            DefenseBase = Cast<ADefenseBase>(FoundBases[0]);
+//            if (IsValid(DefenseBase))
+//            {
+//                const float Dist = FVector::Dist(GetActorLocation(), DefenseBase->GetActorLocation());
+//                FTargetCandidate Candidate;
+//                Candidate.Actor = DefenseBase;
+//                Candidate.Score = BasePriority * FMath::Clamp(1.f - (Dist / (MaxConsiderRange * 1.2f)), 0.f, 1.f);
+//                Candidates.Add(Candidate);
+//            }
+//        }
+//    }
+//
+//    // --- 防衛建物（進行ルート上のみ） ---
+//    if (IsValid(DefenseBase))
+//    {
+//        TArray<AActor*> FoundStructures;
+//        UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseStructure::StaticClass(), FoundStructures);
+//
+//        FVector ToBaseDir = (DefenseBase->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+//
+//        for (AActor* StructureActor : FoundStructures)
+//        {
+//            if (!IsValid(StructureActor)) continue;
+//
+//            FVector ToStructureDir = (StructureActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+//            float Angle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(ToBaseDir, ToStructureDir)));
+//
+//            if (Angle < BlockCheckAngle)
+//            {
+//                FHitResult Hit;
+//                FCollisionQueryParams Params;
+//                Params.AddIgnoredActor(this);
+//
+//                bool bHit = GetWorld()->LineTraceSingleByChannel(
+//                    Hit,
+//                    GetActorLocation() + FVector(0, 0, 50.f),
+//                    StructureActor->GetActorLocation() + FVector(0, 0, 50.f),
+//                    ECC_Visibility, Params);
+//
+//                if (bHit && Hit.GetActor() == StructureActor)
+//                {
+//                    const float Dist = FVector::Dist(GetActorLocation(), StructureActor->GetActorLocation());
+//                    FTargetCandidate Candidate;
+//                    Candidate.Actor = StructureActor;
+//                    Candidate.Score = StructurePriority * FMath::Clamp(1.f - (Dist / (MaxConsiderRange * 0.5f)), 0.f, 1.f);
+//                    Candidates.Add(Candidate);
+//                }
+//            }
+//        }
+//    }
+//
+//    // --- スコア順でソート ---
+//    Candidates.Sort([](const FTargetCandidate& A, const FTargetCandidate& B)
+//        {
+//            return A.Score > B.Score;
+//        });
+//
+//    // --- デバッグ出力 ---
+//    if (Candidates.Num() > 0)
+//    {
+//        //UE_LOG(LogTemp, Log, TEXT("Target: %s (Score=%.2f)"),
+//            //*Candidates[0].Actor->GetName(), Candidates[0].Score);
+//    }
+//
+//    return Candidates.Num() > 0 ? Candidates[0].Actor : BaseStructure;
+//}
 
 
 // ==================== 攻撃処理 ====================
@@ -458,6 +713,8 @@ float AEnemyCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& Da
         Die();
     }
 
+    CurrentTarget = ChooseTarget_Default();
+
     return ActualDamage;
 }
 
@@ -489,7 +746,7 @@ float AEnemyCharacterBase::GetEffectiveAttackRange(AActor* Target) const
 {
     if (Target->IsA(ADefenseBase::StaticClass()))
     {
-        return 400.f; // 基地には広いレンジ
+        return 600.f; // 基地には広いレンジ
     }
     else if (Target->IsA(ADefenseStructure::StaticClass()))
     {
