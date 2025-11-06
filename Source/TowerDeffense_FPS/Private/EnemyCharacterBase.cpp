@@ -70,7 +70,7 @@ void AEnemyCharacterBase::BeginPlay()
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+       // UE_LOG(LogTemp, Warning, TEXT("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
         // 基地が存在しない場合は距離判定ターゲットを探す
         CurrentTarget = ChooseTarget_Default();
     }
@@ -94,16 +94,16 @@ void AEnemyCharacterBase::BeginPlay()
     //    }
     //}
 
-    // 定期的に停止判定を実施
-    GetWorldTimerManager().SetTimerForNextTick([this]()
-        {
-            GetWorldTimerManager().SetTimer(
-                StopCheckTimerHandle,
-                this,
-                &AEnemyCharacterBase::CheckIfStopped,
-                StopCheckInterval,
-                true);
-        });
+    // //定期的に停止判定を実施
+    //GetWorldTimerManager().SetTimerForNextTick([this]()
+    //    {
+    //        GetWorldTimerManager().SetTimer(
+    //            StopCheckTimerHandle,
+    //            this,
+    //            &AEnemyCharacterBase::CheckIfStopped,
+    //            StopCheckInterval,
+    //            true);
+    //    });
 
     // ターゲット更新タイマーを開始
     GetWorldTimerManager().SetTimer(TargetUpdateTimerHandle, this, &AEnemyCharacterBase::UpdateTarget, TargetUpdateInterval, true);
@@ -141,101 +141,329 @@ void AEnemyCharacterBase::BeginPlay()
 void AEnemyCharacterBase::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+
     if (bIsDead) return;
-
-    //CurrentTarget = ChooseTarget_Default();
-
-    //if (!IsValid(CurrentTarget))
-    //{
-    //    CurrentTarget = ChooseTarget_Default();
-
-    //    // それでも見つからない場合、基地をターゲットにする
-    //    if (!IsValid(CurrentTarget) && IsValid(BaseStructure))
-    //    {
-    //        UE_LOG(LogTemp, Warning, TEXT("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
-    //        CurrentTarget = BaseStructure;
-
-    //        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
-    //        {
-    //            
-    //                AI->SetFocus(BaseStructure);
-    //                AI->MoveToActor(BaseStructure, 5.f);
-    //            
-    //        }
-    //        
-    //    }
-
-    //    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
-    //    {
-    //        if (IsValid(CurrentTarget))
-    //        {
-    //            AI->SetFocus(CurrentTarget);
-    //            AI->MoveToActor(CurrentTarget, 5.f);
-    //        }
-    //    }
-    //}
-   
-       // ターゲットが存在しない or 無効なら基地へ戻す
-    if (!IsValid(CurrentTarget))
-    {
-        if (IsValid(BaseStructure))
-        {
-            CurrentTarget = BaseStructure;
-        }
-        else
-        {
-            CurrentTarget = ChooseTarget_Default();
-        }
-
-        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
-        {
-            if (IsValid(CurrentTarget))
-            {
-                AI->SetFocus(CurrentTarget);
-                AI->MoveToActor(CurrentTarget, 5.f);
-            }
-        }
-    }
-
-    //// --- ターゲットが存在しないか壊れていたら選び直し ---
-    //if (!IsValid(CurrentTarget))
-    //{
-    //    CurrentTarget = ChooseTarget_Default();
-    //    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
-    //    {
-    //        if (IsValid(CurrentTarget))
-    //        {
-    //            AI->SetFocus(CurrentTarget);
-    //            AI->MoveToActor(CurrentTarget, 5.f);
-    //        }
-    //    }
-    //}
-
-    /*if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
-    {
-        AI->SetFocus(CurrentTarget);
-        AI->MoveToActor(CurrentTarget, 5.f);
-    }
-
-    CurrentTarget = ChooseTarget_Default();*/
-
     if (!IsValid(CurrentTarget)) return;
 
-    const float Distance = FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
-    float EffectiveAttackRange = GetEffectiveAttackRange(CurrentTarget);
+    // ==========================
+    // 現在ターゲットへの直線上にバリケードがあるかチェック
+    // ==========================
+    AActor* BlockingStructure = CheckBlockingStructure(CurrentTarget);
+    bool bUseDirectMove = false;
 
+    if (BlockingStructure)
+    {
+        if (BlockingStructure != CurrentTarget)
+        {
+            PreviousTarget = CurrentTarget;
+            CurrentTarget = BlockingStructure;
+
+            // 建物破壊通知を受け取る
+            if (ADefenseStructure* Struct = Cast<ADefenseStructure>(BlockingStructure))
+            {
+                Struct->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
+            }
+        }
+
+        bUseDirectMove = true; // バリケード直進フラグ
+    }
+
+    // ==========================
+    // 攻撃距離チェック
+    // ==========================
+    FVector ToTarget = CurrentTarget->GetActorLocation() - GetActorLocation();
+    float Distance = ToTarget.Size();
+    float EffectiveAttackRange = GetEffectiveAttackRange(CurrentTarget);
+    float DesiredDistance = EffectiveAttackRange + 10.0f; // ターゲットより10f外側を維持
+    FVector Direction = ToTarget.GetSafeNormal();
+
+    // ==========================
+    // 移動処理
+    // ==========================
+    if (Distance > DesiredDistance)
+    {
+        float MoveDistance = FMath::Min(GetCharacterMovement()->MaxWalkSpeed * DeltaTime, Distance - DesiredDistance);
+        FVector NewLocation = GetActorLocation() + Direction * MoveDistance;
+        SetActorLocation(NewLocation, true);
+    }
+
+    SetActorRotation(Direction.Rotation());
+
+    // ==========================
+    // 攻撃
+    // ==========================
     if (Distance <= EffectiveAttackRange)
     {
         PerformAttack();
+        return;
     }
-    else
+
+    // ==========================
+    // AI 移動はバリケード以外のみ
+    // ==========================
+    if (!bUseDirectMove)
     {
         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
         {
-            AI->MoveToActor(CurrentTarget, 5.f);
+            AI->SetFocus(CurrentTarget);
+            AI->MoveToActor(CurrentTarget, GetCharacterMovement()->MaxWalkSpeed);
         }
     }
 }
+
+
+
+
+//void AEnemyCharacterBase::Tick(float DeltaTime)
+//{
+//    Super::Tick(DeltaTime);
+//    if (bIsDead) return;
+//
+//    // ==========================
+//    // 現在ターゲットが無効なら、まずターゲット選定
+//    // ==========================
+//    if (!IsValid(CurrentTarget))
+//    {
+//        UpdateTarget(); // プレイヤー・味方・基地を優先で選ぶ関数
+//    }
+//
+//    if (!IsValid(CurrentTarget)) return;
+//
+//    // ==========================
+//    // 現在ターゲットへの直線上にバリケードがあるかチェック
+//    // ==========================
+//    AActor* BlockingStructure = CheckBlockingStructure(CurrentTarget);
+//    if (BlockingStructure && BlockingStructure != CurrentTarget)
+//    {
+//        // まだバリケードを狙っていなければ切り替え
+//        PreviousTarget = CurrentTarget;
+//        CurrentTarget = BlockingStructure;
+//
+//        if (ADefenseStructure* Struct = Cast<ADefenseStructure>(BlockingStructure))
+//        {
+//            Struct->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
+//        }
+//
+//        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+//        {
+//            AI->SetFocus(CurrentTarget);
+//           // AI->MoveToActor(CurrentTarget, 5.f);
+//        }
+//    }
+//
+//    // ==========================
+//    // 攻撃距離チェック
+//    // ==========================
+//    const float Distance = FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
+//    float EffectiveAttackRange = GetEffectiveAttackRange(CurrentTarget);
+//
+//    if (Distance <= EffectiveAttackRange)
+//    {
+//        PerformAttack();
+//        return;
+//    }
+//
+//    // ==========================
+//    // 移動
+//    // ==========================
+//        if (/*CurrentTarget == BaseStructure*/law_inteli_flag==true)
+//    {
+//       // UE_LOG(LogTemp, Warning, TEXT("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+//        FVector Direction = (CurrentTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+//        FVector NewLocation = GetActorLocation() + Direction * GetCharacterMovement()->MaxWalkSpeed * DeltaTime;
+//        SetActorLocation(NewLocation, true);
+//       // SetActorRotation(Direction.Rotation());
+//        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+//        {
+//            AI->SetFocus(CurrentTarget);
+//           
+//        }
+//    }
+//    else
+//    {
+//        //UE_LOG(LogTemp, Warning, TEXT("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+//
+//        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+//        {
+//            AI->SetFocus(CurrentTarget);
+//            AI->MoveToActor(CurrentTarget, GetCharacterMovement()->MaxWalkSpeed);
+//        }
+//    }
+//}
+
+
+//void AEnemyCharacterBase::Tick(float DeltaTime)
+//{
+//    Super::Tick(DeltaTime);
+//    if (bIsDead) return;
+//    if (!IsValid(CurrentTarget)) return;
+//
+//    // ==========================
+//    // 現在ターゲットへの直線上にバリケードがあるかチェック
+//    // ==========================
+//    AActor* BlockingStructure = CheckBlockingStructure(CurrentTarget);
+//    if (BlockingStructure)
+//    {
+//        // すでにバリケードを狙っていない場合のみターゲット切り替え
+//        if (BlockingStructure != CurrentTarget)
+//        {
+//            PreviousTarget = CurrentTarget;
+//            //CurrentTarget = BlockingStructure;
+//
+//            // 建物破壊通知を受け取って復帰
+//            if (ADefenseStructure* Struct = Cast<ADefenseStructure>(BlockingStructure))
+//            {
+//                Struct->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
+//            }
+//
+//            if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+//            {
+//                AI->SetFocus(CurrentTarget);
+//                AI->MoveToActor(CurrentTarget, 5.f);
+//            }
+//        }
+//    }
+//
+//    // ==========================
+//    // 攻撃距離チェック
+//    // ==========================
+//    const float Distance = FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
+//    float EffectiveAttackRange = GetEffectiveAttackRange(CurrentTarget);
+//
+//    if (Distance <= EffectiveAttackRange)
+//    {
+//        PerformAttack();
+//        return;
+//    }
+//
+//    // ==========================
+//    // 基地の場合は直進、それ以外はAI移動
+//    // ==========================
+//    if (/*CurrentTarget == BaseStructure*/law_inteli_flag==true)
+//    {
+//       // UE_LOG(LogTemp, Warning, TEXT("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+//        FVector Direction = (BaseStructure->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+//        FVector NewLocation = GetActorLocation() + Direction * GetCharacterMovement()->MaxWalkSpeed * DeltaTime;
+//        SetActorLocation(NewLocation, true);
+//       // SetActorRotation(Direction.Rotation());
+//        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+//        {
+//            AI->SetFocus(CurrentTarget);
+//           
+//        }
+//    }
+//    else
+//    {
+//        //UE_LOG(LogTemp, Warning, TEXT("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+//
+//        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+//        {
+//            AI->SetFocus(CurrentTarget);
+//            AI->MoveToActor(CurrentTarget, GetCharacterMovement()->MaxWalkSpeed);
+//        }
+//    }
+//}
+//
+
+//void AEnemyCharacterBase::Tick(float DeltaTime)
+//{
+//    Super::Tick(DeltaTime);
+//    if (bIsDead) return;
+//
+//    //CurrentTarget = ChooseTarget_Default();
+//
+//    //if (!IsValid(CurrentTarget))
+//    //{
+//    //    CurrentTarget = ChooseTarget_Default();
+//
+//    //    // それでも見つからない場合、基地をターゲットにする
+//    //    if (!IsValid(CurrentTarget) && IsValid(BaseStructure))
+//    //    {
+//    //        UE_LOG(LogTemp, Warning, TEXT("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+//    //        CurrentTarget = BaseStructure;
+//
+//    //        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+//    //        {
+//    //            
+//    //                AI->SetFocus(BaseStructure);
+//    //                AI->MoveToActor(BaseStructure, 5.f);
+//    //            
+//    //        }
+//    //        
+//    //    }
+//
+//    //    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+//    //    {
+//    //        if (IsValid(CurrentTarget))
+//    //        {
+//    //            AI->SetFocus(CurrentTarget);
+//    //            AI->MoveToActor(CurrentTarget, 5.f);
+//    //        }
+//    //    }
+//    //}
+//   
+//       // ターゲットが存在しない or 無効なら基地へ戻す
+//    if (!IsValid(CurrentTarget))
+//    {
+//        if (IsValid(BaseStructure))
+//        {
+//            CurrentTarget = BaseStructure;
+//        }
+//        else
+//        {
+//            CurrentTarget = ChooseTarget_Default();
+//        }
+//
+//        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+//        {
+//            if (IsValid(CurrentTarget))
+//            {
+//                AI->SetFocus(CurrentTarget);
+//                AI->MoveToActor(CurrentTarget, 5.f);
+//            }
+//        }
+//    }
+//
+//    //// --- ターゲットが存在しないか壊れていたら選び直し ---
+//    //if (!IsValid(CurrentTarget))
+//    //{
+//    //    CurrentTarget = ChooseTarget_Default();
+//    //    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+//    //    {
+//    //        if (IsValid(CurrentTarget))
+//    //        {
+//    //            AI->SetFocus(CurrentTarget);
+//    //            AI->MoveToActor(CurrentTarget, 5.f);
+//    //        }
+//    //    }
+//    //}
+//
+//    /*if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+//    {
+//        AI->SetFocus(CurrentTarget);
+//        AI->MoveToActor(CurrentTarget, 5.f);
+//    }
+//
+//    CurrentTarget = ChooseTarget_Default();*/
+//
+//    if (!IsValid(CurrentTarget)) return;
+//
+//    const float Distance = FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
+//    float EffectiveAttackRange = GetEffectiveAttackRange(CurrentTarget);
+//
+//    if (Distance <= EffectiveAttackRange)
+//    {
+//        PerformAttack();
+//    }
+//    else
+//    {
+//        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+//        {
+//            AI->SetFocus(CurrentTarget);
+//            AI->MoveToActor(CurrentTarget, 5.f);
+//        }
+//    }
+//}
 
 //void AEnemyCharacterBase::Tick(float DeltaTime)
 //{
@@ -252,38 +480,148 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
 //    }
 //}
 
+AActor* AEnemyCharacterBase::CheckBlockingStructure(AActor* MainTarget)
+{
+    if (!IsValid(MainTarget)) return nullptr;
+
+    UCapsuleComponent* Capsule = GetCapsuleComponent();
+    float HalfHeight = Capsule ? Capsule->GetScaledCapsuleHalfHeight() : 0.f;
+
+    FVector Start = GetActorLocation() - FVector(0, 0, HalfHeight - 10.f);
+    FVector End = MainTarget->GetActorLocation() + FVector(0, 0, 50.f);
+
+    FHitResult Hit;
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    bool bHit = GetWorld()->LineTraceSingleByChannel(
+        Hit,
+        Start,
+        End,
+        ECC_Visibility,
+        Params
+    );
+
+    DrawDebugLine(GetWorld(), Start, End, FColor::Cyan, false, 0.1f, 0, 1.5f);
+
+    if (bHit)
+    {
+        if (ADefenseStructure* HitStructure = Cast<ADefenseStructure>(Hit.GetActor()))
+        {
+            // 目標より手前のバリケードのみ有効
+            float DistToHit = FVector::Dist(GetActorLocation(), HitStructure->GetActorLocation());
+            float DistToTarget = FVector::Dist(GetActorLocation(), MainTarget->GetActorLocation());
+
+            if (DistToHit < DistToTarget)
+                return HitStructure;
+        }
+    }
+
+    return nullptr;
+}
+
 
 void AEnemyCharacterBase::UpdateTarget()
 {
     if (bIsDead) return;
 
-    // 現在ターゲットが生きていない場合、または再評価
-    if (!IsValid(CurrentTarget) || CurrentTarget->IsPendingKillPending())
+    // ---  ターゲットの基本選定 ---
+    AActor* NewTarget = ChooseTarget_Default(); // バリケード以外を含む通常のロジック
+
+    // 無効ターゲットなら基地へフォールバック
+    if (!IsValid(NewTarget))
     {
-        CurrentTarget = ChooseTarget_Default();
-        return;
+        if (IsValid(BaseStructure))
+            NewTarget = BaseStructure;
+        else
+            return;
     }
 
-    // 現在のターゲットが基地や建物の場合、近くに優先度の高いターゲット（プレイヤーや味方）がいたら切り替え
-    if (CurrentTarget->IsA(ADefenseBase::StaticClass()) || CurrentTarget->IsA(ADefenseStructure::StaticClass()))
+    // ---  新ターゲットがバリケードでない場合のみ遮蔽物をチェック ---
+    AActor* BlockingStructure = nullptr;
+    if (!NewTarget->IsA(ADefenseStructure::StaticClass()))
     {
-        AActor* NewTarget = ChooseTarget_Default();
-        if (NewTarget && NewTarget != CurrentTarget)
+        BlockingStructure = CheckBlockingStructure(NewTarget);
+
+        if (IsValid(BlockingStructure))
         {
-            CurrentTarget = NewTarget;
+            PreviousTarget = NewTarget;
+            NewTarget = BlockingStructure;
+
+            // 破壊通知
+            BlockingStructure->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
         }
     }
 
-    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+    // ---  ターゲット変更が必要な場合のみ更新 ---
+    if (NewTarget != CurrentTarget)
     {
-        if (IsValid(CurrentTarget))
+        CurrentTarget = NewTarget;
+
+        //law_inteli_flag = false;
+
+        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
         {
-            AI->SetFocus(CurrentTarget);
-            AI->MoveToActor(CurrentTarget, 5.f);
+            AI->ClearFocus(EAIFocusPriority::Gameplay);
+            AI->StopMovement();
+
+            if (IsValid(CurrentTarget)&&!law_inteli_flag)
+            {
+                AI->SetFocus(CurrentTarget);
+                AI->MoveToActor(CurrentTarget, 5.f);
+            }
         }
     }
-
 }
+
+
+
+//void AEnemyCharacterBase::UpdateTarget()
+//{
+//    if (bIsDead) return;
+//
+//    // ターゲット無効なら再設定
+//    if (!IsValid(CurrentTarget))
+//    {
+//        CurrentTarget = ChooseTarget_Default();
+//        return;
+//    }
+//
+//    if (GetWorld()->GetTimeSeconds() - LastBarrierCheckTime < BarrierCheckCooldown) return;
+//    LastBarrierCheckTime = GetWorld()->GetTimeSeconds();
+//
+//    // --- 現ターゲットがバリケードではない場合のみチェック ---
+//    if (!CurrentTarget->IsA(ADefenseStructure::StaticClass()))
+//    {
+//        // バリケードが視線上にあるかチェック
+//        if (AActor* BlockStructure = CheckBlockingStructure(CurrentTarget))
+//        {
+//            float DistToBlock = FVector::Dist(GetActorLocation(), BlockStructure->GetActorLocation());
+//            float DistToTarget = FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
+//
+//            // ターゲットより手前にある && 近すぎない場合のみターゲット変更
+//            if (DistToBlock < DistToTarget/* && DistToBlock < 2000.f*/)
+//            {
+//                PreviousTarget = CurrentTarget;
+//                CurrentTarget = BlockStructure;
+//
+//                // バリケードが破壊されたら戻る
+//                BlockStructure->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
+//            }
+//        }
+//    }
+//
+//    // --- AIの更新 ---
+//   /* if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+//    {
+//        if (IsValid(CurrentTarget))
+//        {
+//            AI->SetFocus(CurrentTarget);
+//            AI->MoveToActor(CurrentTarget, 5.f);
+//        }
+//    }*/
+//}
+
 
 
 //void AEnemyCharacterBase::Tick(float DeltaTime)
@@ -328,8 +666,8 @@ void AEnemyCharacterBase::OnEnemyBeginOverlap(AActor* OverlappedActor, AActor* O
     {
         if (CurrentTarget == HitStructure) return;
 
-        /*UE_LOG(LogTemp, Warning, TEXT("%s collided with structure %s -> targeting it!"),
-            *GetName(), *HitStructure->GetName());*/
+        UE_LOG(LogTemp, Warning, TEXT("%s collided with structure %s -> targeting it!"),
+            *GetName(), *HitStructure->GetName());
 
         PreviousTarget = CurrentTarget;
         CurrentTarget = HitStructure;
@@ -337,11 +675,14 @@ void AEnemyCharacterBase::OnEnemyBeginOverlap(AActor* OverlappedActor, AActor* O
         // 建物が破壊されたら通知を受け取る
         HitStructure->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
 
-        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+        /*if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
         {
-            AI->SetFocus(HitStructure);
-            AI->MoveToActor(HitStructure, 5.f);
-        }
+            if (IsValid(CurrentTarget) && CurrentTarget != BaseStructure)
+            {
+                AI->SetFocus(CurrentTarget);
+                AI->MoveToActor(CurrentTarget, 5.f);
+            }
+        }*/
         return;
     }
 
@@ -371,28 +712,28 @@ void AEnemyCharacterBase::OnTargetDestroyed(AActor* DestroyedActor)
 {
     if (bIsDead) return;
 
-    UE_LOG(LogTemp, Warning, TEXT("%s detected target destroyed: %s"),
-        *GetName(), *DestroyedActor->GetName());
-
     if (CurrentTarget == DestroyedActor)
     {
         CurrentTarget = nullptr;
 
-        // 元ターゲットに戻す or 新規選定
+        // 元ターゲット（プレイヤー・基地など）に戻る
         if (IsValid(PreviousTarget))
         {
             CurrentTarget = PreviousTarget;
+            PreviousTarget = nullptr;
         }
         else
         {
             CurrentTarget = ChooseTarget_Default();
         }
 
-        PreviousTarget = nullptr;
-
+        // --- フォーカスをリセット ---
         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
         {
-            if (CurrentTarget)
+            AI->ClearFocus(EAIFocusPriority::Gameplay);
+            AI->StopMovement();
+
+            if (IsValid(CurrentTarget)&&!law_inteli_flag)
             {
                 AI->SetFocus(CurrentTarget);
                 AI->MoveToActor(CurrentTarget, 5.f);
@@ -400,6 +741,7 @@ void AEnemyCharacterBase::OnTargetDestroyed(AActor* DestroyedActor)
         }
     }
 }
+
 
 // ==================== ターゲット選定（Blueprint拡張対応） ====================
 
@@ -412,7 +754,7 @@ AActor* AEnemyCharacterBase::ChooseTarget_Default()
 {
     // 停止中なら認識範囲を2倍に
     const float MaxConsiderRangeBase = bIsRecognitionExtended ? ExtendedConsiderRange : DefaultConsiderRange;
-    const float MaxConsiderRange = 4000.0f;
+    const float MaxConsiderRange = 8000.0f;
 
     const float BlockCheckAngle = 45.f;
 
@@ -500,8 +842,18 @@ AActor* AEnemyCharacterBase::ChooseTarget_Default()
                     Candidate.Actor = StructureActor;
                     Candidate.Score = StructurePriority * FMath::Clamp(1.f - (Dist / (MaxConsiderRange * 0.5f)), 0.f, 1.f);
                     Candidates.Add(Candidate);
+
+                    //UE_LOG(LogTemp, Warning, TEXT("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"));
+                    
                 }
+                
+                //law_inteli_flag = true;
+
             }
+           /* else
+            {
+                law_inteli_flag = false;
+            }*/
         }
     }
 
@@ -538,7 +890,7 @@ void AEnemyCharacterBase::CheckIfStopped()
     if (bIsDead) return;
 
     const float Speed = GetVelocity().Size();
-    if (CurrentTarget!=BaseStructure) {
+    if (CurrentTarget==BaseStructure) {
 
         if (Speed < StopThresholdSpeed)
         {
@@ -713,7 +1065,7 @@ float AEnemyCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& Da
         Die();
     }
 
-    CurrentTarget = ChooseTarget_Default();
+    UpdateTarget();
 
     return ActualDamage;
 }
@@ -746,7 +1098,7 @@ float AEnemyCharacterBase::GetEffectiveAttackRange(AActor* Target) const
 {
     if (Target->IsA(ADefenseBase::StaticClass()))
     {
-        return 600.f; // 基地には広いレンジ
+        return 400.f; // 基地には広いレンジ
     }
     else if (Target->IsA(ADefenseStructure::StaticClass()))
     {

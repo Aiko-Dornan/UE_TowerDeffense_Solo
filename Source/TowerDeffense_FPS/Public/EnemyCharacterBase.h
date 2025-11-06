@@ -34,7 +34,7 @@ protected:
     virtual void BeginPlay() override;
 
     float DefaultConsiderRange = 4000.f;
-    float ExtendedConsiderRange = 12000.f; // 停止中の探索距離
+    float ExtendedConsiderRange = 8000.f; // 停止中の探索距離
     float StopCheckInterval = 1.0f;        // 停止チェック間隔
     float StopThresholdSpeed = 10.f;       // 速度がこの以下なら停止中
     float StopDurationToExtend = 2.0f;     // 何秒停止したら距離を広げるか
@@ -73,6 +73,8 @@ public:
 
     float GetEffectiveAttackRange(AActor* Target) const;
 
+    AActor* CheckBlockingStructure(AActor* MainTarget);
+
     //void UpdateTarget();
 
         // --- ターゲット優先度を変数化 ---
@@ -106,7 +108,13 @@ private:
     float MaxHealth;
     float CurrentHealth;
 
-    
+    float LastBarrierCheckTime = 0.f;
+    float BarrierCheckCooldown = 1.0f; // 1秒に1回だけチェック
+
+
+    bool law_inteli_flag = true;
+
+
 
     FTimerHandle AttackCooldownTimerHandle;
 
@@ -119,7 +127,7 @@ private:
     // AEnemyCharacterBase.h
 private:
     FTimerHandle TargetUpdateTimerHandle;
-    float TargetUpdateInterval = 3.0f; // 0.5秒ごとにターゲット更新
+    float TargetUpdateInterval = 1.5f; // 0.5秒ごとにターゲット更新
 
     FTimerHandle StopCheckTimerHandle;
 
