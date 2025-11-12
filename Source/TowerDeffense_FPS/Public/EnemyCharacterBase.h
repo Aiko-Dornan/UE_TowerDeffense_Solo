@@ -71,9 +71,14 @@ public:
 
     void Die();
 
+    void StartMovingToTarget();
+
     float GetEffectiveAttackRange(AActor* Target) const;
 
     AActor* CheckBlockingStructure(AActor* MainTarget);
+
+    FORCEINLINE AActor* GetCurrentTarget() const { return CurrentTarget; }
+    FORCEINLINE void SetCurrentTarget(AActor* NewTarget) { CurrentTarget = NewTarget; }
 
     //void UpdateTarget();
 
@@ -114,7 +119,7 @@ private:
 
     bool law_inteli_flag = true;
 
-
+    bool bUseDirectMove = false;
 
     FTimerHandle AttackCooldownTimerHandle;
 

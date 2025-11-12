@@ -1,3 +1,97 @@
+// EnemyAIController.cpp
+
+//#include "EnemyAIController.h"
+//#include "Kismet/GameplayStatics.h"
+//#include "EnemyCharacterBase.h"
+//#include "DefenseBase.h"
+//
+//AEnemyAIController::AEnemyAIController()
+//{
+//    PrimaryActorTick.bCanEverTick = true;
+//}
+//
+//void AEnemyAIController::BeginPlay()
+//{
+//    Super::BeginPlay();
+//
+//    PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+//    UE_LOG(LogTemp, Warning, TEXT("EnemyAIController BeginPlay"));
+//}
+//
+//void AEnemyAIController::OnPossess(APawn* InPawn)
+//{
+//    Super::OnPossess(InPawn);
+//
+//    if (AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(InPawn))
+//    {
+//        CurrentEnemy = Enemy;
+//
+//        // 初期ターゲットを設定
+//        CurrentTarget = CurrentEnemy->GetCurrentTarget();
+//        if (!IsValid(CurrentTarget))
+//        {
+//            CurrentTarget = CurrentEnemy->ChooseTarget_Default();
+//            if (IsValid(CurrentTarget))
+//            {
+//                CurrentEnemy->SetCurrentTarget(CurrentTarget);
+//            }
+//        }
+//
+//        if (IsValid(CurrentTarget))
+//        {
+//            MoveToActor(CurrentTarget, CurrentEnemy->GetEffectiveAttackRange(CurrentTarget));
+//            SetFocus(CurrentTarget);
+//            UE_LOG(LogTemp, Warning, TEXT("EnemyAIController initial target: %s"), *CurrentTarget->GetName());
+//        }
+//    }
+//}
+//
+//void AEnemyAIController::Tick(float DeltaTime)
+//{
+//    Super::Tick(DeltaTime);
+//
+//    UpdateTargetAndMove();
+//}
+//
+//void AEnemyAIController::UpdateTargetAndMove()
+//{
+//    if (!IsValid(CurrentEnemy))
+//        return;
+//
+//    // 現在のターゲットが破壊されている場合、再選択
+//    if (!IsValid(CurrentTarget))
+//    {
+//        CurrentTarget = CurrentEnemy->ChooseTarget_Default();
+//        CurrentEnemy->SetCurrentTarget(CurrentTarget);
+//
+//        if (IsValid(CurrentTarget))
+//        {
+//            MoveToActor(CurrentTarget, CurrentEnemy->GetEffectiveAttackRange(CurrentTarget)-200.0f);
+//            SetFocus(CurrentTarget);
+//            UE_LOG(LogTemp, Warning, TEXT("EnemyAIController new target: %s"), *CurrentTarget->GetName());
+//        }
+//        return;
+//    }
+//
+//    // ターゲットは有効、移動先やフォーカスを更新（必要に応じて）
+//    float Distance = CurrentEnemy->GetDistanceTo(CurrentTarget);
+//    float AttackRange = CurrentEnemy->GetEffectiveAttackRange(CurrentTarget);
+//
+//    if (Distance > AttackRange)
+//    {
+//        MoveToActor(CurrentTarget, AttackRange-200.0f);
+//    }
+//
+//    
+//    if (!CurrentTarget)
+//    {
+//        UE_LOG(LogTemp, Warning, TEXT("%s: ChooseTarget_Default returned nullptr"), *GetName());
+//    }
+//}
+
+
+
+
 #include "EnemyAIController.h"
 #include "Kismet/GameplayStatics.h"
 #include "EnemyCharacterBase.h"
@@ -23,17 +117,46 @@ void AEnemyAIController::BeginPlay()
 
 }
 
+//void AEnemyAIController::OnPossess(APawn* InPawn)
+//{
+//    Super::OnPossess(InPawn);
+//
+//    UE_LOG(LogTemp, Warning, TEXT("EnemyAIController possessed: %s"), *InPawn->GetName());
+//
+//    if (PlayerPawn && InPawn)
+//    {
+//        MoveToActor(PlayerPawn, 0.0f); // 到達半径100
+//    }
+//}
+
 void AEnemyAIController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
 
     UE_LOG(LogTemp, Warning, TEXT("EnemyAIController possessed: %s"), *InPawn->GetName());
 
-    if (PlayerPawn && InPawn)
+    if (AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(InPawn))
     {
-        MoveToActor(PlayerPawn, 0.0f); // 到達半径100
+        if (AActor* Target = Enemy->GetCurrentTarget()) // ← Getter を追加
+        {
+            MoveToActor(Target, Enemy->GetEffectiveAttackRange(Target)/*-200.0f*/);
+            SetFocus(Target);
+        }
+        else
+        {
+            // 念のためここでもターゲット検索
+            AActor* NewTarget = Enemy->ChooseTarget_Default();
+            if (IsValid(NewTarget))
+            {
+                Enemy->SetCurrentTarget(NewTarget);
+                MoveToActor(NewTarget, Enemy->GetEffectiveAttackRange(NewTarget)/*-200.0f*/);
+                SetFocus(NewTarget);
+            }
+        }
     }
 }
+
+
 
 void AEnemyAIController::Tick(float DeltaSeconds)
 {
