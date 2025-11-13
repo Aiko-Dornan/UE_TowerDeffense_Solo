@@ -117,6 +117,6 @@ private:
     // ウェーブ中かどうか
     bool bWaveInProgress = false;
 
-
+    bool all_spawn = false;
     
 };
