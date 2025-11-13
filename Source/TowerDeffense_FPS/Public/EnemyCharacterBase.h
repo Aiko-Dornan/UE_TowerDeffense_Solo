@@ -72,6 +72,7 @@ public:
     void Die();
 
     void StartMovingToTarget();
+    void TryStartAI();
 
     float GetEffectiveAttackRange(AActor* Target) const;
 
@@ -95,10 +96,17 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
     float StructurePriority = 60.f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|AttackRange")
+    float BaseAttackRange = 600.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|AttackRange")
+    float PlayerAllyAttackRange = 200.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|AttackRange")
+    float BarricadeAttackRange = 200.0f;
+   
 private:
+   
     UPROPERTY()
     AActor* CurrentTarget = nullptr;
-
     UPROPERTY()
     AActor* PreviousTarget = nullptr; // 建物破壊後に戻る用
 
@@ -119,6 +127,8 @@ private:
 
     bool law_inteli_flag = true;
 
+    bool bHasLoggedStuck = false;
+
     bool bUseDirectMove = false;
 
     FTimerHandle AttackCooldownTimerHandle;
@@ -132,9 +142,11 @@ private:
     // AEnemyCharacterBase.h
 private:
     FTimerHandle TargetUpdateTimerHandle;
-    float TargetUpdateInterval = 1.5f; // 0.5秒ごとにターゲット更新
+    float TargetUpdateInterval = 0.5f; // 0.5秒ごとにターゲット更新
 
     FTimerHandle StopCheckTimerHandle;
+
+    FTimerHandle TryStartTimerHandle;
 
 };
 
