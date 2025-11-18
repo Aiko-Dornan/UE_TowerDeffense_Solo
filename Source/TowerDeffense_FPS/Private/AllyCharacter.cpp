@@ -224,7 +224,6 @@ float AAllyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 void AAllyCharacter::Die()
 {
     UE_LOG(LogTemp, Warning, TEXT("Ally %s died!"), *GetName());
-    
     Destroy();
 }
 

@@ -92,7 +92,7 @@ void AEnemyCharacterBase::BeginPlay()
         TryStartTimerHandle,
         this,
         &AEnemyCharacterBase::TryStartAI,
-        0.1f,   // 0.2秒後に実行（AI Possessを待つ）
+        1.5f,   // 0.2秒後に実行（AI Possessを待つ）
         false
     );
 
@@ -114,13 +114,13 @@ void AEnemyCharacterBase::TryStartAI()
 {
     if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
     {
-        //UE_LOG(LogTemp, Warning, TEXT("%s: AI initialized successfully."), *GetName());
-        ChooseTargetBP();               // ターゲット選定
+        UE_LOG(LogTemp, Warning, TEXT("%s: AI initialized successfully."), *GetName());
+        UpdateTarget();               // ターゲット選定
         StartMovingToTarget();        // 移動開始
     }
     else
     {
-       //UE_LOG(LogTemp, Warning, TEXT("%s: AI not ready, retrying..."), *GetName());
+        UE_LOG(LogTemp, Warning, TEXT("%s: AI not ready, retrying..."), *GetName());
         // まだAIがついていなければ再試行
         GetWorldTimerManager().SetTimerForNextTick(this, &AEnemyCharacterBase::TryStartAI);
     }
@@ -138,18 +138,18 @@ void AEnemyCharacterBase::StartMovingToTarget()
     {
         if (IsValid(CurrentTarget))
         {
-           // UE_LOG(LogTemp, Warning, TEXT("%s: StartMovingToTarget -> %s"), *GetName(), *CurrentTarget->GetName());
+            UE_LOG(LogTemp, Warning, TEXT("%s: StartMovingToTarget -> %s"), *GetName(), *CurrentTarget->GetName());
             AI->SetFocus(CurrentTarget);
             AI->MoveToActor(CurrentTarget, GetEffectiveAttackRange(CurrentTarget)-200.0f);
         }
         else
         {
-            //UE_LOG(LogTemp, Warning, TEXT("%s: StartMovingToTarget failed (no target)"), *GetName());
+            UE_LOG(LogTemp, Warning, TEXT("%s: StartMovingToTarget failed (no target)"), *GetName());
         }
     }
     else
     {
-        //UE_LOG(LogTemp, Warning, TEXT("%s: StartMovingToTarget failed (no controller yet)"), *GetName());
+        UE_LOG(LogTemp, Warning, TEXT("%s: StartMovingToTarget failed (no controller yet)"), *GetName());
         // Controllerがまだなければ再試行
         GetWorldTimerManager().SetTimerForNextTick(this, &AEnemyCharacterBase::StartMovingToTarget);
     }
@@ -167,21 +167,7 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     if (!IsValid(CurrentTarget)) {
         UE_LOG(LogTemp, Warning, TEXT("{{{%s}}}No Target!!!!!!!!!!!!11!"), *GetName());
 
-        CurrentTarget = BaseStructure;
-
-        bUseDirectMove = true;
-
-        FVector Dir = (CurrentTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-        AddMovementInput(Dir, 5.0f); // これならNavMeshや物理と自然に共存できる
-        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
-        {
-           // float EAttackRange = GetEffectiveAttackRange(CurrentTarget);
-            
-            AI->SetFocus(CurrentTarget);
-           // AI->MoveToActor(CurrentTarget, EAttackRange - 200.0f);
-           // bUseDirectMove = false;
-        }
-      /* return;*/ }
+        return; }
 
     
 
@@ -191,27 +177,21 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
         // 移動速度チェック
         if (GetVelocity().Size() < 1.0f) // 動いていなければ
         {
-            //CurrentTarget = BaseStructure;
-
-            FVector Dir = (CurrentTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-            AddMovementInput(Dir, 5.0f); // これならNavMeshや物理と自然に共存できる
-
-            //bHasLoggedStuck = true; // 一度だけログ
+            bHasLoggedStuck = true; // 一度だけログ
             AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController());
             if (AICon)
             {
-                AICon->SetFocus(CurrentTarget);
-              /* UE_LOG(LogTemp, Error, TEXT("[STUCK AI] %s has Target: %s but is not moving! AIController: %s (Class: %s)"),
+                UE_LOG(LogTemp, Error, TEXT("[STUCK AI] %s has Target: %s but is not moving! AIController: %s (Class: %s)"),
                     *GetName(),
                     *CurrentTarget->GetName(),
                     *AICon->GetName(),
-                    *AICon->GetClass()->GetName());*/
+                    *AICon->GetClass()->GetName());
             }
             else
             {
-               /* UE_LOG(LogTemp, Error, TEXT("[STUCK AI] %s has Target: %s but has NO AIController!"),
+                UE_LOG(LogTemp, Error, TEXT("[STUCK AI] %s has Target: %s but has NO AIController!"),
                     *GetName(),
-                    *CurrentTarget->GetName());*/
+                    *CurrentTarget->GetName());
             }
         }
     }
@@ -263,8 +243,7 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
             if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
             {
                 AI->StopMovement();
-                AI->SetFocus(CurrentTarget);
-                //AI->ClearFocus(EAIFocusPriority::Gameplay);
+                AI->ClearFocus(EAIFocusPriority::Gameplay);
             }
 
             bUseDirectMove = true;
@@ -285,14 +264,14 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
             AI->MoveToActor(CurrentTarget, EffectiveAttackRange-200.0f);
 
             // MoveToActor は距離が一定以上離れた時のみ再発行
-            /* float LastMoveCommandTime = 0.0f;
+             float LastMoveCommandTime = 0.0f;
             const float MoveCommandCooldown = 0.5f;
 
             if (GetWorld()->GetTimeSeconds() - LastMoveCommandTime > MoveCommandCooldown)
             {
                
                 LastMoveCommandTime = GetWorld()->GetTimeSeconds();
-            }*/
+            }
         }
     }
 
@@ -429,17 +408,17 @@ void AEnemyCharacterBase::UpdateTarget()
 
         //law_inteli_flag = false;
 
-        //if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
-        //{
-        //    AI->ClearFocus(EAIFocusPriority::Gameplay);
-        //    AI->StopMovement();
+        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+        {
+            AI->ClearFocus(EAIFocusPriority::Gameplay);
+            AI->StopMovement();
 
-        //    if (IsValid(CurrentTarget)/*&&!law_inteli_flag*/)
-        //    {
-        //        AI->SetFocus(CurrentTarget);
-        //        AI->MoveToActor(CurrentTarget, GetEffectiveAttackRange(CurrentTarget) - 200.0f);
-        //    }
-        //}
+            if (IsValid(CurrentTarget)/*&&!law_inteli_flag*/)
+            {
+                AI->SetFocus(CurrentTarget);
+                AI->MoveToActor(CurrentTarget, GetEffectiveAttackRange(CurrentTarget) - 200.0f);
+            }
+        }
     }
 }
 
@@ -727,7 +706,6 @@ void AEnemyCharacterBase::PerformAttack()
     UGameplayStatics::ApplyDamage(CurrentTarget, AttackDamage, GetController(), this, nullptr);
 
    
-    UpdateTarget();
 
     GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
         &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
