@@ -132,7 +132,7 @@ private:
     // AEnemyCharacterBase.h
 private:
     FTimerHandle TargetUpdateTimerHandle;
-    float TargetUpdateInterval = 0.5f; // 0.5秒ごとにターゲット更新
+    float TargetUpdateInterval = 1.5f; // 0.5秒ごとにターゲット更新
 
     FTimerHandle StopCheckTimerHandle;
 
