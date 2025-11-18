@@ -1,0 +1,727 @@
+From bcde28654c9318c93ccd85f698187cea13d0038a Mon Sep 17 00:00:00 2001
+From: "MSI\\GA2A_Aiko" <h1202415010@hiratagakuen.onmicrosoft.com>
+Date: Thu, 13 Nov 2025 12:31:14 +0900
+Subject: [PATCH] =?UTF-8?q?=E4=B8=80=E9=83=A8=E3=81=AE=E6=95=B5=E3=81=A0?=
+ =?UTF-8?q?=E3=81=91=E5=8B=95=E3=81=8B=E3=81=AA=E3=81=84=E3=80=82?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ Content/BaseMap.umap                          |   2 +-
+ Content/BluePrint/BP_EnemySpawnerWave.uasset  |   2 +-
+ .../Private/EnemyAIController.cpp             |  66 +++--
+ .../Private/EnemyCharacterBase.cpp            | 131 +++++++--
+ .../Private/EnemySpawnerWave.cpp              | 259 +++++++++++++++++-
+ .../Public/EnemyAIController.h                |   2 +-
+ .../Public/EnemyCharacterBase.h               |  16 +-
+ .../Public/EnemySpawnerWave.h                 |   2 +-
+ 8 files changed, 424 insertions(+), 56 deletions(-)
+
+diff --git a/Content/BaseMap.umap b/Content/BaseMap.umap
+index f062f91..ce2e2fe 100644
+--- a/Content/BaseMap.umap
++++ b/Content/BaseMap.umap
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:73a0ce0f57061409f93920ac9c783fd1bcb090cc62f1dceca0572db4e6c67587
++oid sha256:f7f15565d27195d27e3f5778eaa78f560897afaf76325d8fb65a621e55202b00
+ size 3866197
+diff --git a/Content/BluePrint/BP_EnemySpawnerWave.uasset b/Content/BluePrint/BP_EnemySpawnerWave.uasset
+index 497b443..8b85e61 100644
+--- a/Content/BluePrint/BP_EnemySpawnerWave.uasset
++++ b/Content/BluePrint/BP_EnemySpawnerWave.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:93793e48d2999ab9e22a04703a32a9e725e98902fe5666e668907bbea336582e
++oid sha256:c4c85c76b21d9110b717d2b026212767ccab5540aa8c19e5ea6a1c84347492e0
+ size 24148
+diff --git a/Source/TowerDeffense_FPS/Private/EnemyAIController.cpp b/Source/TowerDeffense_FPS/Private/EnemyAIController.cpp
+index be30e70..4a2b9ae 100644
+--- a/Source/TowerDeffense_FPS/Private/EnemyAIController.cpp
++++ b/Source/TowerDeffense_FPS/Private/EnemyAIController.cpp
+@@ -137,41 +137,47 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
+ 
+     if (AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(InPawn))
+     {
+-        if (AActor* Target = Enemy->GetCurrentTarget()) // ← Getter を追加
+-        {
+-            MoveToActor(Target, Enemy->GetEffectiveAttackRange(Target)/*-200.0f*/);
+-            SetFocus(Target);
+-        }
+-        else
+-        {
+-            // 念のためここでもターゲット検索
+-            AActor* NewTarget = Enemy->ChooseTarget_Default();
+-            if (IsValid(NewTarget))
+-            {
+-                Enemy->SetCurrentTarget(NewTarget);
+-                MoveToActor(NewTarget, Enemy->GetEffectiveAttackRange(NewTarget)/*-200.0f*/);
+-                SetFocus(NewTarget);
+-            }
+-        }
++        Enemy->UpdateTarget();        // ターゲット選定
++        Enemy->StartMovingToTarget(); // 移動開始
+     }
+-}
+ 
++    //if (AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(InPawn))
++    //{
++    //    if (AActor* Target = Enemy->GetCurrentTarget()) // ← Getter を追加
++    //    {
++    //        MoveToActor(Target, Enemy->GetEffectiveAttackRange(Target)-200.0f);
++    //        SetFocus(Target);
++    //    }
++    //    else
++    //    {
++    //        // 念のためここでもターゲット検索
++    //        AActor* NewTarget = Enemy->ChooseTargetBP();
++    //        if (IsValid(NewTarget))
++    //        {
++    //            Enemy->SetCurrentTarget(NewTarget);
++    //            MoveToActor(NewTarget, Enemy->GetEffectiveAttackRange(NewTarget)-200.0f);
++    //            SetFocus(NewTarget);
++    //        }
++    //    }
++    //}
++}
+ 
+ 
+-void AEnemyAIController::Tick(float DeltaSeconds)
+-{
+-    Super::Tick(DeltaSeconds);
+ 
+-    AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(GetPawn());
+-    if (!Enemy) return;
+-
+-    AActor* Target = Enemy->ChooseTarget_Default();
+-    if (Target)
+-    {
+-        MoveToActor(Target, 50.f);
+-    }
+-
+-}
++//void AEnemyAIController::Tick(float DeltaSeconds)
++//{
++//    Super::Tick(DeltaSeconds);
++//
++//    AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(GetPawn());
++//    if (!Enemy) return;
++//
++//    AActor* Target = Enemy->ChooseTargetBP();
++//    if (Target)
++//    {
++//        MoveToActor(Target, 50.f);
++//    }
++//
++//}
+ 
+ 
+ //#include "EnemyAIController.h"
+diff --git a/Source/TowerDeffense_FPS/Private/EnemyCharacterBase.cpp b/Source/TowerDeffense_FPS/Private/EnemyCharacterBase.cpp
+index 160c67a..af7ec6f 100644
+--- a/Source/TowerDeffense_FPS/Private/EnemyCharacterBase.cpp
++++ b/Source/TowerDeffense_FPS/Private/EnemyCharacterBase.cpp
+@@ -48,6 +48,14 @@ void AEnemyCharacterBase::BeginPlay()
+     // 通常の初期化
+     CurrentHealth = MaxHealth;
+ 
++    // プレイヤー初期化を追加
++    TArray<AActor*> FoundPlayers;
++    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMyHeroPlayer::StaticClass(), FoundPlayers);
++    if (FoundPlayers.Num() > 0)
++    {
++        PlayerCharacter = Cast<AMyHeroPlayer>(FoundPlayers[0]);
++    }
++
+     // ターゲット設定
+     if (!IsValid(BaseStructure))
+     {
+@@ -80,18 +88,59 @@ void AEnemyCharacterBase::BeginPlay()
+     );
+ 
+ 
++    GetWorldTimerManager().SetTimer(
++        TryStartTimerHandle,
++        this,
++        &AEnemyCharacterBase::TryStartAI,
++        1.5f,   // 0.2秒後に実行（AI Possessを待つ）
++        false
++    );
+ 
++   /* AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController());
++    if (AICon)
++    {
++        UE_LOG(LogTemp, Warning, TEXT("%s has been possessed by AIController: %s (Class: %s)"),
++            *GetName(),
++            *AICon->GetName(),
++            *AICon->GetClass()->GetName());
++    }
++    else
++    {
++        UE_LOG(LogTemp, Error, TEXT("%s has NO AIController after SpawnDefaultController!"), *GetName());
++    }*/
+ }
+ 
++void AEnemyCharacterBase::TryStartAI()
++{
++    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
++    {
++        UE_LOG(LogTemp, Warning, TEXT("%s: AI initialized successfully."), *GetName());
++        UpdateTarget();               // ターゲット選定
++        StartMovingToTarget();        // 移動開始
++    }
++    else
++    {
++        UE_LOG(LogTemp, Warning, TEXT("%s: AI not ready, retrying..."), *GetName());
++        // まだAIがついていなければ再試行
++        GetWorldTimerManager().SetTimerForNextTick(this, &AEnemyCharacterBase::TryStartAI);
++    }
++}
++
++
+ void AEnemyCharacterBase::StartMovingToTarget()
+ {
++
++   
++
++    
++
+     if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+     {
+         if (IsValid(CurrentTarget))
+         {
+             UE_LOG(LogTemp, Warning, TEXT("%s: StartMovingToTarget -> %s"), *GetName(), *CurrentTarget->GetName());
+             AI->SetFocus(CurrentTarget);
+-            AI->MoveToActor(CurrentTarget, GetEffectiveAttackRange(CurrentTarget));
++            AI->MoveToActor(CurrentTarget, GetEffectiveAttackRange(CurrentTarget)-200.0f);
+         }
+         else
+         {
+@@ -115,7 +164,37 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
+     Super::Tick(DeltaTime);
+ 
+     if (bIsDead) return;
+-    if (!IsValid(CurrentTarget)) return;
++    if (!IsValid(CurrentTarget)) {
++        UE_LOG(LogTemp, Warning, TEXT("{{{%s}}}No Target!!!!!!!!!!!!11!"), *GetName());
++
++        return; }
++
++    
++
++    // すでにターゲットを認識しているか
++    if (CurrentTarget && !bHasLoggedStuck)
++    {
++        // 移動速度チェック
++        if (GetVelocity().Size() < 1.0f) // 動いていなければ
++        {
++            bHasLoggedStuck = true; // 一度だけログ
++            AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController());
++            if (AICon)
++            {
++                UE_LOG(LogTemp, Error, TEXT("[STUCK AI] %s has Target: %s but is not moving! AIController: %s (Class: %s)"),
++                    *GetName(),
++                    *CurrentTarget->GetName(),
++                    *AICon->GetName(),
++                    *AICon->GetClass()->GetName());
++            }
++            else
++            {
++                UE_LOG(LogTemp, Error, TEXT("[STUCK AI] %s has Target: %s but has NO AIController!"),
++                    *GetName(),
++                    *CurrentTarget->GetName());
++            }
++        }
++    }
+ 
+     // ==========================
+     // 現在ターゲットへの直線上にバリケードがあるかチェック
+@@ -281,15 +360,22 @@ void AEnemyCharacterBase::UpdateTarget()
+ {
+     if (bIsDead) return;
+ 
++    
++
+     // ---  ターゲットの基本選定 ---
+-    AActor* NewTarget = ChooseTarget_Default(); // バリケード以外を含む通常のロジック
++    //AActor* NewTarget = ChooseTarget_Default(); // バリケード以外を含む通常のロジック
++    AActor* NewTarget = ChooseTargetBP(); // バリケード以外を含む通常のロジック
+ 
+     // 無効ターゲットなら基地へフォールバック
+     if (!IsValid(NewTarget))
+     {
+         if (IsValid(BaseStructure))
+             NewTarget = BaseStructure;
++       // UE_LOG(LogTemp, Warning, TEXT("%s Base Target!"),*GetName());
++
+         else
++            UE_LOG(LogTemp, Warning, TEXT("No Target!!!! %s No Target!"),
++                *GetName());
+             return;
+     }
+ 
+@@ -314,6 +400,12 @@ void AEnemyCharacterBase::UpdateTarget()
+     {
+         CurrentTarget = NewTarget;
+ 
++        //// 破壊通知登録（既存の建物以外にも適用）
++        //if (IsValid(CurrentTarget))
++        //{
++        //    CurrentTarget->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
++        //}
++
+         //law_inteli_flag = false;
+ 
+         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+@@ -390,24 +482,27 @@ void AEnemyCharacterBase::OnTargetDestroyed(AActor* DestroyedActor)
+ 
+     if (CurrentTarget == DestroyedActor)
+     {
++        bUseDirectMove = false; // ←これを追加
+         //CurrentTarget = nullptr;
+-        CurrentTarget = ChooseTarget_Default();
++        /*CurrentTarget = ChooseTarget_Default();*/
++        //CurrentTarget = ChooseTargetBP();
+ 
+         if (!IsValid(CurrentTarget))
+         {
+             CurrentTarget = BaseStructure;
+         }
+ 
+-        //// 元ターゲット（プレイヤー・基地など）に戻る
+-        //if (IsValid(PreviousTarget))
+-        //{
+-        //    CurrentTarget = PreviousTarget;
+-        //    PreviousTarget = nullptr;
+-        //}
+-        //else
+-        //{
+-        //    CurrentTarget = ChooseTarget_Default();
+-        //}
++        // 元ターゲット（プレイヤー・基地など）に戻る
++        if (IsValid(PreviousTarget))
++        {
++            CurrentTarget = PreviousTarget;
++            PreviousTarget = nullptr;
++        }
++        else
++        {
++            //CurrentTarget = ChooseTarget_Default();
++          CurrentTarget = ChooseTargetBP();
++        }
+ 
+         // --- フォーカスをリセット ---
+         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+@@ -436,7 +531,7 @@ AActor* AEnemyCharacterBase::ChooseTarget_Default()
+ {
+     // 停止中なら認識範囲を2倍に
+     const float MaxConsiderRangeBase = bIsRecognitionExtended ? ExtendedConsiderRange : DefaultConsiderRange;
+-    const float MaxConsiderRange = 8000.0f;
++    const float MaxConsiderRange = 4000.0f;
+ 
+     const float BlockCheckAngle = 45.f;
+ 
+@@ -672,15 +767,15 @@ float AEnemyCharacterBase::GetEffectiveAttackRange(AActor* Target) const
+ {
+     if (Target->IsA(ADefenseBase::StaticClass()))
+     {
+-        return 600.f; // 基地には広いレンジ
++        return BaseAttackRange; // 基地には広いレンジ
+     }
+     else if (Target->IsA(ADefenseStructure::StaticClass()))
+     {
+-        return 300.f; // 建物はやや広め
++        return BarricadeAttackRange; // 建物はやや広め
+     }
+     else if (Target->IsA(AAllyCharacter::StaticClass()) || Target->IsA(AMyHeroPlayer::StaticClass()))
+     {
+-        return 200.f;
++        return PlayerAllyAttackRange;
+     }
+ 
+     return AttackRange;
+diff --git a/Source/TowerDeffense_FPS/Private/EnemySpawnerWave.cpp b/Source/TowerDeffense_FPS/Private/EnemySpawnerWave.cpp
+index 1c08cf5..34b1dfc 100644
+--- a/Source/TowerDeffense_FPS/Private/EnemySpawnerWave.cpp
++++ b/Source/TowerDeffense_FPS/Private/EnemySpawnerWave.cpp
+@@ -79,8 +79,183 @@ void AEnemySpawnerWave::Tick(float DeltaTime)
+     //}
+ 
+ }
++
++//void AEnemySpawnerWave::SpawnWave()
++//{
++//    if (!EnemyClass || SpawnPoints.Num() == 0) return;
++//    if (CurrentWave > LimitWave) return;
++//
++//    UWorld* World = GetWorld();
++//    if (!World) return;
++//
++//    SpawnedEnemies.Empty();
++//
++//    int32 EnemyCountThisWave = SpawnPoints.Num();
++//
++//    UE_LOG(LogTemp, Warning, TEXT("Wave %d started! Spawning %d enemies gradually."), CurrentWave, EnemyCountThisWave);
++//
++//    for (int32 i = 0; i < EnemyCountThisWave; i++)
++//    {
++//        // 各敵のスポーンを少しずつずらす（0.2秒ごと）
++//        const float Delay = i * 0.1f;
++//
++//        FTimerHandle TimerHandle;
++//        World->GetTimerManager().SetTimer(
++//            TimerHandle,
++//            [this, i, EnemyCountThisWave]()
++//            {
++//                if (!EnemyClass || SpawnPoints.Num() == 0) return;
++//                UWorld* InnerWorld = GetWorld();
++//                if (!InnerWorld) return;
++//
++//                FVector SpawnLocation = SpawnPoints[FMath::RandRange(0, SpawnPoints.Num() - 1)];
++//                SpawnLocation += FVector(FMath::RandRange(-100, 100), FMath::RandRange(-100, 100), 0);
++//                FRotator SpawnRotation = FRotator::ZeroRotator;
++//
++//                FActorSpawnParameters SpawnParams;
++//                SpawnParams.SpawnCollisionHandlingOverride =
++//                    ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
++//
++//                AEnemyCharacterBase* SpawnedEnemy =
++//                    InnerWorld->SpawnActor<AEnemyCharacterBase>(EnemyClass, SpawnLocation, SpawnRotation, SpawnParams);
++//
++//                if (SpawnedEnemy)
++//                {
++//                    SpawnedEnemy->SpawnDefaultController();
++//
++//                    // AIの初期化を少し遅らせて安全に開始
++//                    FTimerHandle TempHandle;
++//                    InnerWorld->GetTimerManager().SetTimer(
++//                        TempHandle,
++//                        [SpawnedEnemy]()
++//                        {
++//                            if (!IsValid(SpawnedEnemy)) return;
++//                            SpawnedEnemy->UpdateTarget();
++//                            SpawnedEnemy->StartMovingToTarget();
++//                        },
++//                        0.25f,
++//                        false
++//                    );
++//
++//                    SpawnedEnemies.Add(SpawnedEnemy);
++//
++//                    UE_LOG(LogTemp, Warning, TEXT("Spawned Enemy %d / %d : %s"),
++//                        i + 1, EnemyCountThisWave, *SpawnedEnemy->GetName());
++//                }
++//            },
++//            Delay,
++//            false
++//        );
++//    }
++//
++//    bWaveInProgress = true;
++//
++//    // 次ウェーブタイマー
++//    GetWorldTimerManager().ClearTimer(WaveTimerHandle);
++//    GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeBetweenWaves, false);
++//
++//    // ウィジェットへ通知
++//   OnWaveChanged.Broadcast(CurrentWave); // 1引数の場合
++//}
++
++
++//void AEnemySpawnerWave::SpawnWave()
++//{
++//    if (CurrentWave > LimitWave) return;
++//    if (!EnemyClass || SpawnPoints.Num() == 0) return;
++//
++//    UWorld* World = GetWorld();
++//    if (!World) return;
++//
++//    SpawnedEnemies.Empty();
++//
++//    int32 EnemyCountThisWave = SpawnPoints.Num();
++//
++//    for (int32 i = 0; i < EnemyCountThisWave; i++)
++//    {
++//        FVector SpawnLocation = SpawnPoints[FMath::RandRange(0, SpawnPoints.Num() - 1)];
++//        SpawnLocation += FVector(FMath::RandRange(-100, 100), FMath::RandRange(-100, 100), 0);
++//        FRotator SpawnRotation = FRotator::ZeroRotator;
++//
++//        FActorSpawnParameters SpawnParams;
++//        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
++//
++//        AEnemyCharacterBase* SpawnedEnemy = World->SpawnActor<AEnemyCharacterBase>(
++//            EnemyClass,
++//            SpawnLocation,
++//            SpawnRotation,
++//            SpawnParams
++//        );
++//
++//        if (SpawnedEnemy)
++//        {
++//            // Possess を確実に
++//            SpawnedEnemy->SpawnDefaultController();
++//
++//            // 遅延処理でターゲットを確実に設定
++//            FTimerHandle TempHandle;
++//            World->GetTimerManager().SetTimer(
++//                TempHandle,
++//                [this, SpawnedEnemy]()
++//                {
++//                    if (!IsValid(SpawnedEnemy)) return;
++//
++//                    // ターゲット更新
++//                    SpawnedEnemy->UpdateTarget();
++//
++//                    // ターゲットがまだ nullptr なら基地をターゲットに強制設定
++//                    if (!IsValid(SpawnedEnemy->CurrentTarget))
++//                    {
++//                        ADefenseBase* Base = Cast<ADefenseBase>(
++//                            UGameplayStatics::GetActorOfClass(GetWorld(), ADefenseBase::StaticClass())
++//                        );
++//                        if (Base)
++//                        {
++//                            SpawnedEnemy->CurrentTarget = Base;
++//                            UE_LOG(LogTemp, Warning, TEXT("%s had no target. Assigned Base as fallback."), *SpawnedEnemy->GetName());
++//                        }
++//                        else
++//                        {
++//                            UE_LOG(LogTemp, Error, TEXT("%s has no target and no Base found!"), *SpawnedEnemy->GetName());
++//                        }
++//                    }
++//
++//                    // AI を動かす
++//                    SpawnedEnemy->StartMovingToTarget();
++//
++//                    // デバッグログ
++//                    if (SpawnedEnemy->GetController())
++//                    {
++//                        UE_LOG(LogTemp, Warning, TEXT("[AI INIT] %s now has Target: %s | Controller: %s (%s)"),
++//                            *SpawnedEnemy->GetName(),
++//                            *SpawnedEnemy->CurrentTarget->GetName(),
++//                            *SpawnedEnemy->GetController()->GetName(),
++//                            *SpawnedEnemy->GetController()->GetClass()->GetName()
++//                        );
++//                    }
++//                },
++//                0.25f + 0.05f * i, // 少しずつスポーンタイミングをずらす
++//                false
++//            );
++//
++//            SpawnedEnemies.Add(SpawnedEnemy);
++//        }
++//    }
++//
++//    bWaveInProgress = true;
++//
++//    // 次ウェーブタイマー
++//    GetWorldTimerManager().ClearTimer(WaveTimerHandle);
++//    GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeBetweenWaves, false);
++//
++//    OnWaveChanged.Broadcast(CurrentWave);
++//}
++
++
+ void AEnemySpawnerWave::SpawnWave()
+ {
++    all_spawn = false;
++
+     // 上限チェック
+     if (CurrentWave > LimitWave)
+     {
+@@ -121,8 +296,67 @@ void AEnemySpawnerWave::SpawnWave()
+ 
+     UE_LOG(LogTemp, Warning, TEXT("Wave %d started! Spawning %d enemies."), CurrentWave, EnemyCountThisWave);
+ 
++    //for (int32 i = 0; i < EnemyCountThisWave; i++)
++    //{
++
++    //    all_spawn = false;
++    //    // 各敵のスポーンを少しずつずらす（0.2秒ごと）
++    //    const float Delay = i * 0.2f;
++
++    //    FTimerHandle TimerHandle;
++    //    World->GetTimerManager().SetTimer(
++    //        TimerHandle,
++    //        [this, i, EnemyCountThisWave]()
++    //        {
++    //            if (!EnemyClass || SpawnPoints.Num() == 0) return;
++    //            UWorld* InnerWorld = GetWorld();
++    //            if (!InnerWorld) return;
++
++    //            FVector SpawnLocation = SpawnPoints[FMath::RandRange(0, SpawnPoints.Num() - 1)];
++    //            SpawnLocation += FVector(FMath::RandRange(-100, 100), FMath::RandRange(-100, 100), 0);
++    //            FRotator SpawnRotation = FRotator::ZeroRotator;
++
++    //            FActorSpawnParameters SpawnParams;
++    //            SpawnParams.SpawnCollisionHandlingOverride =
++    //                ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
++
++    //            AEnemyCharacterBase* SpawnedEnemy =
++    //                InnerWorld->SpawnActor<AEnemyCharacterBase>(EnemyClass, SpawnLocation, SpawnRotation, SpawnParams);
++
++    //            if (SpawnedEnemy)
++    //            {
++    //                SpawnedEnemy->SpawnDefaultController();
++
++    //                // AIの初期化を少し遅らせて安全に開始
++    //                FTimerHandle TempHandle;
++    //                InnerWorld->GetTimerManager().SetTimer(
++    //                    TempHandle,
++    //                    [SpawnedEnemy]()
++    //                    {
++    //                        if (!IsValid(SpawnedEnemy)) return;
++    //                        SpawnedEnemy->UpdateTarget();
++    //                        SpawnedEnemy->StartMovingToTarget();
++    //                    },
++    //                    0.25f,
++    //                    false
++    //                );
++
++    //                SpawnedEnemies.Add(SpawnedEnemy);
++
++    //                UE_LOG(LogTemp, Warning, TEXT("Spawned Enemy %d / %d : %s"),
++    //                    i + 1, EnemyCountThisWave, *SpawnedEnemy->GetName());
++    //            }
++    //        },
++    //        Delay,
++    //        false
++    //    );
++    //}
++
+     for (int32 i = 0; i < EnemyCountThisWave; i++)
+     {
++        // 各敵のスポーンを少しずつずらす（0.2秒ごと）
++        const float Delay = i * 0.2f;
++
+         // ランダムなスポーンポイントを選択
+         FVector SpawnLocation = SpawnPoints[FMath::RandRange(0, SpawnPoints.Num() - 1)];
+ 
+@@ -144,7 +378,27 @@ void AEnemySpawnerWave::SpawnWave()
+         if (SpawnedEnemy)
+         {
+ 
+-        
++
++            // まずAIを生成（この時点ではPossessされていない可能性あり）
++            SpawnedEnemy->SpawnDefaultController();
++
++            // 少し遅らせてターゲット更新と移動を開始
++            FTimerHandle TempHandle;
++            World->GetTimerManager().SetTimer(
++                TempHandle,
++                [SpawnedEnemy]()
++                {
++                    if (!IsValid(SpawnedEnemy)) return;
++
++                    // 念のためBaseStructureがnullでないか確認
++                    SpawnedEnemy->UpdateTarget();
++                    SpawnedEnemy->StartMovingToTarget();
++
++                    UE_LOG(LogTemp, Warning, TEXT("%s AI started moving after delayed init."), *SpawnedEnemy->GetName());
++                },
++                0.25f,   // 0.25秒後に実行（AI Possess完了を待つ）
++                false
++            );
+ 
+            /*  SpawnedEnemy->SpawnDefaultController();
+ 
+@@ -158,6 +412,7 @@ void AEnemySpawnerWave::SpawnWave()
+                 SpawnedEnemy->SpawnDefaultController();
+             }*/
+ 
++           
+ 
+             // AI を有効化
+            
+@@ -178,7 +433,7 @@ void AEnemySpawnerWave::SpawnWave()
+     // ウィジェットへ通知
+     OnWaveChanged.Broadcast(CurrentWave); // 1引数の場合
+ 
+-  
++   // all_spawn = true;
+ }
+ 
+ 
+diff --git a/Source/TowerDeffense_FPS/Public/EnemyAIController.h b/Source/TowerDeffense_FPS/Public/EnemyAIController.h
+index b628933..a836b90 100644
+--- a/Source/TowerDeffense_FPS/Public/EnemyAIController.h
++++ b/Source/TowerDeffense_FPS/Public/EnemyAIController.h
+@@ -14,7 +14,7 @@ protected:
+     //AEnemyAIController();
+     virtual void BeginPlay() override;
+     virtual void OnPossess(APawn* InPawn) override;
+-    virtual void Tick(float DeltaSeconds) override;
++    //virtual void Tick(float DeltaSeconds) override;
+ 
+ private:
+     APawn* PlayerPawn;
+diff --git a/Source/TowerDeffense_FPS/Public/EnemyCharacterBase.h b/Source/TowerDeffense_FPS/Public/EnemyCharacterBase.h
+index e03352c..d46cb79 100644
+--- a/Source/TowerDeffense_FPS/Public/EnemyCharacterBase.h
++++ b/Source/TowerDeffense_FPS/Public/EnemyCharacterBase.h
+@@ -72,6 +72,7 @@ public:
+     void Die();
+ 
+     void StartMovingToTarget();
++    void TryStartAI();
+ 
+     float GetEffectiveAttackRange(AActor* Target) const;
+ 
+@@ -95,10 +96,17 @@ public:
+     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
+     float StructurePriority = 60.f;
+ 
++    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|AttackRange")
++    float BaseAttackRange = 600.0f;
++    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|AttackRange")
++    float PlayerAllyAttackRange = 200.0f;
++    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|AttackRange")
++    float BarricadeAttackRange = 200.0f;
++   
+ private:
++   
+     UPROPERTY()
+     AActor* CurrentTarget = nullptr;
+-
+     UPROPERTY()
+     AActor* PreviousTarget = nullptr; // 建物破壊後に戻る用
+ 
+@@ -119,6 +127,8 @@ private:
+ 
+     bool law_inteli_flag = true;
+ 
++    bool bHasLoggedStuck = false;
++
+     bool bUseDirectMove = false;
+ 
+     FTimerHandle AttackCooldownTimerHandle;
+@@ -132,10 +142,12 @@ private:
+     // AEnemyCharacterBase.h
+ private:
+     FTimerHandle TargetUpdateTimerHandle;
+-    float TargetUpdateInterval = 1.5f; // 0.5秒ごとにターゲット更新
++    float TargetUpdateInterval = 0.5f; // 0.5秒ごとにターゲット更新
+ 
+     FTimerHandle StopCheckTimerHandle;
+ 
++    FTimerHandle TryStartTimerHandle;
++
+ };
+ 
+ 
+diff --git a/Source/TowerDeffense_FPS/Public/EnemySpawnerWave.h b/Source/TowerDeffense_FPS/Public/EnemySpawnerWave.h
+index e0f62b2..2585870 100644
+--- a/Source/TowerDeffense_FPS/Public/EnemySpawnerWave.h
++++ b/Source/TowerDeffense_FPS/Public/EnemySpawnerWave.h
+@@ -117,6 +117,6 @@ private:
+     // ウェーブ中かどうか
+     bool bWaveInProgress = false;
+ 
+-
++    bool all_spawn = false;
+     
+ };
+-- 
+2.51.0.windows.1
+
