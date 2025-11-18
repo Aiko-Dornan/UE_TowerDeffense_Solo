@@ -48,6 +48,14 @@ void AEnemyCharacterBase::BeginPlay()
     // 通常の初期化
     CurrentHealth = MaxHealth;
 
+    // プレイヤー初期化を追加
+    TArray<AActor*> FoundPlayers;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMyHeroPlayer::StaticClass(), FoundPlayers);
+    if (FoundPlayers.Num() > 0)
+    {
+        PlayerCharacter = Cast<AMyHeroPlayer>(FoundPlayers[0]);
+    }
+
     // ターゲット設定
     if (!IsValid(BaseStructure))
     {
@@ -80,18 +88,59 @@ void AEnemyCharacterBase::BeginPlay()
     );
 
 
+    GetWorldTimerManager().SetTimer(
+        TryStartTimerHandle,
+        this,
+        &AEnemyCharacterBase::TryStartAI,
+        1.5f,   // 0.2秒後に実行（AI Possessを待つ）
+        false
+    );
 
+   /* AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController());
+    if (AICon)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("%s has been possessed by AIController: %s (Class: %s)"),
+            *GetName(),
+            *AICon->GetName(),
+            *AICon->GetClass()->GetName());
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("%s has NO AIController after SpawnDefaultController!"), *GetName());
+    }*/
 }
+
+void AEnemyCharacterBase::TryStartAI()
+{
+    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("%s: AI initialized successfully."), *GetName());
+        UpdateTarget();               // ターゲット選定
+        StartMovingToTarget();        // 移動開始
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("%s: AI not ready, retrying..."), *GetName());
+        // まだAIがついていなければ再試行
+        GetWorldTimerManager().SetTimerForNextTick(this, &AEnemyCharacterBase::TryStartAI);
+    }
+}
+
 
 void AEnemyCharacterBase::StartMovingToTarget()
 {
+
+   
+
+    
+
     if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
     {
         if (IsValid(CurrentTarget))
         {
             UE_LOG(LogTemp, Warning, TEXT("%s: StartMovingToTarget -> %s"), *GetName(), *CurrentTarget->GetName());
             AI->SetFocus(CurrentTarget);
-            AI->MoveToActor(CurrentTarget, GetEffectiveAttackRange(CurrentTarget));
+            AI->MoveToActor(CurrentTarget, GetEffectiveAttackRange(CurrentTarget)-200.0f);
         }
         else
         {
@@ -115,7 +164,37 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 
     if (bIsDead) return;
-    if (!IsValid(CurrentTarget)) return;
+    if (!IsValid(CurrentTarget)) {
+        UE_LOG(LogTemp, Warning, TEXT("{{{%s}}}No Target!!!!!!!!!!!!11!"), *GetName());
+
+        return; }
+
+    
+
+    // すでにターゲットを認識しているか
+    if (CurrentTarget && !bHasLoggedStuck)
+    {
+        // 移動速度チェック
+        if (GetVelocity().Size() < 1.0f) // 動いていなければ
+        {
+            bHasLoggedStuck = true; // 一度だけログ
+            AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController());
+            if (AICon)
+            {
+                UE_LOG(LogTemp, Error, TEXT("[STUCK AI] %s has Target: %s but is not moving! AIController: %s (Class: %s)"),
+                    *GetName(),
+                    *CurrentTarget->GetName(),
+                    *AICon->GetName(),
+                    *AICon->GetClass()->GetName());
+            }
+            else
+            {
+                UE_LOG(LogTemp, Error, TEXT("[STUCK AI] %s has Target: %s but has NO AIController!"),
+                    *GetName(),
+                    *CurrentTarget->GetName());
+            }
+        }
+    }
 
     // ==========================
     // 現在ターゲットへの直線上にバリケードがあるかチェック
@@ -281,15 +360,22 @@ void AEnemyCharacterBase::UpdateTarget()
 {
     if (bIsDead) return;
 
+    
+
     // ---  ターゲットの基本選定 ---
-    AActor* NewTarget = ChooseTarget_Default(); // バリケード以外を含む通常のロジック
+    //AActor* NewTarget = ChooseTarget_Default(); // バリケード以外を含む通常のロジック
+    AActor* NewTarget = ChooseTargetBP(); // バリケード以外を含む通常のロジック
 
     // 無効ターゲットなら基地へフォールバック
     if (!IsValid(NewTarget))
     {
         if (IsValid(BaseStructure))
             NewTarget = BaseStructure;
+       // UE_LOG(LogTemp, Warning, TEXT("%s Base Target!"),*GetName());
+
         else
+            UE_LOG(LogTemp, Warning, TEXT("No Target!!!! %s No Target!"),
+                *GetName());
             return;
     }
 
@@ -313,6 +399,12 @@ void AEnemyCharacterBase::UpdateTarget()
     if (NewTarget != CurrentTarget)
     {
         CurrentTarget = NewTarget;
+
+        //// 破壊通知登録（既存の建物以外にも適用）
+        //if (IsValid(CurrentTarget))
+        //{
+        //    CurrentTarget->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
+        //}
 
         //law_inteli_flag = false;
 
@@ -390,24 +482,27 @@ void AEnemyCharacterBase::OnTargetDestroyed(AActor* DestroyedActor)
 
     if (CurrentTarget == DestroyedActor)
     {
+        bUseDirectMove = false; // ←これを追加
         //CurrentTarget = nullptr;
-        CurrentTarget = ChooseTarget_Default();
+        /*CurrentTarget = ChooseTarget_Default();*/
+        //CurrentTarget = ChooseTargetBP();
 
         if (!IsValid(CurrentTarget))
         {
             CurrentTarget = BaseStructure;
         }
 
-        //// 元ターゲット（プレイヤー・基地など）に戻る
-        //if (IsValid(PreviousTarget))
-        //{
-        //    CurrentTarget = PreviousTarget;
-        //    PreviousTarget = nullptr;
-        //}
-        //else
-        //{
-        //    CurrentTarget = ChooseTarget_Default();
-        //}
+        // 元ターゲット（プレイヤー・基地など）に戻る
+        if (IsValid(PreviousTarget))
+        {
+            CurrentTarget = PreviousTarget;
+            PreviousTarget = nullptr;
+        }
+        else
+        {
+            //CurrentTarget = ChooseTarget_Default();
+          CurrentTarget = ChooseTargetBP();
+        }
 
         // --- フォーカスをリセット ---
         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
@@ -436,7 +531,7 @@ AActor* AEnemyCharacterBase::ChooseTarget_Default()
 {
     // 停止中なら認識範囲を2倍に
     const float MaxConsiderRangeBase = bIsRecognitionExtended ? ExtendedConsiderRange : DefaultConsiderRange;
-    const float MaxConsiderRange = 8000.0f;
+    const float MaxConsiderRange = 4000.0f;
 
     const float BlockCheckAngle = 45.f;
 
@@ -672,15 +767,15 @@ float AEnemyCharacterBase::GetEffectiveAttackRange(AActor* Target) const
 {
     if (Target->IsA(ADefenseBase::StaticClass()))
     {
-        return 600.f; // 基地には広いレンジ
+        return BaseAttackRange; // 基地には広いレンジ
     }
     else if (Target->IsA(ADefenseStructure::StaticClass()))
     {
-        return 300.f; // 建物はやや広め
+        return BarricadeAttackRange; // 建物はやや広め
     }
     else if (Target->IsA(AAllyCharacter::StaticClass()) || Target->IsA(AMyHeroPlayer::StaticClass()))
     {
-        return 200.f;
+        return PlayerAllyAttackRange;
     }
 
     return AttackRange;

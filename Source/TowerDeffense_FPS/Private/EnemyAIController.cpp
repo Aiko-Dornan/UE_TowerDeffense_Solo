@@ -137,41 +137,47 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 
     if (AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(InPawn))
     {
-        if (AActor* Target = Enemy->GetCurrentTarget()) // ← Getter を追加
-        {
-            MoveToActor(Target, Enemy->GetEffectiveAttackRange(Target)/*-200.0f*/);
-            SetFocus(Target);
-        }
-        else
-        {
-            // 念のためここでもターゲット検索
-            AActor* NewTarget = Enemy->ChooseTarget_Default();
-            if (IsValid(NewTarget))
-            {
-                Enemy->SetCurrentTarget(NewTarget);
-                MoveToActor(NewTarget, Enemy->GetEffectiveAttackRange(NewTarget)/*-200.0f*/);
-                SetFocus(NewTarget);
-            }
-        }
+        Enemy->UpdateTarget();        // ターゲット選定
+        Enemy->StartMovingToTarget(); // 移動開始
     }
+
+    //if (AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(InPawn))
+    //{
+    //    if (AActor* Target = Enemy->GetCurrentTarget()) // ← Getter を追加
+    //    {
+    //        MoveToActor(Target, Enemy->GetEffectiveAttackRange(Target)-200.0f);
+    //        SetFocus(Target);
+    //    }
+    //    else
+    //    {
+    //        // 念のためここでもターゲット検索
+    //        AActor* NewTarget = Enemy->ChooseTargetBP();
+    //        if (IsValid(NewTarget))
+    //        {
+    //            Enemy->SetCurrentTarget(NewTarget);
+    //            MoveToActor(NewTarget, Enemy->GetEffectiveAttackRange(NewTarget)-200.0f);
+    //            SetFocus(NewTarget);
+    //        }
+    //    }
+    //}
 }
 
 
 
-void AEnemyAIController::Tick(float DeltaSeconds)
-{
-    Super::Tick(DeltaSeconds);
-
-    AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(GetPawn());
-    if (!Enemy) return;
-
-    AActor* Target = Enemy->ChooseTarget_Default();
-    if (Target)
-    {
-        MoveToActor(Target, 50.f);
-    }
-
-}
+//void AEnemyAIController::Tick(float DeltaSeconds)
+//{
+//    Super::Tick(DeltaSeconds);
+//
+//    AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(GetPawn());
+//    if (!Enemy) return;
+//
+//    AActor* Target = Enemy->ChooseTargetBP();
+//    if (Target)
+//    {
+//        MoveToActor(Target, 50.f);
+//    }
+//
+//}
 
 
 //#include "EnemyAIController.h"
