@@ -112,25 +112,91 @@ void AWeaponBase::FireAtackAction()
 	if (!StaticMeshComp) return;
 
 	FName MuzzleSocketName = "FireSocket";
-	FVector MuzzleLocation = StaticMeshComp->GetSocketLocation(MuzzleSocketName);
-	FRotator MuzzleRotation = StaticMeshComp->GetSocketRotation(MuzzleSocketName);
+	const FVector MuzzleLocation = StaticMeshComp->GetSocketLocation(MuzzleSocketName);
+	const FRotator MuzzleRotation = StaticMeshComp->GetSocketRotation(MuzzleSocketName);
 
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
 	SpawnParams.Instigator = OwnerActor->GetInstigator();
 
-	AMyProjectileActor* Projectile = GetWorld()->SpawnActor<AMyProjectileActor>(
-		ProjectileClass,
-		MuzzleLocation,
-		MuzzleRotation,
-		SpawnParams
-	);
+	TArray<AMyProjectileActor*> SpawnedProjectiles;
 
-	if (Projectile)
+	// ======== ’Êí’e or U’e‚Ì•ªŠò =========
+	const int32 ShotCount = bIsShotgun ? PelletCount : 1;
+
+	for (int32 i = 0; i < ShotCount; i++)
 	{
-		Projectile->Damage = WeaponDamage; // •Ší‚ÌUŒ‚—Í‚ğ’e‚É”½‰f
+		FRotator ShootRot = MuzzleRotation;
+
+		if (bIsShotgun)
+		{
+			// ŠgUŠp“xƒ‰ƒ“ƒ_ƒ€‰»
+			ShootRot.Yaw += FMath::FRandRange(-PelletSpread, PelletSpread);
+			ShootRot.Pitch += FMath::FRandRange(-PelletSpread, PelletSpread);
+
+		}
+
+		AMyProjectileActor* Projectile =
+			GetWorld()->SpawnActor<AMyProjectileActor>(
+				ProjectileClass,
+				MuzzleLocation,
+				ShootRot,
+				SpawnParams
+			);
+
+		if (Projectile)
+		{
+			Projectile->Damage = WeaponDamage;
+			SpawnedProjectiles.Add(Projectile);
+
+			// ’e“¯m‚ÌÕ“Ë‚ğ–³‹
+			for (AMyProjectileActor* OtherProj : SpawnedProjectiles)
+			{
+				if (OtherProj != Projectile)
+				{
+					Projectile->CollisionComp->IgnoreActorWhenMoving(OtherProj, true);
+					OtherProj->CollisionComp->IgnoreActorWhenMoving(Projectile, true);
+				}
+			}
+		}
+
+		
+
+		UE_LOG(LogTemp, Warning, TEXT("fire by%s,%d,%s"),*GetName(), i, *Projectile->GetName());
 	}
 }
+
+
+//void AWeaponBase::FireAtackAction()
+//{
+//	if (!ProjectileClass) return;
+//
+//	AActor* OwnerActor = GetOwner();
+//	if (!OwnerActor) return;
+//
+//	UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(GetRootComponent());
+//	if (!StaticMeshComp) return;
+//
+//	FName MuzzleSocketName = "FireSocket";
+//	FVector MuzzleLocation = StaticMeshComp->GetSocketLocation(MuzzleSocketName);
+//	FRotator MuzzleRotation = StaticMeshComp->GetSocketRotation(MuzzleSocketName);
+//
+//	FActorSpawnParameters SpawnParams;
+//	SpawnParams.Owner = this;
+//	SpawnParams.Instigator = OwnerActor->GetInstigator();
+//
+//	AMyProjectileActor* Projectile = GetWorld()->SpawnActor<AMyProjectileActor>(
+//		ProjectileClass,
+//		MuzzleLocation,
+//		MuzzleRotation,
+//		SpawnParams
+//	);
+//
+//	if (Projectile)
+//	{
+//		Projectile->Damage = WeaponDamage; // •Ší‚ÌUŒ‚—Í‚ğ’e‚É”½‰f
+//	}
+//}
 
 void AWeaponBase::SetCanFire()
 {

@@ -87,10 +87,15 @@ void AMyHeroPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	
 	PlayerInputComponent->BindAxis("Turn", this, &AMyHeroPlayer::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("Look Up", this, &AMyHeroPlayer::AddControllerPitchInput);
-	//PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMyHeroPlayer::HandleFire);
-	// クリックで射撃
+
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMyHeroPlayer::OnFirePressed);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AMyHeroPlayer::OnFireReleased);
+
+	
+
+	//PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMyHeroPlayer::HandleFire);
+	// クリックで射撃
+	
 	//reload
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &AMyHeroPlayer::OnReloadPressed);
 
@@ -109,9 +114,17 @@ void AMyHeroPlayer::HandleFire()
 
 void AMyHeroPlayer::OnFirePressed()
 {
-	if (CurrentWeapon)
+	if (!CurrentWeapon) return;
+
+	if (CurrentWeapon->bIsFullAuto)
 	{
-		CurrentWeapon->StartFire(); // ← 押した瞬間
+		// フルオート開始
+		CurrentWeapon->StartFire();
+	}
+	else
+	{
+		// セミオートは一発だけ
+		CurrentWeapon->Fire();
 	}
 
 	if (AmmoWidget)
@@ -122,9 +135,10 @@ void AMyHeroPlayer::OnFirePressed()
 
 void AMyHeroPlayer::OnFireReleased()
 {
-	if (CurrentWeapon)
+	if (!CurrentWeapon) return;
+	if (CurrentWeapon->bIsFullAuto)
 	{
-		CurrentWeapon->StopFire(); // ← 離した瞬間
+		CurrentWeapon->StopFire();
 	}
 
 	if (AmmoWidget)

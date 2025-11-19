@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include"MyGrenadeProjectileActor.h"
 #include "EnemyCharacterBase.generated.h"
 
 class ADefenseBase;
@@ -67,6 +68,12 @@ public:
     void PerformAttack();
     void ResetAttack();
 
+    UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+    TSubclassOf<class AMyGrenadeProjectileActor> ProjectileClass;
+    void AllRangeAttack();
+
+
+
     float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
     void Die();
@@ -102,6 +109,9 @@ public:
     float PlayerAllyAttackRange = 200.0f;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|AttackRange")
     float BarricadeAttackRange = 200.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|AllRangeFlag")
+    bool RangeAttack = false;
    
 private:
    

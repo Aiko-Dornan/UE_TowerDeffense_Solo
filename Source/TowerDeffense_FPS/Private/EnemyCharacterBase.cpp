@@ -169,7 +169,19 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
 
         return; }
 
-    
+    if (GetVelocity().Size() < 0.1f) // 動いていなければ
+    {
+        FVector Dir = (CurrentTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+        AddMovementInput(Dir, 5.0f); // これならNavMeshや物理と自然に共存できる
+
+        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+        {
+           
+            AI->SetFocus(CurrentTarget);
+            //AI->ClearFocus(EAIFocusPriority::Gameplay);
+        }
+
+    }
 
     // すでにターゲットを認識しているか
     if (CurrentTarget && !bHasLoggedStuck)
@@ -243,7 +255,8 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
             if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
             {
                 AI->StopMovement();
-                AI->ClearFocus(EAIFocusPriority::Gameplay);
+                AI->SetFocus(CurrentTarget);
+                //AI->ClearFocus(EAIFocusPriority::Gameplay);
             }
 
             bUseDirectMove = true;
@@ -282,11 +295,16 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     // ==========================
     // 攻撃
     // ==========================
+    if (Distance <= EffectiveAttackRange && RangeAttack)
+    {
+        AllRangeAttack(); return;
+    }
     if (Distance <= EffectiveAttackRange)
     {
         PerformAttack();
         return;
     }
+   
 
    /* if (CurrentTarget && !CurrentTarget->IsValidLowLevel())
     {
@@ -694,7 +712,7 @@ void AEnemyCharacterBase::CheckIfStopped()
 
 // ==================== 攻撃処理 ====================
 
-void AEnemyCharacterBase::PerformAttack()
+void AEnemyCharacterBase::PerformAttack()//近距離
 {
     if (!bCanAttack || bIsDead || !CurrentTarget) return;
 
@@ -709,6 +727,44 @@ void AEnemyCharacterBase::PerformAttack()
 
     GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
         &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
+}
+void AEnemyCharacterBase::AllRangeAttack()//遠距離
+{
+    if (!bCanAttack || bIsDead || !CurrentTarget) return;
+
+    bCanAttack = false;
+
+    if (!ProjectileClass) return;
+
+    AActor* OwnerActor = GetOwner();
+    if (!OwnerActor) return;
+
+    UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(GetRootComponent());
+    if (!StaticMeshComp) return;
+
+    FName MuzzleSocketName = "EnemyFireSocket";
+    const FVector MuzzleLocation = StaticMeshComp->GetSocketLocation(MuzzleSocketName);
+    const FRotator MuzzleRotation = StaticMeshComp->GetSocketRotation(MuzzleSocketName);
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Owner = this;
+    SpawnParams.Instigator = OwnerActor->GetInstigator();
+
+    UE_LOG(LogTemp, Warning, TEXT("%s attacks %s!"),
+        *GetName(), *CurrentTarget->GetName());
+
+    AMyGrenadeProjectileActor* grenade= GetWorld()->SpawnActor<AMyGrenadeProjectileActor>(
+        ProjectileClass,
+        MuzzleLocation,
+        MuzzleRotation,
+        SpawnParams
+    );
+
+    if (grenade)
+    {
+        grenade->Damage = AttackDamage;
+    }
+
 }
 
 void AEnemyCharacterBase::ResetAttack()

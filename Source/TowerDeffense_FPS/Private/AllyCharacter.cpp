@@ -190,8 +190,17 @@ void AAllyCharacter::HandleFire()
         EquippedWeapon->StartReload();
         return;
     }
-
-    EquippedWeapon->StartFire();
+    if (EquippedWeapon->bIsFullAuto)
+    {
+        // フルオート開始
+        EquippedWeapon->StartFire();
+    }
+    else
+    {
+        // セミオートは一発だけ
+        EquippedWeapon->Fire();
+    }
+    //EquippedWeapon->StartFire();
 }
 
 void AAllyCharacter::StopMovement()

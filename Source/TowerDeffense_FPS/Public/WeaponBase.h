@@ -69,8 +69,7 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Gameplay")
 	void SetCanFire();
 
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Weapon")
-	bool bIsFullAuto;
+	
 
 	bool bIsFiring = false; // åªç›éÀåÇíÜÇ©
 
@@ -87,6 +86,9 @@ public:
 
 	//FORCEINLINE class USkeletalMeshComponent* GetMesh() const { return Mesh; }
 	FORCEINLINE class UStaticMeshComponent* GetMesh() const { return Mesh; }
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	bool bIsFullAuto;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	float MaxAmmo;
@@ -108,6 +110,17 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Reload")
 	USoundBase* ReloadSound;
+
+	// ========== Shotgun ==========
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Shotgun")
+	bool bIsShotgun = false;  // Å© éUíeON/OFF
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Shotgun")
+	int32 PelletCount = 8;   // Å© î≠éÀÇ∑ÇÈíeÇÃêîÅiéUíeêîÅj
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Shotgun")
+	float PelletSpread = 6.0f;  // Å© ägéUäpìxÅiìxÅj
 
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	float GetMaxAmmo();
