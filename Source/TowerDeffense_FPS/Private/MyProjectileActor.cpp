@@ -1,3 +1,88 @@
+//// Fill out your copyright notice in the Description page of Project Settings.
+//
+//#include "MyProjectileActor.h"
+//#include "GameFramework/ProjectileMovementComponent.h"
+//#include "Components/SphereComponent.h"
+//#include "Kismet/GameplayStatics.h"
+//
+//// Sets default values
+//AMyProjectileActor::AMyProjectileActor()
+//{
+//    PrimaryActorTick.bCanEverTick = true;
+//
+//    // ============================
+//    // Collision
+//    // ============================
+//    CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
+//    CollisionComp->InitSphereRadius(5.0f);
+//
+//    // ★重要：Projectile にすることで 弾同士は衝突しない
+//    CollisionComp->SetCollisionProfileName(TEXT("Projectile"));
+//
+//    CollisionComp->OnComponentHit.AddDynamic(this, &AMyProjectileActor::OnHit);
+//    RootComponent = CollisionComp;
+//
+//    // ============================
+//    // Visual
+//    // ============================
+//    Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
+//    Mesh->SetupAttachment(RootComponent);
+//    Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+//
+//    // ============================
+//    // Movement
+//    // ============================
+//    ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
+//    ProjectileMovement->InitialSpeed = 3000.f;
+//    ProjectileMovement->MaxSpeed = 6000.f;
+//    ProjectileMovement->bRotationFollowsVelocity = true;
+//    ProjectileMovement->bShouldBounce = false;
+//
+//    // life
+//    InitialLifeSpan = 3.0f;
+//}
+//
+//// Called when the game starts or when spawned
+//void AMyProjectileActor::BeginPlay()
+//{
+//    Super::BeginPlay();
+//
+//    // オーナー（撃った武器 / キャラ）との衝突は無視
+//    if (AActor* OwnerActor = GetOwner())
+//    {
+//        CollisionComp->IgnoreActorWhenMoving(OwnerActor, true);
+//    }
+//}
+//
+//// Called every frame
+//void AMyProjectileActor::Tick(float DeltaTime)
+//{
+//    Super::Tick(DeltaTime);
+//}
+//
+//void AMyProjectileActor::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor,
+//    UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+//{
+//    // 無効な衝突は無視
+//    if (!OtherActor || OtherActor == this)
+//        return;
+//
+//    // ダメージ適用
+//    UGameplayStatics::ApplyPointDamage(
+//        OtherActor,
+//        Damage,
+//        GetVelocity().GetSafeNormal(),
+//        Hit,
+//        nullptr,
+//        this,
+//        nullptr
+//    );
+//
+//    // 弾を消す
+//    Destroy();
+//}
+
+
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
@@ -16,6 +101,7 @@ AMyProjectileActor::AMyProjectileActor()
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	CollisionComp->InitSphereRadius(5.0f);
 	CollisionComp->SetCollisionProfileName("BlockAll");
+	//CollisionComp->SetCollisionProfileName("Projectile");
 	CollisionComp->OnComponentHit.AddDynamic(this, &AMyProjectileActor::OnHit);
 	RootComponent = CollisionComp;
 
@@ -38,14 +124,42 @@ AMyProjectileActor::AMyProjectileActor()
 void AMyProjectileActor::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// スポーン直後は弾同士で当たらないように Ignore にする
+	//CollisionComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	//// Overlap を有効化
+	//CollisionComp->SetGenerateOverlapEvents(true);
+	//CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &AMyProjectileActor::OnOverlap);
+
+	 // オーナー（撃った武器 / キャラ）との衝突は常に無視
+	if (AActor* OwnerActor = GetOwner())
+	{
+		CollisionComp->IgnoreActorWhenMoving(OwnerActor, true);
+	}
 	
+	
+	//CollisionComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	// 0.05秒後にコリジョンを有効化
+	/*GetWorldTimerManager().SetTimer(TimerHandle_EnableCollision, this,
+		&AMyProjectileActor::EnableCollision, 0.0001f, false);*/
+
 }
+
+
 
 // Called every frame
 void AMyProjectileActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	
+
+}
+
+void AMyProjectileActor::EnableCollision()
+{
+	CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 }
 
 void AMyProjectileActor::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor,
@@ -53,6 +167,8 @@ void AMyProjectileActor::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor,
 {
 	if (OtherActor && OtherActor != this)
 	{
+		
+
 		UGameplayStatics::ApplyPointDamage(OtherActor, Damage, GetVelocity().GetSafeNormal(), Hit, nullptr, this, nullptr);
 		Destroy(); // 弾を消す
 	}

@@ -26,7 +26,7 @@ public:
 	AMyHeroPlayer();
 
 	// エディタから指定可能な武器クラス
-	UPROPERTY(EditAnywhere, Category = "Weapon")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category = "Weapon")
 	TSubclassOf<AWeaponBase> GunComponent;
 
 	// 現在装備中の武器
