@@ -3,6 +3,8 @@
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
+#include "Math/UnrealMathUtility.h"
+
 
 AEnemySpawnerWave::AEnemySpawnerWave()
 {
@@ -367,6 +369,26 @@ void AEnemySpawnerWave::SpawnWave()
 
         FActorSpawnParameters SpawnParams;
         SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+        RandomInt = FMath::RandRange(0, 7);
+
+        switch (RandomInt)
+        {
+        case 0:
+            EnemyClass = EnemyClassTypeB;
+            break;
+        case 1:
+            EnemyClass = EnemyClassTypeG;
+            break;
+            case 2 :
+            EnemyClass = EnemyClassTypeT;
+            break;
+
+
+        default:
+            EnemyClass = EnemyClassTypeB;
+            break;
+        }
 
         AEnemyCharacterBase* SpawnedEnemy = World->SpawnActor<AEnemyCharacterBase>(
             EnemyClass,

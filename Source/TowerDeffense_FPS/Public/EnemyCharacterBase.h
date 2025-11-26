@@ -113,6 +113,8 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|AllRangeFlag")
     bool RangeAttack = false;
    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
+    float MaxHealth=100.0f;
 private:
    
     UPROPERTY()
@@ -128,7 +130,7 @@ private:
     float AttackCooldown;
     float AttackDamage;
 
-    float MaxHealth;
+    
     float CurrentHealth;
 
     float LastBarrierCheckTime = 0.f;
@@ -158,6 +160,7 @@ private:
 
     FTimerHandle TryStartTimerHandle;
 
+    float LastMoveCommandTime = 0.0f;
 };
 
 

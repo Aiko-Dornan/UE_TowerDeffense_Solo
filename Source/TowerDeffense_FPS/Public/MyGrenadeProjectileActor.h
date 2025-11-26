@@ -16,6 +16,8 @@ public:
 	// Sets default values for this actor's properties
 	AMyGrenadeProjectileActor();
 
+	/** 発射方向・初速度を計算 */
+	void CalculateLaunchVelocity();
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -57,7 +59,6 @@ public:
 private:
     FVector Velocity;
 
-    /** 発射方向・初速度を計算 */
-    void CalculateLaunchVelocity();
+    
 
 };

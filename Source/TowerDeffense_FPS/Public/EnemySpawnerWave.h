@@ -40,9 +40,17 @@ protected:
     
 
 public:
-    // 敵のクラス
+    // 敵のクラス1Base
     UPROPERTY(EditAnywhere, Category = "Spawn")
-    TSubclassOf<AEnemyCharacterBase> EnemyClass;
+    TSubclassOf<AEnemyCharacterBase> EnemyClassTypeB;
+
+    // 敵のクラス2Grenade
+    UPROPERTY(EditAnywhere, Category = "Spawn")
+    TSubclassOf<AEnemyCharacterBase> EnemyClassTypeG;
+
+    // 敵のクラス3Tank
+    UPROPERTY(EditAnywhere, Category = "Spawn")
+    TSubclassOf<AEnemyCharacterBase> EnemyClassTypeT;
 
     // スポーン位置
     UPROPERTY(EditAnywhere, Category = "Spawn")
@@ -119,4 +127,8 @@ private:
 
     bool all_spawn = false;
     
+    int RandomInt = 0;
+
+    UPROPERTY(VisibleAnywhere, Category = "Spawn")
+    TSubclassOf<AEnemyCharacterBase> EnemyClass;
 };

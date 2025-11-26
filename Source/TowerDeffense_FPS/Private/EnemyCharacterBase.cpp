@@ -24,10 +24,12 @@ AEnemyCharacterBase::AEnemyCharacterBase()
     AttackRange = 150.0f;
     AttackCooldown = 2.0f;
     AttackDamage = 10.0f;
-    MaxHealth = 100.0f;
+    //MaxHealth = 100.0f;
     CurrentHealth = MaxHealth;
 
     GetCharacterMovement()->MaxWalkSpeed = 300.f;
+
+
 
     AIControllerClass = AEnemyAIController::StaticClass();
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
@@ -39,7 +41,7 @@ void AEnemyCharacterBase::BeginPlay()
 {
     Super::BeginPlay();
 
-        if(!GetController())
+    if (!GetController())
     {
         SpawnDefaultController();
     }
@@ -64,7 +66,7 @@ void AEnemyCharacterBase::BeginPlay()
         if (FoundBases.Num() > 0)
         {
             BaseStructure = Cast<ADefenseBase>(FoundBases[0]);
-            
+
         }
     }
 
@@ -96,18 +98,18 @@ void AEnemyCharacterBase::BeginPlay()
         false
     );
 
-   /* AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController());
-    if (AICon)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("%s has been possessed by AIController: %s (Class: %s)"),
-            *GetName(),
-            *AICon->GetName(),
-            *AICon->GetClass()->GetName());
-    }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("%s has NO AIController after SpawnDefaultController!"), *GetName());
-    }*/
+    /* AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController());
+     if (AICon)
+     {
+         UE_LOG(LogTemp, Warning, TEXT("%s has been possessed by AIController: %s (Class: %s)"),
+             *GetName(),
+             *AICon->GetName(),
+             *AICon->GetClass()->GetName());
+     }
+     else
+     {
+         UE_LOG(LogTemp, Error, TEXT("%s has NO AIController after SpawnDefaultController!"), *GetName());
+     }*/
 }
 
 void AEnemyCharacterBase::TryStartAI()
@@ -130,9 +132,9 @@ void AEnemyCharacterBase::TryStartAI()
 void AEnemyCharacterBase::StartMovingToTarget()
 {
 
-   
 
-    
+
+
 
     if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
     {
@@ -140,7 +142,7 @@ void AEnemyCharacterBase::StartMovingToTarget()
         {
             UE_LOG(LogTemp, Warning, TEXT("%s: StartMovingToTarget -> %s"), *GetName(), *CurrentTarget->GetName());
             AI->SetFocus(CurrentTarget);
-            AI->MoveToActor(CurrentTarget, GetEffectiveAttackRange(CurrentTarget)-200.0f);
+            AI->MoveToActor(CurrentTarget, GetEffectiveAttackRange(CurrentTarget) - 200.0f);
         }
         else
         {
@@ -167,7 +169,8 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     if (!IsValid(CurrentTarget)) {
         UE_LOG(LogTemp, Warning, TEXT("{{{%s}}}No Target!!!!!!!!!!!!11!"), *GetName());
 
-        return; }
+        return;
+    }
 
     if (GetVelocity().Size() < 0.1f) // 動いていなければ
     {
@@ -176,7 +179,7 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
 
         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
         {
-           
+
             AI->SetFocus(CurrentTarget);
             //AI->ClearFocus(EAIFocusPriority::Gameplay);
         }
@@ -212,30 +215,31 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     // 現在ターゲットへの直線上にバリケードがあるかチェック
     // ==========================
     AActor* BlockingStructure = CheckBlockingStructure(CurrentTarget);
-        bUseDirectMove = false;
+    bUseDirectMove = false;
 
-   
-        if (BlockingStructure != CurrentTarget && BlockingStructure)
+
+    if (BlockingStructure != CurrentTarget && BlockingStructure)
+    {
+        PreviousTarget = CurrentTarget;
+        CurrentTarget = BlockingStructure;
+
+        // 建物破壊通知を受け取る
+        if (ADefenseStructure* Struct = Cast<ADefenseStructure>(BlockingStructure))
         {
-            PreviousTarget = CurrentTarget;
-            CurrentTarget = BlockingStructure;
-
-            // 建物破壊通知を受け取る
-            if (ADefenseStructure* Struct = Cast<ADefenseStructure>(BlockingStructure))
-            {
-                Struct->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
-            }
-            bUseDirectMove = true; // バリケード直進フラグ
+            Struct->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
         }
+        bUseDirectMove = true; // バリケード直進フラグ
+    }
 
-       
-    
+
+
 
     // ==========================
     // 攻撃距離チェック
     // ==========================
     FVector ToTarget = CurrentTarget->GetActorLocation() - GetActorLocation();
     float Distance = ToTarget.Size();
+   const float TestDistance= FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
     float EffectiveAttackRange = GetEffectiveAttackRange(CurrentTarget);
     float DesiredDistance = EffectiveAttackRange/* + 10.0f*/; // ターゲットより10f外側を維持
     FVector Direction = ToTarget.GetSafeNormal();
@@ -274,21 +278,29 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
             bUseDirectMove = false;
 
             AI->SetFocus(CurrentTarget);
-            AI->MoveToActor(CurrentTarget, EffectiveAttackRange-200.0f);
+            if (RangeAttack)
+            {
+                AI->MoveToActor(CurrentTarget, EffectiveAttackRange-600.0f);
+            }
+            else
+            {
+                AI->MoveToActor(CurrentTarget, EffectiveAttackRange - 200.0f);
+            }
+
 
             // MoveToActor は距離が一定以上離れた時のみ再発行
-             float LastMoveCommandTime = 0.0f;
-            const float MoveCommandCooldown = 0.5f;
+            
+           /* const float MoveCommandCooldown = 0.5f;
 
             if (GetWorld()->GetTimeSeconds() - LastMoveCommandTime > MoveCommandCooldown)
             {
-               
+                AI->MoveToActor(CurrentTarget, DesiredDistance);
                 LastMoveCommandTime = GetWorld()->GetTimeSeconds();
-            }
+            }*/
         }
     }
 
-  
+
 
     SetActorRotation(Direction.Rotation());
 
@@ -297,31 +309,35 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     // ==========================
     if (Distance <= EffectiveAttackRange && RangeAttack)
     {
-        AllRangeAttack(); return;
+       
+        UE_LOG(LogTemp, Warning, TEXT("%s Fire Grenade!!"), *GetName());
+        AllRangeAttack();
+
+        return;
     }
-    if (Distance <= EffectiveAttackRange)
+    else if (Distance <= EffectiveAttackRange)
     {
         PerformAttack();
         return;
     }
-   
 
-   /* if (CurrentTarget && !CurrentTarget->IsValidLowLevel())
-    {
-        CurrentTarget = nullptr;
-    }*/
 
-    // ==========================
-    // AI 移動はバリケード以外のみ
-    // ==========================
-    /*if (!bUseDirectMove)
-    {
-        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
-        {
-            AI->SetFocus(CurrentTarget);
-            AI->MoveToActor(CurrentTarget,5.0f);
-        }
-    }*/
+    /* if (CurrentTarget && !CurrentTarget->IsValidLowLevel())
+     {
+         CurrentTarget = nullptr;
+     }*/
+
+     // ==========================
+     // AI 移動はバリケード以外のみ
+     // ==========================
+     /*if (!bUseDirectMove)
+     {
+         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+         {
+             AI->SetFocus(CurrentTarget);
+             AI->MoveToActor(CurrentTarget,5.0f);
+         }
+     }*/
 }
 
 
@@ -378,7 +394,7 @@ void AEnemyCharacterBase::UpdateTarget()
 {
     if (bIsDead) return;
 
-    
+
 
     // ---  ターゲットの基本選定 ---
     //AActor* NewTarget = ChooseTarget_Default(); // バリケード以外を含む通常のロジック
@@ -389,12 +405,12 @@ void AEnemyCharacterBase::UpdateTarget()
     {
         if (IsValid(BaseStructure))
             NewTarget = BaseStructure;
-       // UE_LOG(LogTemp, Warning, TEXT("%s Base Target!"),*GetName());
+        // UE_LOG(LogTemp, Warning, TEXT("%s Base Target!"),*GetName());
 
         else
             UE_LOG(LogTemp, Warning, TEXT("No Target!!!! %s No Target!"),
                 *GetName());
-            return;
+        return;
     }
 
     // ---  新ターゲットがバリケードでない場合のみ遮蔽物をチェック ---
@@ -519,7 +535,7 @@ void AEnemyCharacterBase::OnTargetDestroyed(AActor* DestroyedActor)
         else
         {
             //CurrentTarget = ChooseTarget_Default();
-          CurrentTarget = ChooseTargetBP();
+            CurrentTarget = ChooseTargetBP();
         }
 
         // --- フォーカスをリセット ---
@@ -531,7 +547,7 @@ void AEnemyCharacterBase::OnTargetDestroyed(AActor* DestroyedActor)
             if (IsValid(CurrentTarget)/*&&!law_inteli_flag*/)
             {
                 AI->SetFocus(CurrentTarget);
-                AI->MoveToActor(CurrentTarget, GetEffectiveAttackRange(CurrentTarget)-200.0f);
+                AI->MoveToActor(CurrentTarget, GetEffectiveAttackRange(CurrentTarget) - 200.0f);
             }
         }
     }
@@ -638,14 +654,14 @@ AActor* AEnemyCharacterBase::ChooseTarget_Default()
                     Candidate.Score = StructurePriority * FMath::Clamp(1.f - (Dist / (MaxConsiderRange * 0.5f)), 0.f, 1.f);
                     Candidates.Add(Candidate);
 
-                   
-                    
+
+
                 }
-                
-               
+
+
 
             }
-         
+
         }
     }
 
@@ -683,7 +699,7 @@ void AEnemyCharacterBase::CheckIfStopped()
     if (bIsDead) return;
 
     const float Speed = GetVelocity().Size();
-    if (CurrentTarget==BaseStructure) {
+    if (CurrentTarget == BaseStructure) {
 
         if (Speed < StopThresholdSpeed)
         {
@@ -704,7 +720,7 @@ void AEnemyCharacterBase::CheckIfStopped()
         }
 
     }
-    
+
 }
 
 
@@ -723,49 +739,113 @@ void AEnemyCharacterBase::PerformAttack()//近距離
 
     UGameplayStatics::ApplyDamage(CurrentTarget, AttackDamage, GetController(), this, nullptr);
 
-   
+
 
     GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
         &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
 }
-void AEnemyCharacterBase::AllRangeAttack()//遠距離
+
+void AEnemyCharacterBase::AllRangeAttack()
 {
-    if (!bCanAttack || bIsDead || !CurrentTarget) return;
+  /*  if (!bCanAttack) UE_LOG(LogTemp, Error, TEXT("%s → bCanAttack == false"), *GetName());
+    if (bIsDead) UE_LOG(LogTemp, Error, TEXT("%s → bIsDead == true"), *GetName());
+    if (!CurrentTarget) UE_LOG(LogTemp, Error, TEXT("%s → CurrentTarget == NULL"), *GetName());*/
 
-    bCanAttack = false;
+    if (!bCanAttack || bIsDead || !CurrentTarget)
+    {
+        //UE_LOG(LogTemp, Error, TEXT("%s → Attack aborted"), *GetName());
+        return;
+    }
 
-    if (!ProjectileClass) return;
 
-    AActor* OwnerActor = GetOwner();
-    if (!OwnerActor) return;
 
-    UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(GetRootComponent());
-    if (!StaticMeshComp) return;
 
-    FName MuzzleSocketName = "EnemyFireSocket";
-    const FVector MuzzleLocation = StaticMeshComp->GetSocketLocation(MuzzleSocketName);
-    const FRotator MuzzleRotation = StaticMeshComp->GetSocketRotation(MuzzleSocketName);
+    if (!ProjectileClass)
+    {
+        UE_LOG(LogTemp, Error, TEXT("ProjectileClass is NULL!!"));
+        return;
+    }
+
+    // 敵 Mesh を取得
+    USkeletalMeshComponent* MeshComp = GetMesh();
+    if (!MeshComp)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Enemy has no SkeletalMesh!"));
+        return;
+    }
+
+    FVector MuzzleLocation = MeshComp->GetSocketLocation("EnemyFireSocket");
+    FRotator MuzzleRotation = MeshComp->GetSocketRotation("EnemyFireSocket");
 
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = this;
-    SpawnParams.Instigator = OwnerActor->GetInstigator();
+    SpawnParams.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-    UE_LOG(LogTemp, Warning, TEXT("%s attacks %s!"),
-        *GetName(), *CurrentTarget->GetName());
-
-    AMyGrenadeProjectileActor* grenade= GetWorld()->SpawnActor<AMyGrenadeProjectileActor>(
+    AMyGrenadeProjectileActor* Grenade = GetWorld()->SpawnActor<AMyGrenadeProjectileActor>(
         ProjectileClass,
         MuzzleLocation,
         MuzzleRotation,
         SpawnParams
     );
 
-    if (grenade)
+    if (Grenade)
     {
-        grenade->Damage = AttackDamage;
+        Grenade->Damage = AttackDamage;
+        Grenade->TargetLocation = CurrentTarget->GetActorLocation();
+        Grenade->CalculateLaunchVelocity(); // ここで velocity を計算
+        UE_LOG(LogTemp, Warning, TEXT("Projectile Spawned!"));
     }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Projectile Spawn FAILED!!"));
+    }
+    bCanAttack = false;
+    GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
+        &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
 
 }
+
+//void AEnemyCharacterBase::AllRangeAttack()//遠距離
+//{
+//    if (!bCanAttack || bIsDead || !CurrentTarget) return;
+//
+//    bCanAttack = false;
+//
+//    if (!ProjectileClass) return;
+//
+//    AActor* OwnerActor = GetOwner();
+//    if (!OwnerActor) return;
+//
+//   // UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(GetRootComponent());
+//    UStaticMeshComponent* StaticMeshComp = FindComponentByClass<UStaticMeshComponent>();
+//    if (!StaticMeshComp) return;
+//
+//    FName MuzzleSocketName = "EnemyFireSocket";
+//    const FVector MuzzleLocation = StaticMeshComp->GetSocketLocation(MuzzleSocketName);
+//    const FRotator MuzzleRotation = StaticMeshComp->GetSocketRotation(MuzzleSocketName);
+//
+//    FActorSpawnParameters SpawnParams;
+//    SpawnParams.Owner = this;
+//    SpawnParams.Instigator = OwnerActor->GetInstigator();
+//
+//    UE_LOG(LogTemp, Warning, TEXT("%s attacks %s!"),
+//        *GetName(), *CurrentTarget->GetName());
+//
+//    AMyGrenadeProjectileActor* grenade= GetWorld()->SpawnActor<AMyGrenadeProjectileActor>(
+//        ProjectileClass,
+//        MuzzleLocation,
+//        MuzzleRotation,
+//        SpawnParams
+//    );
+//
+//    if (grenade)
+//    {
+//        grenade->Damage = AttackDamage;
+//        //grenade->TargetLocation = CurrentTarget->GetActorLocation();
+//    }
+//
+//}
 
 void AEnemyCharacterBase::ResetAttack()
 {

@@ -17,7 +17,6 @@ class TOWERDEFFENSE_FPS_API AMyHeroPlayer : public ACharacter
 	UCameraComponent* CameraComponent;
 
 	
-	
 
 	GENERATED_BODY()
 
@@ -28,6 +27,12 @@ public:
 	// エディタから指定可能な武器クラス
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category = "Weapon")
 	TSubclassOf<AWeaponBase> GunComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	TSubclassOf<AWeaponBase> GunComponentSub;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	bool MainSubFlag{ false };
 
 	// 現在装備中の武器
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -71,6 +76,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass);
 
+	UFUNCTION()
+	void AmmoInteract();
+
+	//武器切り替え
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void SwitchWeapon();
+
+	UPROPERTY(VisibleAnywhere)
+	class AAmmoBox* ammobox;
+
+	UFUNCTION()
+	void CheatGunEquip(TSubclassOf<AWeaponBase> NewWeaponClass);
+
 	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	
 	TSubclassOf<class UUserWidget> AmmoWidgetClass;*/
@@ -98,4 +116,18 @@ public:
 
 	// ダメージ処理
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+	UFUNCTION()
+	void VaultAmmoNum();
+
+	private:
+
+		float ammo_stock_main = 0;
+		float ammo_magazine_main = 0;
+		float ammo_stock_sub = 0;
+		float ammo_magazine_sub = 0;
+
+
+		UPROPERTY(EditAnywhere, Category = "Weapon")
+		TSubclassOf<AWeaponBase> GunComponentVault;
 };

@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Components/CapsuleComponent.h"
 #include "Blueprint/UserWidget.h" // 忘れずに！
+#include"AmmoBox.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 // Sets default values
@@ -91,7 +92,8 @@ void AMyHeroPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMyHeroPlayer::OnFirePressed);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AMyHeroPlayer::OnFireReleased);
 
-	
+	PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &AMyHeroPlayer::AmmoInteract);
+	PlayerInputComponent->BindAction("Switch", IE_Pressed, this, &AMyHeroPlayer::SwitchWeapon);
 
 	//PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMyHeroPlayer::HandleFire);
 	// クリックで射撃
@@ -118,11 +120,13 @@ void AMyHeroPlayer::OnFirePressed()
 
 	if (CurrentWeapon->bIsFullAuto)
 	{
+		VaultAmmoNum();
 		// フルオート開始
 		CurrentWeapon->StartFire();
 	}
 	else
 	{
+		VaultAmmoNum();
 		// セミオートは一発だけ
 		CurrentWeapon->Fire();
 	}
@@ -138,6 +142,7 @@ void AMyHeroPlayer::OnFireReleased()
 	if (!CurrentWeapon) return;
 	if (CurrentWeapon->bIsFullAuto)
 	{
+		VaultAmmoNum();
 		CurrentWeapon->StopFire();
 	}
 
@@ -151,6 +156,7 @@ void AMyHeroPlayer::OnReloadPressed()
 {
 	if (CurrentWeapon)
 	{
+		VaultAmmoNum();
 		CurrentWeapon->StartReload();
 	}
 
@@ -158,6 +164,34 @@ void AMyHeroPlayer::OnReloadPressed()
 	{
 		AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
 	}
+
+}
+
+void AMyHeroPlayer::AmmoInteract()
+{
+
+
+
+	if (ammobox && CurrentWeapon)
+	{
+		VaultAmmoNum();
+		ammobox->TryGiveAmmo(CurrentWeapon);
+		if (AmmoWidget)
+		{
+			AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Player Failed!!"));
+	}
+
+}
+
+void AMyHeroPlayer::CheatGunEquip(TSubclassOf<AWeaponBase> NewWeaponClass)
+{
+	
+
 
 }
 
@@ -204,6 +238,54 @@ float AMyHeroPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 	return ActualDamage;
 }
 
+void AMyHeroPlayer::VaultAmmoNum()
+{
+	if (MainSubFlag)
+	{
+		ammo_stock_main = CurrentWeapon->StockAmmo;
+		ammo_magazine_main = CurrentWeapon->Ammo;
+	}
+	else
+	{
+		ammo_stock_sub = CurrentWeapon->StockAmmo;
+		ammo_magazine_sub = CurrentWeapon->Ammo;
+	}
+}
+
+void AMyHeroPlayer::SwitchWeapon()
+{
+	if (MainSubFlag)
+	{
+		GunComponentVault = GunComponent;
+		MainSubFlag = false;
+	}
+	else
+	{
+		GunComponentVault = GunComponentSub;
+		MainSubFlag = true;
+	}
+
+	EquipWeapon(GunComponentVault);
+
+	if (MainSubFlag)
+	{
+		CurrentWeapon->StockAmmo = ammo_stock_main;
+		CurrentWeapon->Ammo = ammo_magazine_main;
+	}
+	else
+	{
+		CurrentWeapon->StockAmmo = ammo_stock_sub;
+		CurrentWeapon->Ammo = ammo_magazine_sub;
+		
+	}
+
+	if (AmmoWidget)
+	{
+		AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
+	}
+	
+}
+
 void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
 {
 	if (!WeaponClass) return;
@@ -228,6 +310,8 @@ void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
 		SpawnedWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponSocketName);
 		CurrentWeapon = SpawnedWeapon;
 	}
+
+	
 
 	//  弾数変更イベントを購読
 	CurrentWeapon->OnAmmoChanged.AddDynamic(this, &AMyHeroPlayer::OnAmmoChanged);
