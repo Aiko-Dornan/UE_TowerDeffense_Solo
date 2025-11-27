@@ -3,6 +3,7 @@
 #include "MyHeroPlayer.h"
 #include "AllyCharacter.h"
 #include "DefenseBase.h"
+#include"DroneCharacter.h"
 #include "TD_GameModeBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -14,6 +15,12 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "EnemySpawnerWave.h"
 
+//#include "Engine/EngineTypes.h"    // FOverlapResult, FCollisionShape
+//#include "Engine/World.h"          // GetWorld()
+//
+//
+//#include "DrawDebugHelpers.h"
+
 // ==================== コンストラクタ ====================
 
 AEnemyCharacterBase::AEnemyCharacterBase()
@@ -23,11 +30,11 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 
     AttackRange = 150.0f;
     AttackCooldown = 2.0f;
-    AttackDamage = 10.0f;
+   
     //MaxHealth = 100.0f;
     CurrentHealth = MaxHealth;
 
-    GetCharacterMovement()->MaxWalkSpeed = 300.f;
+    GetCharacterMovement()->MaxWalkSpeed = MoveEnemySpeed;
 
 
 
@@ -40,7 +47,7 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 void AEnemyCharacterBase::BeginPlay()
 {
     Super::BeginPlay();
-
+    GetCharacterMovement()->MaxWalkSpeed = MoveEnemySpeed;
     if (!GetController())
     {
         SpawnDefaultController();
@@ -175,7 +182,7 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     if (GetVelocity().Size() < 0.1f) // 動いていなければ
     {
         FVector Dir = (CurrentTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-        AddMovementInput(Dir, 5.0f); // これならNavMeshや物理と自然に共存できる
+        AddMovementInput(Dir, MoveEnemySpeed); // これならNavMeshや物理と自然に共存できる
 
         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
         {
@@ -310,7 +317,7 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     if (Distance <= EffectiveAttackRange && RangeAttack)
     {
        
-        UE_LOG(LogTemp, Warning, TEXT("%s Fire Grenade!!"), *GetName());
+       
         AllRangeAttack();
 
         return;
@@ -501,6 +508,12 @@ void AEnemyCharacterBase::OnEnemyBeginOverlap(AActor* OverlappedActor, AActor* O
         return;
     }
 
+    if (ADroneCharacter* Drone = Cast<ADroneCharacter>(OtherActor))
+    {
+        CurrentTarget = Drone;
+        return;
+    }
+
     if (ADefenseBase* Base = Cast<ADefenseBase>(OtherActor))
     {
         CurrentTarget = Base;
@@ -596,6 +609,23 @@ AActor* AEnemyCharacterBase::ChooseTarget_Default()
             FTargetCandidate Candidate;
             Candidate.Actor = Ally;
             Candidate.Score = AllyPriority * FMath::Clamp(1.f - (Dist / MaxConsiderRange), 0.f, 1.f);
+            Candidates.Add(Candidate);
+        }
+    }
+
+    //---ドローン---
+
+    TArray<AActor*> FoundDrones;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADroneCharacter::StaticClass(), FoundDrones);
+    for (AActor* Drone : FoundDrones)
+    {
+        if (!IsValid(Drone)) continue;
+        const float Dist = FVector::Dist(GetActorLocation(), Drone->GetActorLocation());
+        if (Dist < MaxConsiderRange)
+        {
+            FTargetCandidate Candidate;
+            Candidate.Actor = Drone;
+            Candidate.Score = DronePriority * FMath::Clamp(1.f - (Dist / MaxConsiderRange), 0.f, 1.f);
             Candidates.Add(Candidate);
         }
     }
@@ -743,6 +773,12 @@ void AEnemyCharacterBase::PerformAttack()//近距離
 
     GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
         &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
+
+    if (KillMeFlag)
+    {
+        Die();
+    }
+
 }
 
 void AEnemyCharacterBase::AllRangeAttack()
@@ -806,46 +842,44 @@ void AEnemyCharacterBase::AllRangeAttack()
 
 }
 
-//void AEnemyCharacterBase::AllRangeAttack()//遠距離
+// ==================== 範囲攻撃（全対象に即時ダメージ） ====================
+//void AEnemyCharacterBase::ApplyAreaDamage(float DamageAmount, float Radius)
 //{
-//    if (!bCanAttack || bIsDead || !CurrentTarget) return;
+//    if (bIsDead) return;
 //
-//    bCanAttack = false;
+//    TArray<FOverlapResult> Overlaps;
+//    FCollisionShape CollisionShape = FCollisionShape::MakeSphere(Radius);
 //
-//    if (!ProjectileClass) return;
-//
-//    AActor* OwnerActor = GetOwner();
-//    if (!OwnerActor) return;
-//
-//   // UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(GetRootComponent());
-//    UStaticMeshComponent* StaticMeshComp = FindComponentByClass<UStaticMeshComponent>();
-//    if (!StaticMeshComp) return;
-//
-//    FName MuzzleSocketName = "EnemyFireSocket";
-//    const FVector MuzzleLocation = StaticMeshComp->GetSocketLocation(MuzzleSocketName);
-//    const FRotator MuzzleRotation = StaticMeshComp->GetSocketRotation(MuzzleSocketName);
-//
-//    FActorSpawnParameters SpawnParams;
-//    SpawnParams.Owner = this;
-//    SpawnParams.Instigator = OwnerActor->GetInstigator();
-//
-//    UE_LOG(LogTemp, Warning, TEXT("%s attacks %s!"),
-//        *GetName(), *CurrentTarget->GetName());
-//
-//    AMyGrenadeProjectileActor* grenade= GetWorld()->SpawnActor<AMyGrenadeProjectileActor>(
-//        ProjectileClass,
-//        MuzzleLocation,
-//        MuzzleRotation,
-//        SpawnParams
+//    bool bHit = GetWorld()->OverlapMultiByChannel(
+//        Overlaps,
+//        GetActorLocation(),
+//        FQuat::Identity,
+//        ECC_Pawn,
+//        CollisionShape
 //    );
 //
-//    if (grenade)
+//    if (!bHit) return;
+//
+//    for (const FOverlapResult& Result : Overlaps)
 //    {
-//        grenade->Damage = AttackDamage;
-//        //grenade->TargetLocation = CurrentTarget->GetActorLocation();
+//        AActor* OverlappedActor = Result.GetActor();
+//        if (!IsValid(OverlappedActor)) continue;
+//        if (OverlappedActor == this) continue;
+//
+//        if (OverlappedActor->IsA(AMyHeroPlayer::StaticClass()) ||
+//            OverlappedActor->IsA(AAllyCharacter::StaticClass()) ||
+//            OverlappedActor->IsA(ADroneCharacter::StaticClass()) ||
+//            OverlappedActor->IsA(ADefenseBase::StaticClass()))
+//        {
+//            UGameplayStatics::ApplyDamage(OverlappedActor, DamageAmount, GetController(), this, nullptr);
+//        }
 //    }
 //
+//    bCanAttack = false;
+//    GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
 //}
+
+
 
 void AEnemyCharacterBase::ResetAttack()
 {
@@ -912,6 +946,10 @@ float AEnemyCharacterBase::GetEffectiveAttackRange(AActor* Target) const
     else if (Target->IsA(AAllyCharacter::StaticClass()) || Target->IsA(AMyHeroPlayer::StaticClass()))
     {
         return PlayerAllyAttackRange;
+    }
+    else if (Target->IsA(ADroneCharacter::StaticClass()) || Target->IsA(ADroneCharacter::StaticClass()))
+    {
+        return DroneAttackRange;
     }
 
     return AttackRange;

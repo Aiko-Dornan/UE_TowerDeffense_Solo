@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include"MyGrenadeProjectileActor.h"
+
 #include "EnemyCharacterBase.generated.h"
 
 class ADefenseBase;
@@ -72,7 +73,7 @@ public:
     TSubclassOf<class AMyGrenadeProjectileActor> ProjectileClass;
     void AllRangeAttack();
 
-
+    //void ApplyAreaDamage(float DamageAmount, float Radius);
 
     float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
@@ -103,18 +104,33 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
     float StructurePriority = 60.f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
+    float DronePriority = 80.f;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|AttackRange")
     float BaseAttackRange = 600.0f;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|AttackRange")
     float PlayerAllyAttackRange = 200.0f;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|AttackRange")
     float BarricadeAttackRange = 200.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|AttackRange")
+    float DroneAttackRange = 200.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|AllRangeFlag")
     bool RangeAttack = false;
    
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
+    float AttackDamage=10.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
     float MaxHealth=100.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
+    float MoveEnemySpeed = 100.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
+    bool KillMeFlag = false;
+
 private:
    
     UPROPERTY()
@@ -128,7 +144,7 @@ private:
 
     float AttackRange;
     float AttackCooldown;
-    float AttackDamage;
+    
 
     
     float CurrentHealth;

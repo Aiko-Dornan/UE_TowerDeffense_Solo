@@ -120,14 +120,22 @@ public:
 	UFUNCTION()
 	void VaultAmmoNum();
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	float ammo_stock_main = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	float ammo_magazine_main = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	float ammo_stock_sub = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	float ammo_magazine_sub = 0;
+
 	private:
 
-		float ammo_stock_main = 0;
-		float ammo_magazine_main = 0;
-		float ammo_stock_sub = 0;
-		float ammo_magazine_sub = 0;
+		
 
 
-		UPROPERTY(EditAnywhere, Category = "Weapon")
+		UPROPERTY(VisibleAnywhere, Category = "Weapon")
 		TSubclassOf<AWeaponBase> GunComponentVault;
+
+		
 };

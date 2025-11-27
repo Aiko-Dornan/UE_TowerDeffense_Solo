@@ -49,6 +49,26 @@ void AMyHeroPlayer::BeginPlay()
 		EquipWeapon(GunComponent);
 	}
 
+	// 装備したメイン武器の弾数を保存
+	if (CurrentWeapon)
+	{
+		ammo_stock_main = CurrentWeapon->StockAmmo;
+		ammo_magazine_main = CurrentWeapon->Ammo;
+	}
+
+	// サブ武器も初期化（まだ装備しないが弾数だけ保存したい場合）
+	if (GunComponentSub)
+	{
+		// 一時的にスポーンして弾数だけ取って破棄する
+		AWeaponBase* TempSub = GetWorld()->SpawnActor<AWeaponBase>(GunComponentSub);
+		if (TempSub)
+		{
+			ammo_stock_sub = TempSub->StockAmmo;
+			ammo_magazine_sub = TempSub->Ammo;
+			TempSub->Destroy();
+		}
+	}
+
 	if (AmmoWidgetClass)
 	{
 		AmmoWidget = CreateWidget<UAmmoDisplay>(GetWorld(), AmmoWidgetClass);
@@ -120,15 +140,17 @@ void AMyHeroPlayer::OnFirePressed()
 
 	if (CurrentWeapon->bIsFullAuto)
 	{
-		VaultAmmoNum();
+		
 		// フルオート開始
 		CurrentWeapon->StartFire();
+		VaultAmmoNum();
 	}
 	else
 	{
-		VaultAmmoNum();
+		
 		// セミオートは一発だけ
 		CurrentWeapon->Fire();
+		VaultAmmoNum();
 	}
 
 	if (AmmoWidget)
@@ -142,8 +164,9 @@ void AMyHeroPlayer::OnFireReleased()
 	if (!CurrentWeapon) return;
 	if (CurrentWeapon->bIsFullAuto)
 	{
-		VaultAmmoNum();
+		
 		CurrentWeapon->StopFire();
+		VaultAmmoNum();
 	}
 
 	if (AmmoWidget)
@@ -156,8 +179,9 @@ void AMyHeroPlayer::OnReloadPressed()
 {
 	if (CurrentWeapon)
 	{
-		VaultAmmoNum();
+		
 		CurrentWeapon->StartReload();
+		VaultAmmoNum();
 	}
 
 	if (AmmoWidget)
@@ -174,8 +198,9 @@ void AMyHeroPlayer::AmmoInteract()
 
 	if (ammobox && CurrentWeapon)
 	{
-		VaultAmmoNum();
+		
 		ammobox->TryGiveAmmo(CurrentWeapon);
+		VaultAmmoNum();
 		if (AmmoWidget)
 		{
 			AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
@@ -233,6 +258,7 @@ float AMyHeroPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Player is dead!"));
 		// TODO: 死亡処理（リスポーン・ゲームオーバーUIなど）
+
 	}
 
 	return ActualDamage;
@@ -240,7 +266,7 @@ float AMyHeroPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 
 void AMyHeroPlayer::VaultAmmoNum()
 {
-	if (MainSubFlag)
+	if (!MainSubFlag)
 	{
 		ammo_stock_main = CurrentWeapon->StockAmmo;
 		ammo_magazine_main = CurrentWeapon->Ammo;
@@ -267,7 +293,7 @@ void AMyHeroPlayer::SwitchWeapon()
 
 	EquipWeapon(GunComponentVault);
 
-	if (MainSubFlag)
+	if (!MainSubFlag)
 	{
 		CurrentWeapon->StockAmmo = ammo_stock_main;
 		CurrentWeapon->Ammo = ammo_magazine_main;
@@ -293,6 +319,9 @@ void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
 	// 既存の武器を削除
 	if (CurrentWeapon)
 	{
+		
+
+
 		CurrentWeapon->Destroy();
 		CurrentWeapon = nullptr;
 	}
@@ -311,13 +340,15 @@ void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
 		CurrentWeapon = SpawnedWeapon;
 	}
 
-	
-
-	//  弾数変更イベントを購読
+	// 新しい武器のデリゲート登録
 	CurrentWeapon->OnAmmoChanged.AddDynamic(this, &AMyHeroPlayer::OnAmmoChanged);
-
-	// リロード状態通知
 	CurrentWeapon->OnReloadStateChanged.AddDynamic(this, &AMyHeroPlayer::OnReloadStateChanged);
+
+	////  弾数変更イベントを購読
+	//CurrentWeapon->OnAmmoChanged.AddDynamic(this, &AMyHeroPlayer::OnAmmoChanged);
+
+	//// リロード状態通知
+	//CurrentWeapon->OnReloadStateChanged.AddDynamic(this, &AMyHeroPlayer::OnReloadStateChanged);
 }
 
 int32 AMyHeroPlayer::GetCurrentAmmo() const
@@ -351,6 +382,7 @@ void AMyHeroPlayer::OnReloadStateChanged(bool bIsReloading)
 	if (AmmoWidget)
 	{
 		AmmoWidget->SetReloading(bIsReloading);
+		VaultAmmoNum();
 	}
 }
 

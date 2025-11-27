@@ -380,10 +380,12 @@ void AEnemySpawnerWave::SpawnWave()
         case 1:
             EnemyClass = EnemyClassTypeG;
             break;
-            case 2 :
+        case 2 :
             EnemyClass = EnemyClassTypeT;
             break;
-
+        case 3:
+            EnemyClass = EnemyClassTypeK;
+            break;
 
         default:
             EnemyClass = EnemyClassTypeB;

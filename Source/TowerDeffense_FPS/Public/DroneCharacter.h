@@ -1,0 +1,46 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Character.h"
+#include "DroneCharacter.generated.h"
+
+UCLASS()
+class TOWERDEFFENSE_FPS_API ADroneCharacter : public ACharacter
+{
+	GENERATED_BODY()
+
+protected:
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+public:
+	ADroneCharacter();
+
+	virtual void Tick(float DeltaTime) override;
+
+	// 目的地
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+	FVector TargetLocation;
+
+	// 弾薬箱クラス
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+	TSubclassOf<class AAmmoBox> AmmoBoxClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+	float MoveDroneSpeed = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone")
+	float MaxHealth = 100.0f;
+
+	// 到着後に呼ばれる
+	void DropAmmoBox();
+
+	float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+	void Die();
+
+private:
+	
+	bool bIsDead = false;
+
+	float CurrentHealth;
+};

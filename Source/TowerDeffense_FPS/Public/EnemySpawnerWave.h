@@ -52,6 +52,10 @@ public:
     UPROPERTY(EditAnywhere, Category = "Spawn")
     TSubclassOf<AEnemyCharacterBase> EnemyClassTypeT;
 
+    // 敵のクラス4Kamikaze
+    UPROPERTY(EditAnywhere, Category = "Spawn")
+    TSubclassOf<AEnemyCharacterBase> EnemyClassTypeK;
+
     // スポーン位置
     UPROPERTY(EditAnywhere, Category = "Spawn")
     USceneComponent* SpawnPoint;
