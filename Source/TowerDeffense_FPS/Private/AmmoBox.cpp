@@ -2,7 +2,11 @@
 #include "Components/BoxComponent.h"
 #include "WeaponBase.h"
 #include"MyHeroPlayer.h"
+#include"DroneCharacter.h"
+#include "DropPointActor.h"
 #include "GameFramework/Character.h"
+#include "EngineUtils.h"
+
 
 //AAmmoBox::AAmmoBox()
 //{
@@ -51,6 +55,49 @@ AAmmoBox::AAmmoBox()
 void AAmmoBox::BeginPlay()
 {
 	Super::BeginPlay();
+
+	UClass* MyClass = GetClass();
+	AActor* OwnerActor = GetOwner();
+
+	if (OwnerActor)
+	{
+		IsParentDrone = true;
+	}
+	/*else if (MyClass->GetOwnerClass())
+	{
+		IsParentDrone = true;
+	}*/
+	else if (MyClass->IsChildOf(APawn::StaticClass()))
+	{
+		IsParentDrone = true;
+		UE_LOG(LogTemp, Warning, TEXT("This AmmoBox is a Pawn subclass"));
+	}
+	else if (MyClass->IsChildOf(ACharacter::StaticClass()))
+	{
+		IsParentDrone = true;
+		UE_LOG(LogTemp, Warning, TEXT("This AmmoBox is a Character subclass"));
+	}
+	else
+	{
+		IsParentDrone = false;
+		UE_LOG(LogTemp, Warning, TEXT("This AmmoBox has no Pawn/Character parent"));
+	}
+	//// ★ Spawn した瞬間に範囲内にいるプレイヤーをチェックする
+	//TArray<AActor*> OverlappingActors;
+	//RangeCollision->GetOverlappingActors(OverlappingActors, AMyHeroPlayer::StaticClass());
+
+	//for (AActor* Actor : OverlappingActors)
+	//{
+	//	if (AMyHeroPlayer* Player = Cast<AMyHeroPlayer>(Actor))
+	//	{
+	//		bPlayerInRange = true;
+	//		OverlappingPlayer = Player;
+	//		Player->ammobox = this;
+
+	//		UE_LOG(LogTemp, Warning, TEXT("BeginPlay: Player already inside AmmoBox range!"));
+	//	}
+	//}
+
 }
 
 void AAmmoBox::Tick(float DeltaTime)
@@ -88,7 +135,7 @@ void AAmmoBox::Tick(float DeltaTime)
 
 void AAmmoBox::TryGiveAmmo(AWeaponBase* Weapon)
 {
-	if (!bPlayerInRange || !Weapon) return;
+	if (!bPlayerInRange || !Weapon||IsParentDrone) return;
 
 	
 	
@@ -100,6 +147,20 @@ void AAmmoBox::TryGiveAmmo(AWeaponBase* Weapon)
 
 		if (IsAmmoGet)
 		{
+			if (LinkedDropPoint)
+			{
+				LinkedDropPoint->bAlreadyDropped = false;
+
+				UE_LOG(LogTemp, Warning, TEXT("DropPoint %s is reset and available again!"),
+					*LinkedDropPoint->GetName());
+
+				for (TActorIterator<ADroneCharacter> It(GetWorld()); It; ++It)
+				{
+					It->RefreshTargetList();
+				}
+
+			}
+			
 			Destroy();
 		}
 		

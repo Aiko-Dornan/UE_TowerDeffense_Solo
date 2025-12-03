@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include"DropPointActor.h"
 #include "DroneCharacter.generated.h"
 
 UCLASS()
@@ -31,8 +32,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone")
 	float MaxHealth = 100.0f;
 
+	UPROPERTY()
+	TArray<AActor*> TargetActors;
+
+	int32 CurrentTargetIndex = 0;
+
+	// ====================================
+	// ここに追加：現在のターゲットポイント
+	ADropPointActor* CurrentTarget = nullptr;
+
+	void MoveToNextTarget();
+
 	// 到着後に呼ばれる
 	void DropAmmoBox();
+
+	void RefreshTargetList();
 
 	float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 

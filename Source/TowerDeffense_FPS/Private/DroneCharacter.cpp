@@ -1,6 +1,8 @@
 #include "DroneCharacter.h"
 #include "AmmoBox.h"
+#include"DropPointActor.h"
 #include "AIController.h"
+#include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -26,7 +28,7 @@ void ADroneCharacter::BeginPlay()
 	GetCharacterMovement()->MaxWalkSpeed = MoveDroneSpeed;
 	if (AAIController* AICon = Cast<AAIController>(GetController()))
 	{
-		AICon->MoveToLocation(TargetLocation);
+		//AICon->MoveToLocation(TargetLocation);
 	}
 
 	// 弾薬箱をスポーン
@@ -66,7 +68,29 @@ void ADroneCharacter::BeginPlay()
 	/*UE_LOG(LogTemp, Warning, TEXT("AttachParent: %s"),
 		*SpawnedAB->GetAttachParentActor()->GetName());*/
 
+		// ▼ タグ "TargetPoint" を持つアクタをすべて取得
 	
+	
+
+	TArray<AActor*> AllTargets;
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("DropTargetPoint"), AllTargets);
+
+	for (AActor* Actor : AllTargets)
+	{
+		ADropPointActor* Point = Cast<ADropPointActor>(Actor);
+		if (Point && !Point->bAlreadyDropped)
+		{
+			TargetActors.Add(Point);
+		}
+	}
+
+	// ソートしたい場合（距離順など）はここで可能
+	// TargetActors.Sort([&](AActor* A, AActor* B){
+	//     return (A->GetActorLocation() - GetActorLocation()).Size() <
+	//            (B->GetActorLocation() - GetActorLocation()).Size();
+	// });
+
+	MoveToNextTarget();
 
 	
 }
@@ -74,38 +98,173 @@ void ADroneCharacter::BeginPlay()
 void ADroneCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	if (TargetActors.Num() == 0) return;
 	if (GetVelocity().Size() < 0.1f) // 動いていなければ
 	{
-		if (AAIController* AICon = Cast<AAIController>(GetController()))
+		/*if (AAIController* AICon = Cast<AAIController>(GetController()))
 		{
 			AICon->MoveToLocation(TargetLocation);
-		}
+		}*/
+		MoveToNextTarget();
 
 	}
+	
+	//TArray<AActor*> AllTargets;
+	////UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("DropTargetPoint"), AllTargets);
 
+	//for (AActor* Actor : AllTargets)
+	//{
+	//	ADropPointActor* Point = Cast<ADropPointActor>(Actor);
+	//	if (Point && !Point->bAlreadyDropped)
+	//	{
+	//		TargetActors.Add(Point);
+	//	}
+	//	else
+	//	{
+	//		TargetActors.Remove(Point);
+	//	}
+	//}
+	
 
 }
 
+void ADroneCharacter::MoveToNextTarget()
+{
+	if (TargetActors.Num() == 0) return;
+
+	CurrentTarget = Cast<ADropPointActor>(TargetActors[CurrentTargetIndex]);
+
+	if (CurrentTarget == nullptr || CurrentTarget->bAlreadyDropped)
+	{
+		TArray<AActor*> AllTargets;
+		UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("DropTargetPoint"), AllTargets);
+
+		for (AActor* Actor : AllTargets)
+		{
+			ADropPointActor* Point = Cast<ADropPointActor>(Actor);
+			if (Point && !Point->bAlreadyDropped)
+			{
+				TargetActors.Add(Point);
+			}
+			else
+			{
+				TargetActors.Remove(Point);
+			}
+		}
+	
+
+
+		return;
+	}
+
+	if (CurrentTargetIndex >= TargetActors.Num())
+	{
+		DropAmmoBox();
+		return;
+	}
+
+	
+
+	if (AAIController* AICon = Cast<AAIController>(GetController()))
+	{
+		AICon->MoveToLocation(CurrentTarget->GetActorLocation());
+	}
+}
+
+void ADroneCharacter::RefreshTargetList()
+{
+	TargetActors.Empty();
+
+	TArray<AActor*> AllTargets;
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("DropTargetPoint"), AllTargets);
+
+	for (AActor* Actor : AllTargets)
+	{
+		ADropPointActor* Point = Cast<ADropPointActor>(Actor);
+		if (Point && !Point->bAlreadyDropped)
+		{
+			TargetActors.Add(Point);
+		}
+	}
+
+	// リストが変わったのでインデックスをリセット
+	CurrentTargetIndex = 0;
+}
+
+
+//void ADroneCharacter::MoveToNextTarget()
+//{
+//	if (TargetActors.Num() == 0) return;
+//
+//	if (CurrentTargetIndex >= TargetActors.Num())
+//	{
+//		// 全部回った → ドロップして終了等
+//		DropAmmoBox();
+//		return;
+//	}
+//
+//	AActor* Target = TargetActors[CurrentTargetIndex];
+//	if (!Target) return;
+//
+//	if (AAIController* AICon = Cast<AAIController>(GetController()))
+//	{
+//		AICon->MoveToLocation(Target->GetActorLocation());
+//	}
+//}
+
 void ADroneCharacter::DropAmmoBox()
 {
+	if (CurrentTarget)
+	{
+		CurrentTarget->bAlreadyDropped = true;
+
+		UE_LOG(LogTemp, Warning, TEXT("Target %s received ammo box!"),
+			*CurrentTarget->GetName());
+	}
+
+	// 既存のドロップ処理
 	if (!AmmoBoxClass) return;
+
+	FVector SpawnPos = GetActorLocation() - FVector(0, 0, 90);
 
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-	// 足元にスポーン
-	FVector SpawnPos = GetActorLocation() - FVector(0, 0, 90);
 
 	AAmmoBox* Box = GetWorld()->SpawnActor<AAmmoBox>(AmmoBoxClass, SpawnPos, FRotator::ZeroRotator, Params);
 
 	if (Box)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Ammo Box Dropped!"));
+		for (TActorIterator<ADroneCharacter> It(GetWorld()); It; ++It)
+		{
+			It->RefreshTargetList();
+		}
+		// どのポイントから落とされたかを覚えさせる
+		Box->LinkedDropPoint = CurrentTarget;
+
 		Destroy();
-		
 	}
 }
+
+
+//void ADroneCharacter::DropAmmoBox()
+//{
+//	if (!AmmoBoxClass) return;
+//
+//	FActorSpawnParameters Params;
+//	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+//
+//	// 足元にスポーン
+//	FVector SpawnPos = GetActorLocation() - FVector(0, 0, 90);
+//
+//	AAmmoBox* Box = GetWorld()->SpawnActor<AAmmoBox>(AmmoBoxClass, SpawnPos, FRotator::ZeroRotator, Params);
+//
+//	if (Box)
+//	{
+//		UE_LOG(LogTemp, Warning, TEXT("Ammo Box Dropped!"));
+//		Destroy();
+//		
+//	}
+//}
 void ADroneCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);

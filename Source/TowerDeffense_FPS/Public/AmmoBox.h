@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include"DropPointActor.h"
 #include "AmmoBox.generated.h"
 
 UCLASS()
@@ -32,6 +33,8 @@ public:
 
 	// ƒvƒŒƒCƒ„[‚ª”ÍˆÍ“à‚É‹‚é‚©
 	bool bPlayerInRange = false;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool IsParentDrone = true;
 
 	/*UFUNCTION()
 	void OnOverlapBegin(
@@ -72,6 +75,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UStaticMeshComponent* Mesh;
+
+	UPROPERTY()
+	ADropPointActor* LinkedDropPoint;
 
 private:
 	bool IsAmmoGet = false;

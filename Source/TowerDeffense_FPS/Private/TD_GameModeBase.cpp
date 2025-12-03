@@ -3,6 +3,7 @@
 #include "EnemyCharacterBase.h"
 #include"EnemySpawnerWave.h"
 #include"DefenseBase.h"
+#include"DroneSpawner.h"
 #include "Blueprint/UserWidget.h"
 
 
@@ -80,6 +81,14 @@ void ATD_GameModeBase::BeginPlay()
         //}
 
        
+    }
+
+    if (DroneClass)
+    {
+        FVector SpawnLocation(0.0f, 14520.f, 0.0f);
+        FRotator SpawnRotation = FRotator::ZeroRotator;
+
+        ADroneSpawner* SpawnedDrone = GetWorld()->SpawnActor<ADroneSpawner>(DroneClass, SpawnLocation, SpawnRotation);
     }
 
     if (WaveWidgetClass)

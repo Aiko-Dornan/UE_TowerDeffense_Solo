@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include"MyProjectileActor.h"
+#include"MyGrenadeProjectileActor.h"
 #include "WeaponBase.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAmmoChanged, int32, CurrentAmmo, int32, StockAmmo);
@@ -58,6 +59,12 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<class AMyProjectileActor> ProjectileClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon|Grenade")
+	TSubclassOf<class AMyGrenadeProjectileActor> ProjectileGrenadeClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon|Grenade")
+	float ExploveArea = 100.0f;//Ç¢ÇÁÇ»Ç¢Ç©Ç‡
 
 protected:
 //Called when the game starts or when spawned
@@ -115,6 +122,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Shotgun")
 	bool bIsShotgun = false;  // Å© éUíeON/OFF
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	bool bIsAmmoGrenade = false;  // Å© GrenadeON/OFF
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Shotgun")
 	int32 PelletCount = 8;   // Å© î≠éÀÇ∑ÇÈíeÇÃêîÅiéUíeêîÅj

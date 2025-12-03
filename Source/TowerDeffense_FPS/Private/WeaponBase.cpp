@@ -119,6 +119,8 @@ void AWeaponBase::FireAtackAction()
 	SpawnParams.Owner = this;
 	SpawnParams.Instigator = OwnerActor->GetInstigator();
 
+	
+	TArray<AMyGrenadeProjectileActor*> SpawnedProjectilesG;
 	TArray<AMyProjectileActor*> SpawnedProjectiles;
 
 	// ======== ’Êí’e or ŽU’e‚Ì•ªŠò =========
@@ -136,33 +138,69 @@ void AWeaponBase::FireAtackAction()
 
 		}
 
-		AMyProjectileActor* Projectile =
-			GetWorld()->SpawnActor<AMyProjectileActor>(
-				ProjectileClass,
-				MuzzleLocation,
-				ShootRot,
-				SpawnParams
-			);
-
-		if (Projectile)
+		if (bIsAmmoGrenade)
 		{
-			Projectile->Damage = WeaponDamage;
-			SpawnedProjectiles.Add(Projectile);
+			AMyGrenadeProjectileActor* Projectile =
+				GetWorld()->SpawnActor<AMyGrenadeProjectileActor>(
+					ProjectileGrenadeClass,
+					MuzzleLocation,
+					ShootRot,
+					SpawnParams
+				);
 
-			// ’e“¯Žm‚ÌÕ“Ë‚ð–³Ž‹
-			for (AMyProjectileActor* OtherProj : SpawnedProjectiles)
+			if (Projectile)
 			{
-				if (OtherProj != Projectile)
+				// š eŒû‚ÌŒü‚«‚É10000cmæ‚ðƒ^[ƒQƒbƒg‚É‚·‚é
+				FVector ShootDir = ShootRot.Vector();
+				Projectile->TargetLocation = MuzzleLocation + ShootDir * 10000.f;
+				Projectile->Damage = WeaponDamage;
+				SpawnedProjectilesG.Add(Projectile);
+				Projectile->CalculateLaunchVelocity(); // ‚±‚±‚Å velocity ‚ðŒvŽZ
+				// ’e“¯Žm‚ÌÕ“Ë‚ð–³Ž‹
+				for (AMyGrenadeProjectileActor* OtherProj : SpawnedProjectilesG)
 				{
-					Projectile->CollisionComp->IgnoreActorWhenMoving(OtherProj, true);
-					OtherProj->CollisionComp->IgnoreActorWhenMoving(Projectile, true);
+					if (OtherProj != Projectile)
+					{
+						Projectile->CollisionComp->IgnoreActorWhenMoving(OtherProj, true);
+						OtherProj->CollisionComp->IgnoreActorWhenMoving(Projectile, true);
+					}
+				}
+			}
+		}
+		else
+		{
+			AMyProjectileActor* Projectile =
+				GetWorld()->SpawnActor<AMyProjectileActor>(
+					ProjectileClass,
+					MuzzleLocation,
+					ShootRot,
+					SpawnParams
+				);
+
+			if (Projectile)
+			{
+				Projectile->Damage = WeaponDamage;
+				SpawnedProjectiles.Add(Projectile);
+
+				// ’e“¯Žm‚ÌÕ“Ë‚ð–³Ž‹
+				for (AMyProjectileActor* OtherProj : SpawnedProjectiles)
+				{
+					if (OtherProj != Projectile)
+					{
+						Projectile->CollisionComp->IgnoreActorWhenMoving(OtherProj, true);
+						OtherProj->CollisionComp->IgnoreActorWhenMoving(Projectile, true);
+					}
 				}
 			}
 		}
 
 		
 
-		UE_LOG(LogTemp, Warning, TEXT("fire by%s,%d,%s"),*GetName(), i, *Projectile->GetName());
+		
+
+		
+
+		//UE_LOG(LogTemp, Warning, TEXT("fire by%s,%d,%s"),*GetName(), i, *Projectile->GetName());
 	}
 }
 

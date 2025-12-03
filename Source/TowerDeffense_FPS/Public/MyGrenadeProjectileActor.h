@@ -5,7 +5,18 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Components/SphereComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
 #include "MyGrenadeProjectileActor.generated.h"
+
+class ADefenseBase;
+class ADefenseStructure;
+class AMyHeroPlayer;
+class AAllyCharacter;
+class ADroneCharacter;
+class AEnemyAIController;
+class AEnemyCharacterBase;
 
 UCLASS()
 class TOWERDEFFENSE_FPS_API AMyGrenadeProjectileActor : public AActor
@@ -44,6 +55,14 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	USphereComponent* CollisionComp;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile|Type")
+	bool ExplosionFlag = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile|Type")
+	bool PlayerFlag = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
+	float AmountAreaAtacck = 100.0f;
 
 	UPROPERTY(VisibleAnywhere)
 	class UStaticMeshComponent* Mesh;
@@ -51,10 +70,20 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Damage = 15.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UNiagaraSystem* NiagaraEffect;
+
+	// パーティクルを再生する関数
+	UFUNCTION(BlueprintCallable, Category = "Effects")
+	void PlayNiagaraEffect();
+
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, FVector NormalImpulse,
 		const FHitResult& Hit);
+
+	UFUNCTION(BlueprintCallable)
+	void ApplyAreaDamage(float DamageAmount, float Radius);
 
 private:
     FVector Velocity;

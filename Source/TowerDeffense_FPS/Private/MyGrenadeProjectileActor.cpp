@@ -2,6 +2,15 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "EnemyCharacterBase.h"
+#include "EnemyAIController.h"
+#include "MyHeroPlayer.h"
+#include "AllyCharacter.h"
+#include "DefenseBase.h"
+#include"DroneCharacter.h"
+#include "DefenseStructure.h"
+#include"AIController.h"
+
 
 // Sets default values
 AMyGrenadeProjectileActor::AMyGrenadeProjectileActor()
@@ -16,12 +25,14 @@ AMyGrenadeProjectileActor::AMyGrenadeProjectileActor()
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	CollisionComp->InitSphereRadius(5.0f);
 	CollisionComp->SetCollisionProfileName("BlockAll");
+	CollisionComp->SetNotifyRigidBodyCollision(true);
 	CollisionComp->OnComponentHit.AddDynamic(this, &AMyGrenadeProjectileActor::OnHit);
 	RootComponent = CollisionComp;
 
 	// メッシュ
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(RootComponent);
+	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 // Called when the game starts or when spawned
@@ -96,12 +107,133 @@ void AMyGrenadeProjectileActor::OnHit(UPrimitiveComponent* HitComp, AActor* Othe
 	if (OtherActor && OtherActor != this)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Hit!!"));
-		UGameplayStatics::ApplyPointDamage(OtherActor, Damage, Velocity.GetSafeNormal(), Hit, nullptr, this, UDamageType::StaticClass());
+
+		if (ExplosionFlag)
+		{
+			
+			UE_LOG(LogTemp, Warning, TEXT("explosion!!"));
+			ApplyAreaDamage(Damage, AmountAreaAtacck);
+		}
+		else
+		{
+			UGameplayStatics::ApplyPointDamage(OtherActor, Damage, Velocity.GetSafeNormal(), Hit, nullptr, this, UDamageType::StaticClass());
+		}
+
+		
 		Destroy();
 	}
 }
 
+// ==================== 範囲攻撃（全対象に即時ダメージ） ====================
+void AMyGrenadeProjectileActor::ApplyAreaDamage(float DamageAmount, float Radius)
+{
+	FHitResult Hit;
 
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	FVector Center = GetActorLocation();   // プレイヤーの位置
+	float Radius2 = Radius;           // 検索半径（例：500.f）
+
+	// 取得結果を入れる配列
+	TArray<AActor*> FoundActors;
+
+	// 取得対象の ObjectType（例：WorldDynamic）
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_WorldDynamic));
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
+	// 無視する Actor（自分）
+	TArray<AActor*> IgnoreActors;
+	IgnoreActors.Add(this);
+
+	bool bHit = UKismetSystemLibrary::SphereOverlapActors(
+		World,
+		Center,
+		Radius,
+		ObjectTypes,
+		AActor::StaticClass(),  // 取得したいクラス
+		IgnoreActors,
+		FoundActors
+	);
+
+	if (bHit)
+	{
+		for (AActor* Actor : FoundActors)
+		{
+			if (PlayerFlag)
+			{
+				// --- 範囲ダメージを与える対象 ---
+				if (/*Actor->IsA(AMyHeroPlayer::StaticClass()) ||*/
+					Actor->IsA(AAllyCharacter::StaticClass()) ||
+					Actor->IsA(ADroneCharacter::StaticClass()) ||
+					/*Actor->IsA(ADefenseBase::StaticClass()) ||*/
+					/*Actor->IsA(ADefenseStructure::StaticClass())||*/
+					Actor->IsA(AEnemyCharacterBase::StaticClass()))
+				{
+					/*UGameplayStatics::ApplyDamage(
+						Actor,
+						DamageAmount,
+						GetController(),
+						this,
+						nullptr
+					);*/
+
+					UGameplayStatics::ApplyPointDamage(Actor, Damage, Velocity.GetSafeNormal(), Hit, nullptr, this, UDamageType::StaticClass());
+
+					UE_LOG(LogTemp, Warning, TEXT("%s - AreaDamage applied to %s巻き込みました!!"),
+						*GetName(), *Actor->GetName());
+				}
+			}
+			else
+			{
+				// --- 範囲ダメージを与える対象 ---
+				if (Actor->IsA(AMyHeroPlayer::StaticClass()) ||
+					Actor->IsA(AAllyCharacter::StaticClass()) ||
+					Actor->IsA(ADroneCharacter::StaticClass()) ||
+					Actor->IsA(ADefenseBase::StaticClass()) ||
+					Actor->IsA(ADefenseStructure::StaticClass()))
+				{
+					
+
+					UGameplayStatics::ApplyPointDamage(Actor, Damage, Velocity.GetSafeNormal(), Hit, nullptr, this, UDamageType::StaticClass());
+
+					UE_LOG(LogTemp, Warning, TEXT("%s - AreaDamage applied to %s巻き込みました!!"),
+						*GetName(), *Actor->GetName());
+				}
+			}
+
+			
+
+			UE_LOG(LogTemp, Warning, TEXT("Actor in range: %s"), *Actor->GetName());
+		}
+	}
+
+
+	PlayNiagaraEffect();
+	
+}
+
+
+void AMyGrenadeProjectileActor::PlayNiagaraEffect()
+{
+	if (NiagaraEffect)
+	{
+		// ワールド上のこのアクタの位置にパーティクルをスポーン
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			NiagaraEffect,
+			GetActorLocation(),
+			FRotator::ZeroRotator,
+			FVector(1.0f),  // スケール
+			true,           // 自動破棄
+			true,           // 自動アクティブ
+			ENCPoolMethod::None,
+			true
+		);
+	}
+}
+ 
+// 
 //// Fill out your copyright notice in the Description page of Project Settings.
 //
 //

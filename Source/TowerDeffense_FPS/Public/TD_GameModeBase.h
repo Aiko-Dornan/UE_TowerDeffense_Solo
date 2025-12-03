@@ -9,6 +9,7 @@
 #include"EnemySpawnerWave.h"
 #include"DefenseBase.h"
 #include"AllyCharacter.h"
+#include"DroneSpawner.h"
 #include "WaveWidget.h"
 #include "TD_GameModeBase.generated.h"
 
@@ -30,6 +31,8 @@ public:
     TSubclassOf<ADefenseBase> DefenseBaseClass;
     UPROPERTY(EditDefaultsOnly, Category = "Ally")
     TSubclassOf<AAllyCharacter> AllyClass;
+    UPROPERTY(EditDefaultsOnly, Category = "Drone")
+    TSubclassOf<ADroneSpawner> DroneClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
     TSubclassOf<UUserWidget> GameOverWidgetClass;

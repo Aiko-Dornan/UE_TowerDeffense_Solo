@@ -10,6 +10,7 @@ class ADefenseBase;
 class ADefenseStructure;
 class AMyHeroPlayer;
 class AAllyCharacter;
+class ADroneCharacter;
 class AEnemyAIController;
 
 USTRUCT(BlueprintType)
@@ -75,6 +76,9 @@ public:
 
     //void ApplyAreaDamage(float DamageAmount, float Radius);
 
+    UFUNCTION(BlueprintCallable)
+    void ApplyAreaDamage(float DamageAmount, float Radius);
+
     float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
     void Die();
@@ -130,6 +134,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
     bool KillMeFlag = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
+    float AmountAreaAtacck=500.0f;
 
 private:
    

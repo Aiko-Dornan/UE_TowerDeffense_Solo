@@ -15,6 +15,10 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "EnemySpawnerWave.h"
 
+#include "Kismet/KismetSystemLibrary.h"
+
+
+
 //#include "Engine/EngineTypes.h"    // FOverlapResult, FCollisionShape
 //#include "Engine/World.h"          // GetWorld()
 //
@@ -321,6 +325,10 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
         AllRangeAttack();
 
         return;
+    }
+    else if (Distance <= EffectiveAttackRange && KillMeFlag)
+    {
+        ApplyAreaDamage(AttackDamage,AmountAreaAtacck);
     }
     else if (Distance <= EffectiveAttackRange)
     {
@@ -774,10 +782,7 @@ void AEnemyCharacterBase::PerformAttack()//近距離
     GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
         &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
 
-    if (KillMeFlag)
-    {
-        Die();
-    }
+   
 
 }
 
@@ -828,6 +833,7 @@ void AEnemyCharacterBase::AllRangeAttack()
     if (Grenade)
     {
         Grenade->Damage = AttackDamage;
+        Grenade->AmountAreaAtacck = AmountAreaAtacck;
         Grenade->TargetLocation = CurrentTarget->GetActorLocation();
         Grenade->CalculateLaunchVelocity(); // ここで velocity を計算
         UE_LOG(LogTemp, Warning, TEXT("Projectile Spawned!"));
@@ -843,41 +849,80 @@ void AEnemyCharacterBase::AllRangeAttack()
 }
 
 // ==================== 範囲攻撃（全対象に即時ダメージ） ====================
-//void AEnemyCharacterBase::ApplyAreaDamage(float DamageAmount, float Radius)
-//{
-//    if (bIsDead) return;
-//
-//    TArray<FOverlapResult> Overlaps;
-//    FCollisionShape CollisionShape = FCollisionShape::MakeSphere(Radius);
-//
-//    bool bHit = GetWorld()->OverlapMultiByChannel(
-//        Overlaps,
-//        GetActorLocation(),
-//        FQuat::Identity,
-//        ECC_Pawn,
-//        CollisionShape
-//    );
-//
-//    if (!bHit) return;
-//
-//    for (const FOverlapResult& Result : Overlaps)
-//    {
-//        AActor* OverlappedActor = Result.GetActor();
-//        if (!IsValid(OverlappedActor)) continue;
-//        if (OverlappedActor == this) continue;
-//
-//        if (OverlappedActor->IsA(AMyHeroPlayer::StaticClass()) ||
-//            OverlappedActor->IsA(AAllyCharacter::StaticClass()) ||
-//            OverlappedActor->IsA(ADroneCharacter::StaticClass()) ||
-//            OverlappedActor->IsA(ADefenseBase::StaticClass()))
-//        {
-//            UGameplayStatics::ApplyDamage(OverlappedActor, DamageAmount, GetController(), this, nullptr);
-//        }
-//    }
-//
-//    bCanAttack = false;
-//    GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
-//}
+void AEnemyCharacterBase::ApplyAreaDamage(float DamageAmount, float Radius)
+{
+    if (bIsDead) return;
+
+    UWorld* World = GetWorld();
+    if (!World) return;
+
+    FVector Center = GetActorLocation();   // プレイヤーの位置
+    float Radius2 = Radius;           // 検索半径（例：500.f）
+
+    // 取得結果を入れる配列
+    TArray<AActor*> FoundActors;
+
+    // 取得対象の ObjectType（例：WorldDynamic）
+    TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+    ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_WorldDynamic));
+    ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
+    // 無視する Actor（自分）
+    TArray<AActor*> IgnoreActors;
+    IgnoreActors.Add(this);
+
+    bool bHit = UKismetSystemLibrary::SphereOverlapActors(
+        World,
+        Center,
+        Radius,
+        ObjectTypes,
+        AActor::StaticClass(),  // 取得したいクラス
+        IgnoreActors,
+        FoundActors
+    );
+
+    if (bHit)
+    {
+        for (AActor* Actor : FoundActors)
+        {
+            // --- 範囲ダメージを与える対象 ---
+            if (Actor->IsA(AMyHeroPlayer::StaticClass()) ||
+                Actor->IsA(AAllyCharacter::StaticClass()) ||
+                Actor->IsA(ADroneCharacter::StaticClass()) ||
+                Actor->IsA(ADefenseBase::StaticClass()) ||
+                Actor->IsA(ADefenseStructure::StaticClass()))
+            {
+                UGameplayStatics::ApplyDamage(
+                    Actor,
+                    DamageAmount,
+                    GetController(),
+                    this,
+                    nullptr
+                );
+
+                UE_LOG(LogTemp, Warning, TEXT("%s - AreaDamage applied to %s巻き込みました!!"),
+                    *GetName(), *Actor->GetName());
+            }
+
+            UE_LOG(LogTemp, Warning, TEXT("Actor in range: %s"), *Actor->GetName());
+        }
+    }
+
+   
+
+    // クールダウン開始
+    bCanAttack = false;
+
+    GetWorldTimerManager().SetTimer(
+        AttackCooldownTimerHandle,
+        this,
+        &AEnemyCharacterBase::ResetAttack,
+        AttackCooldown,
+        false
+    );
+
+    Die();
+}
+
 
 
 

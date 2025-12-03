@@ -90,6 +90,13 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Components/SphereComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "EnemyCharacterBase.h"
+#include "EnemyAIController.h"
+#include "MyHeroPlayer.h"
+#include "AllyCharacter.h"
+#include "DefenseBase.h"
+#include"DroneCharacter.h"
+#include "DefenseStructure.h"
 
 // Sets default values
 AMyProjectileActor::AMyProjectileActor()
@@ -168,8 +175,16 @@ void AMyProjectileActor::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor,
 	if (OtherActor && OtherActor != this)
 	{
 		
-
-		UGameplayStatics::ApplyPointDamage(OtherActor, Damage, GetVelocity().GetSafeNormal(), Hit, nullptr, this, nullptr);
+		if (OtherActor->IsA(AMyHeroPlayer::StaticClass()) ||
+			OtherActor->IsA(AAllyCharacter::StaticClass()) ||
+			OtherActor->IsA(ADroneCharacter::StaticClass()) ||
+			/*Actor->IsA(ADefenseBase::StaticClass()) ||*/
+			/*Actor->IsA(ADefenseStructure::StaticClass())||*/
+			OtherActor->IsA(AEnemyCharacterBase::StaticClass()))
+		{
+			UGameplayStatics::ApplyPointDamage(OtherActor, Damage, GetVelocity().GetSafeNormal(), Hit, nullptr, this, nullptr);
+		}
+		
 		Destroy(); // ’e‚ğÁ‚·
 	}
 }
