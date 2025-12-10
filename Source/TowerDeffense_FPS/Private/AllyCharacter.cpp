@@ -9,6 +9,7 @@
 #include "NavigationSystem.h"
 #include "NavigationPath.h"
 #include "DrawDebugHelpers.h"
+#include"ItemBase.h"
 
 AAllyCharacter::AAllyCharacter()
 {
@@ -41,33 +42,62 @@ void AAllyCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    // 敵がいない → 初期位置へ戻る
+    //----------------------------------------
+    // ■ ターゲットロック維持処理
+    //----------------------------------------
+    if (TargetEnemy && IsValid(TargetEnemy))
+    {
+        // 経過時間加算
+        TargetLockedElapsed += DeltaTime;
+
+        float DistToTarget = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
+
+        // 一定距離より離れた or 時間が経過したらロック解除
+        if (DistToTarget > TargetLoseDistance || TargetLockedElapsed > TargetLockTime)
+        {
+            TargetEnemy = nullptr;
+        }
+    }
+
+    //----------------------------------------
+    // ■ ターゲットがいない場合のみ検索
+    //----------------------------------------
     if (!TargetEnemy || !IsValid(TargetEnemy))
     {
         GetWorldTimerManager().ClearTimer(FireTimerHandle);
-        MoveBackToInitialPosition();
-        return;
-    }
-    else
-    {
-        FaceTarget(TargetEnemy);
+        FindNearestEnemy();
+
+        // 見つからなければ初期位置へ戻る
+        if (!TargetEnemy)
+        {
+            MoveBackToInitialPosition();
+            return;
+        }
+        else
+        {
+            // 新しいターゲットをロック開始
+            TargetLockedElapsed = 0.f;
+        }
     }
 
-    FindNearestEnemy();
+    //----------------------------------------
+    // ■ 敵がいる時の行動
+    //----------------------------------------
+
+    FaceTarget(TargetEnemy);
 
     const float DistanceToEnemy = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
 
-    // 敵が遠すぎる → 初期位置へ戻る
+    // 敵が検知範囲外に出たらターゲット解除 → 初期位置へ
     if (DistanceToEnemy > EnemyDetectRange)
     {
+        TargetEnemy = nullptr;
         GetWorldTimerManager().ClearTimer(FireTimerHandle);
         MoveBackToInitialPosition();
         return;
     }
 
-    FaceTarget(TargetEnemy);
-
-    // 敵が近づきすぎたら後退
+    // 接近しすぎたら後退
     if (DistanceToEnemy < MaintainDistance)
     {
         MoveAwayFromEnemy(TargetEnemy);
@@ -82,7 +112,8 @@ void AAllyCharacter::Tick(float DeltaTime)
     {
         if (!GetWorldTimerManager().IsTimerActive(FireTimerHandle))
         {
-            GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AAllyCharacter::HandleFire, FireInterval, true);
+            GetWorldTimerManager().SetTimer(FireTimerHandle, this,
+                &AAllyCharacter::HandleFire, FireInterval, true);
         }
     }
     else
@@ -91,8 +122,80 @@ void AAllyCharacter::Tick(float DeltaTime)
     }
 }
 
+
+//void AAllyCharacter::Tick(float DeltaTime)
+//{
+//    Super::Tick(DeltaTime);
+//
+//    // 敵がいない → 初期位置へ戻る
+//    if (!TargetEnemy || !IsValid(TargetEnemy))
+//    {
+//        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+//        MoveBackToInitialPosition();
+//        return;
+//    }
+//    else
+//    {
+//        FaceTarget(TargetEnemy);
+//    }
+//
+//    if (TargetEnemy && IsValid(TargetEnemy))
+//    {
+//        // 経過時間加算
+//        TargetLockedElapsed += DeltaTime;
+//
+//        float DistToTarget = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
+//
+//        // 一定距離離れた or 時間経過 → ターゲット解除
+//        if (DistToTarget > TargetLoseDistance || TargetLockedElapsed > TargetLockTime)
+//        {
+//            TargetEnemy = nullptr;
+//        }
+//    }
+//
+//    FindNearestEnemy();
+//
+//    const float DistanceToEnemy = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
+//
+//    // 敵が遠すぎる → 初期位置へ戻る
+//    if (DistanceToEnemy > EnemyDetectRange)
+//    {
+//        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+//        MoveBackToInitialPosition();
+//        return;
+//    }
+//
+//    FaceTarget(TargetEnemy);
+//
+//    // 敵が近づきすぎたら後退
+//    if (DistanceToEnemy < MaintainDistance)
+//    {
+//        MoveAwayFromEnemy(TargetEnemy);
+//    }
+//    else
+//    {
+//        StopMovement();
+//    }
+//
+//    // 射撃範囲内なら射撃開始
+//    if (DistanceToEnemy <= FireRange)
+//    {
+//        if (!GetWorldTimerManager().IsTimerActive(FireTimerHandle))
+//        {
+//            GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AAllyCharacter::HandleFire, FireInterval, true);
+//        }
+//    }
+//    else
+//    {
+//        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+//    }
+//}
+
 void AAllyCharacter::FindNearestEnemy()
 {
+    // 既にターゲットがいるなら探さない
+    if (TargetEnemy && IsValid(TargetEnemy)) return;
+
     float ClosestDistance = TNumericLimits<float>::Max();
     AEnemyCharacterBase* ClosestEnemy = nullptr;
 
@@ -233,9 +336,58 @@ float AAllyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 void AAllyCharacter::Die()
 {
     UE_LOG(LogTemp, Warning, TEXT("Ally %s died!"), *GetName());
+    DropCurrentWeapon();
     Destroy();
 }
 
+void AAllyCharacter::DropCurrentWeapon()
+{
+    if (!EquippedWeapon) return;
+
+    FActorSpawnParameters Params;
+    Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    FVector DropLocation = GetActorLocation() + GetActorForwardVector() * 300.0f + FVector(0, 30, 50);
+    FRotator DropRotation = FRotator(0, 0, 0);//GetActorRotation();
+
+    // ▼ AItemBase をスポーン（変換ではない）
+    AItemBase* DroppedItem = GetWorld()->SpawnActor<AItemBase>(
+        AItemBase::StaticClass(),
+        DropLocation,
+        DropRotation,
+        Params
+    );
+
+    if (DroppedItem)
+    {
+        DroppedItem->bIsWeapon = true;
+
+        // ▼ 武器クラスをコピー
+        DroppedItem->WeaponClass = EquippedWeapon->GetClass();
+
+        // ▼ 弾数コピー
+        DroppedItem->SavedAmmo = EquippedWeapon->Ammo;
+        DroppedItem->SavedStockAmmo = EquippedWeapon->StockAmmo;
+        DroppedItem->ItemType = EItemType::IT_Weapon;
+        // ▼ メッシュの見た目を WeaponBase と合わせる（必要なら）
+        if (EquippedWeapon->GetMesh())
+        {
+            DroppedItem->Mesh->SetStaticMesh(EquippedWeapon->GetMesh()->GetStaticMesh());
+        }
+
+        DroppedItem->Mesh->SetSimulatePhysics(true);
+        DroppedItem->Mesh->AddImpulse(GetActorForwardVector() * 200);
+
+        /*DroppedItem->Mesh->BodyInstance.bLockXRotation = true;
+        DroppedItem->Mesh->BodyInstance.bLockYRotation = true;
+        DroppedItem->Mesh->BodyInstance.bLockZRotation = true;*/
+
+    }
+
+    // ▼ 元の武器を破棄
+    EquippedWeapon->Destroy();
+    EquippedWeapon = nullptr;
+}
 
 //#include "AllyCharacter.h"
 //#include "AIController.h"

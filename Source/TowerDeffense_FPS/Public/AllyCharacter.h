@@ -57,6 +57,9 @@ public:
 
     void MoveToInitialPosition();
 
+    UFUNCTION()//武器ドロップ
+        void DropCurrentWeapon();
+
     /** 味方の現在 HP */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float CurrentHealth = 100.f;
@@ -96,6 +99,17 @@ public:
     /** 敵ターゲット */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
     AEnemyCharacterBase* TargetEnemy;
+
+    /** ターゲットを保持する最大時間 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+    float TargetLockTime = 3.0f;
+
+    /** ターゲット解除距離 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+    float TargetLoseDistance = 2500.f;
+
+    /** 現在のターゲットをロックした時間 */
+    float TargetLockedElapsed = 0.f;
 
     /** 初期位置 */
     FVector InitialPosition;

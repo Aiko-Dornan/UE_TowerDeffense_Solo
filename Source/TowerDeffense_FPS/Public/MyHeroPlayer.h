@@ -8,6 +8,10 @@
 #include"WeaponBase.h"
 #include "AmmoDisplayWidget.h"   // ← これを追加！
 #include "GameFramework/Character.h"
+#include "InventorySlot.h"
+#include"InventorySlotWidget.h"
+#include"InventoryWidget.h"
+#include "Components/TextRenderComponent.h"
 #include "MyHeroPlayer.generated.h"
 
 UCLASS()
@@ -23,6 +27,26 @@ class TOWERDEFFENSE_FPS_API AMyHeroPlayer : public ACharacter
 public:
 	// Sets default values for this character's properties
 	AMyHeroPlayer();
+
+	// 消耗品インベントリ
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	TArray<FInventorySlot> Inventory;
+
+	UFUNCTION(BlueprintCallable)
+	void AddItemToInventory(TSubclassOf<AItemBase> ItemClass, int32 Quantity = 1);
+
+	//// 消耗品用インベントリ（スロット型）
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	TArray<FInventorySlot> ConsumableInventory;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	int32 InventorySlots = 27; // 3x9など
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<class UInventoryWidget> InventoryWidgetClass;
+
+	UPROPERTY()
+	class UInventoryWidget* InventoryWidget;
 
 	// エディタから指定可能な武器クラス
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category = "Weapon")
@@ -41,6 +65,23 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	void BeginZoom();
+	void EndZoom();
+
+	
+
+protected:
+	
+	bool bIsZooming = false;
+
+	UPROPERTY(EditAnywhere, Category = "Zoom")
+	float ZoomedFOV = 45.0f;   // 右クリック時のFOV
+
+	float DefaultFOV;
+
+	UPROPERTY(EditAnywhere, Category = "Zoom")
+	float ZoomInterpSpeed = 20.0f;  // FOV補間スピード
 
 public:	
 	// Called every frame
@@ -77,7 +118,17 @@ public:
 	void EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass);
 
 	UFUNCTION()
-	void AmmoInteract();
+	void ItemInteract();
+
+	UFUNCTION(BlueprintCallable)
+	void PickupItem(class AItemBase* Item);
+
+	// 消耗品追加・使用
+	bool AddConsumableToInventory(AItemBase* Item, int32 Quantity = 1);
+	bool UseConsumable(int32 SlotIndex);
+
+	UFUNCTION()//武器ドロップ
+	void DropCurrentWeapon();
 
 	//武器切り替え
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
@@ -131,7 +182,10 @@ public:
 
 	private:
 
-		
+		UPROPERTY(VisibleAnywhere)
+		class UTextRenderComponent* DebugInventoryText;
+
+		void ShowInventoryDebug();
 
 
 		UPROPERTY(VisibleAnywhere, Category = "Weapon")

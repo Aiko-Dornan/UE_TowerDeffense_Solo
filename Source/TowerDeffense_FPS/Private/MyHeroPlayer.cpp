@@ -7,7 +7,13 @@
 #include "Components/CapsuleComponent.h"
 #include "Blueprint/UserWidget.h" // 忘れずに！
 #include"AmmoBox.h"
+#include"ItemBase.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "DrawDebugHelpers.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Components/StaticMeshComponent.h"   // ★ WeaponMesh の参照用
+#include "Components/BoxComponent.h"          // ★ DroppedItem->CollisionBox 用
+#include"InventorySlotWidget.h"
 
 // Sets default values
 AMyHeroPlayer::AMyHeroPlayer()
@@ -36,12 +42,25 @@ AMyHeroPlayer::AMyHeroPlayer()
 
 	CurrentWeapon = nullptr;
 
+	// コンストラクタで初期化
+	DebugInventoryText = CreateDefaultSubobject<UTextRenderComponent>(TEXT("DebugInventoryText"));
+	DebugInventoryText->SetupAttachment(RootComponent);
+	DebugInventoryText->SetRelativeLocation(FVector(0, 0, 200)); // プレイヤー頭上など
+	DebugInventoryText->SetHorizontalAlignment(EHTA_Center);
+	DebugInventoryText->SetWorldSize(30.f);
+
 }
 
 // Called when the game starts or when spawned
 void AMyHeroPlayer::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (CameraComponent)
+	{
+		DefaultFOV = CameraComponent->FieldOfView;
+	}
+
 
 	// ゲーム開始時に銃を装備
 	if (GunComponent)
@@ -79,6 +98,22 @@ void AMyHeroPlayer::BeginPlay()
 		}
 	}
 
+	// ------------------ InventoryWidget の生成 ------------------
+	if (InventoryWidgetClass)
+	{
+		InventoryWidget = CreateWidget<UInventoryWidget>(GetWorld(), InventoryWidgetClass);
+		if (InventoryWidget)
+		{
+			InventoryWidget->AddToViewport();
+
+			// 初期表示用に Inventory を反映
+			InventoryWidget->UpdateInventory(Inventory);
+		}
+	}
+
+	// インベントリ初期化
+	//ConsumableInventory.SetNum(InventorySlots);
+
 	/*if (AmmoWidgetClass)
 	{
 		UUserWidget* AmmoWidget = CreateWidget<UUserWidget>(GetWorld(), AmmoWidgetClass);
@@ -94,6 +129,33 @@ void AMyHeroPlayer::BeginPlay()
 void AMyHeroPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	FVector Start = CameraComponent->GetComponentLocation();
+	FVector End = Start + CameraComponent->GetForwardVector() * 500.0f;
+
+	FVector BoxHalfSize(10, 10, 10);
+	FRotator Orientation = CameraComponent->GetComponentRotation();
+
+	DrawDebugBox(
+		GetWorld(),
+		End,
+		BoxHalfSize,
+		Orientation.Quaternion(),
+		FColor::Green,
+		false,
+		0.f,
+		0,
+		1.f
+	);
+
+	// -------- Zoom 処理 --------
+	float TargetFOV = bIsZooming ? ZoomedFOV : DefaultFOV;
+	float NewFOV = FMath::FInterpTo(
+		CameraComponent->FieldOfView,
+		TargetFOV,
+		DeltaTime,
+		ZoomInterpSpeed
+	);
+	CameraComponent->SetFieldOfView(NewFOV);
 
 }
 
@@ -112,7 +174,7 @@ void AMyHeroPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMyHeroPlayer::OnFirePressed);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AMyHeroPlayer::OnFireReleased);
 
-	PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &AMyHeroPlayer::AmmoInteract);
+	PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &AMyHeroPlayer::ItemInteract);
 	PlayerInputComponent->BindAction("Switch", IE_Pressed, this, &AMyHeroPlayer::SwitchWeapon);
 
 	//PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMyHeroPlayer::HandleFire);
@@ -120,6 +182,8 @@ void AMyHeroPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	
 	//reload
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &AMyHeroPlayer::OnReloadPressed);
+	PlayerInputComponent->BindAction("Zoom", IE_Pressed, this, &AMyHeroPlayer::BeginZoom);
+	PlayerInputComponent->BindAction("Zoom", IE_Released, this, &AMyHeroPlayer::EndZoom);
 
 }
 
@@ -191,27 +255,281 @@ void AMyHeroPlayer::OnReloadPressed()
 
 }
 
-void AMyHeroPlayer::AmmoInteract()
+void AMyHeroPlayer::BeginZoom()
 {
+	bIsZooming = true;
+}
 
+void AMyHeroPlayer::EndZoom()
+{
+	bIsZooming = false;
+}
 
+void AMyHeroPlayer::ItemInteract()
+{
+	FVector Start = CameraComponent->GetComponentLocation();
+	FVector End = Start + CameraComponent->GetForwardVector() * 500.0f;
 
-	if (ammobox && CurrentWeapon)
+	// 四角形の半径（XYZ方向のサイズ）
+	FVector BoxHalfSize(10.f, 10.f, 10.f);
+
+	// 角度（今回は回転なし）
+	FRotator Orientation = CameraComponent->GetComponentRotation();
+
+	FHitResult Hit;
+
+	bool bHit = UKismetSystemLibrary::BoxTraceSingle(
+		this,
+		Start,
+		End,
+		BoxHalfSize,
+		Orientation,
+		UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		false,
+		{ this },
+		EDrawDebugTrace::ForDuration,   // ← 四角形が視覚化される！
+		Hit,
+		true,
+		FLinearColor::Green,
+		FLinearColor::Red,
+		0.1f
+	);
+
+	if (bHit)
 	{
+		// アイテム取得
+		if (AItemBase* Item = Cast<AItemBase>(Hit.GetActor()))
+		{
+			PickupItem(Item);
+			return;
+		}
+
+		// AmmoBox (既存の処理)
+		if (AAmmoBox* AmmoBoxHit = Cast<AAmmoBox>(Hit.GetActor()))
+		{
+			AmmoBoxHit->TryGiveAmmo(CurrentWeapon);
+			VaultAmmoNum();
+
+			if (AmmoWidget)
+				AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
+			return;
+		}
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Nothing to interact with."));
+}
+
+bool AMyHeroPlayer::AddConsumableToInventory(AItemBase* Item, int32 Quantity)
+{
+	if (!Item || Item->ItemType != EItemType::IT_Consumable) return false;
+
+	// 既存の同じアイテムにスタック
+	for (FInventorySlot& Slot : ConsumableInventory)
+	{
+		if (Slot.ItemClass == Item->GetClass())
+		{
+			Slot.Quantity += Quantity;
+			Item->Destroy();
+			return true;
+		}
+	}
+
+	// 空スロットに追加
+	for (FInventorySlot& Slot : ConsumableInventory)
+	{
+		if (Slot.IsEmpty())
+		{
+			Slot.ItemClass = Item->GetClass();
+			Slot.Quantity = Quantity;
+			Item->Destroy();
+			return true;
+		}
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Inventory full!"));
+	return false;
+}
+
+void AMyHeroPlayer::AddItemToInventory(TSubclassOf<AItemBase> ItemClass, int32 Quantity)
+{
+	if (!ItemClass) return;
+
+	// 既存スロットに追加できるかチェック
+	for (FInventorySlot& Slot : Inventory)
+	{
+		if (Slot.ItemClass == ItemClass)
+		{
+			Slot.Quantity += Quantity;
+			UE_LOG(LogTemp, Warning, TEXT("Added %d to existing slot: %s, new qty: %d"), Quantity, *ItemClass->GetName(), Slot.Quantity);
 		
-		ammobox->TryGiveAmmo(CurrentWeapon);
-		VaultAmmoNum();
+			return;
+		}
+	}
+
+	// 新しいスロットに追加
+	FInventorySlot NewSlot;
+	NewSlot.ItemClass = ItemClass;
+	NewSlot.Quantity = Quantity;
+	Inventory.Add(NewSlot);
+
+	UE_LOG(LogTemp, Warning, TEXT("Added new slot: %s, qty: %d"), *ItemClass->GetName(), NewSlot.Quantity);
+
+}
+
+void AMyHeroPlayer::ShowInventoryDebug()
+{
+	FString InventoryStr = TEXT("Inventory:\n");
+	for (const FInventorySlot& Slot : Inventory)
+	{
+		if (Slot.IsEmpty())
+			InventoryStr += TEXT("- Empty\n");
+		else
+		{
+			AItemBase* DefaultItem = Slot.ItemClass->GetDefaultObject<AItemBase>();
+			InventoryStr += FString::Printf(TEXT("- %s x%d\n"), *DefaultItem->GetName(), Slot.Quantity);
+		}
+	}
+
+	if (DebugInventoryText)
+		DebugInventoryText->SetText(FText::FromString(InventoryStr));
+}
+
+bool AMyHeroPlayer::UseConsumable(int32 SlotIndex)
+{
+	if (!ConsumableInventory.IsValidIndex(SlotIndex)) return false;
+
+	FInventorySlot& Slot = ConsumableInventory[SlotIndex];
+	if (Slot.IsEmpty()) return false;
+
+	// 回復処理
+	if (Slot.ItemClass)
+	{
+		AItemBase* TempItem = GetWorld()->SpawnActor<AItemBase>(Slot.ItemClass);
+		if (TempItem && TempItem->HealAmount > 0.f)
+		{
+			// HP回復
+			//PlayerHP = FMath::Clamp(PlayerHP + TempItem->HealAmount, 0.f, MaxHP);
+			if (AmmoWidget)
+				AmmoWidget->UpdateHPText(PlayerHP);
+
+			TempItem->Destroy();
+		}
+	}
+
+	// スタック減少
+	Slot.Quantity--;
+	if (Slot.Quantity <= 0)
+		Slot.ItemClass = nullptr;
+
+	return true;
+}
+
+void AMyHeroPlayer::PickupItem(AItemBase* Item)
+{
+	if (!Item) return;
+
+	// 武器は従来通り
+	if (Item->ItemType == EItemType::IT_Weapon)
+	{
+		DropCurrentWeapon();
+		Item->OnPickedUp(this);
+
 		if (AmmoWidget)
 		{
 			AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
 		}
 	}
-	else
+
+	// 消耗品（インベントリへ入れる）
+	else if (Item->ItemType == EItemType::IT_Consumable)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Player Failed!!"));
+		AddItemToInventory(Item->GetClass(), 1);
+
+		// UI更新
+		if (InventoryWidget)
+		{
+			InventoryWidget->UpdateInventory(Inventory);
+		}
 	}
 
+	// デバッグ表示
+	ShowInventoryDebug();
+
+	Item->Destroy();
+	UE_LOG(LogTemp, Warning, TEXT("Picked up item: %s"), *Item->GetName());
 }
+
+
+//void AMyHeroPlayer::PickupItem(AItemBase* Item)
+//{
+//	if (!Item) return;
+//
+//	// ▼ ここで古い武器をドロップする
+//	if (Item->bIsWeapon)
+//	{
+//		DropCurrentWeapon();
+//	}
+//
+//	// アイテム側の処理
+//	Item->OnPickedUp(this);
+//
+//	// UI更新
+//	if (AmmoWidget)
+//	{
+//		AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
+//	}
+//}
+
+
+void AMyHeroPlayer::DropCurrentWeapon()
+{
+	if (!CurrentWeapon) return;
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	FVector DropLocation = GetActorLocation() + GetActorForwardVector() * 300.0f + FVector(0, 30, 50);
+	FRotator DropRotation = FRotator(0, 0, 0);//GetActorRotation();
+
+	// ▼ AItemBase をスポーン（変換ではない）
+	AItemBase* DroppedItem = GetWorld()->SpawnActor<AItemBase>(
+		AItemBase::StaticClass(),
+		DropLocation,
+		DropRotation,
+		Params
+	);
+
+	if (DroppedItem)
+	{
+		DroppedItem->bIsWeapon = true;
+
+		// ▼ 武器クラスをコピー
+		DroppedItem->WeaponClass = CurrentWeapon->GetClass();
+
+		// ▼ 弾数コピー
+		DroppedItem->SavedAmmo = CurrentWeapon->Ammo;
+		DroppedItem->SavedStockAmmo = CurrentWeapon->StockAmmo;
+		DroppedItem->ItemType = EItemType::IT_Weapon;
+		// ▼ メッシュの見た目を WeaponBase と合わせる（必要なら）
+		if (CurrentWeapon->GetMesh())
+		{
+			DroppedItem->Mesh->SetStaticMesh(CurrentWeapon->GetMesh()->GetStaticMesh());
+		}
+
+		DroppedItem->Mesh->SetSimulatePhysics(true);
+		DroppedItem->Mesh->AddImpulse(GetActorForwardVector() * 200);
+
+		/*DroppedItem->Mesh->BodyInstance.bLockXRotation = true;
+		DroppedItem->Mesh->BodyInstance.bLockYRotation = true;
+		DroppedItem->Mesh->BodyInstance.bLockZRotation = true;*/
+
+	}
+
+	// ▼ 元の武器を破棄
+	CurrentWeapon->Destroy();
+	CurrentWeapon = nullptr;
+}
+
 
 void AMyHeroPlayer::CheatGunEquip(TSubclassOf<AWeaponBase> NewWeaponClass)
 {
@@ -344,11 +662,7 @@ void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
 	CurrentWeapon->OnAmmoChanged.AddDynamic(this, &AMyHeroPlayer::OnAmmoChanged);
 	CurrentWeapon->OnReloadStateChanged.AddDynamic(this, &AMyHeroPlayer::OnReloadStateChanged);
 
-	////  弾数変更イベントを購読
-	//CurrentWeapon->OnAmmoChanged.AddDynamic(this, &AMyHeroPlayer::OnAmmoChanged);
-
-	//// リロード状態通知
-	//CurrentWeapon->OnReloadStateChanged.AddDynamic(this, &AMyHeroPlayer::OnReloadStateChanged);
+	
 }
 
 int32 AMyHeroPlayer::GetCurrentAmmo() const
