@@ -31,12 +31,18 @@ void UAmmoDisplay::SetReloading(bool bIsReloading)
     }
 }
 
-void UAmmoDisplay::UpdateHPText(int32 RestHP)
+void UAmmoDisplay::UpdateHP(float CurrentHP, float MaxHP)
 {
+    if (HPBar)
+    {
+        float Ratio = CurrentHP / MaxHP;
+        HPBar->SetPercent(Ratio);
+    }
+
     if (HPTextBlock)
     {
-        FString HPString = FString::Printf(TEXT("%d"), RestHP);
-        HPTextBlock->SetText(FText::FromString(HPString));
-
+        /*FString HPString = FString::Printf(TEXT("%f"), CurrentHP);
+        HPTextBlock->SetText(FText::FromString(HPString));*/
+        HPTextBlock->SetText(FText::AsNumber(FMath::RoundToInt(CurrentHP)));
     }
 }

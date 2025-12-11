@@ -48,6 +48,14 @@ public:
 	UPROPERTY()
 	class UInventoryWidget* InventoryWidget;
 
+	// 現在選択しているスロット番号
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	int32 SelectedSlotIndex = 0;
+
+	// インベントリスロット数（UIと揃える）
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 MaxInventorySlots = 9; // SlotCount と同じにする
+
 	// エディタから指定可能な武器クラス
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category = "Weapon")
 	TSubclassOf<AWeaponBase> GunComponent;
@@ -127,6 +135,9 @@ public:
 	bool AddConsumableToInventory(AItemBase* Item, int32 Quantity = 1);
 	bool UseConsumable(int32 SlotIndex);
 
+	void OnMouseWheel(float Value);
+	void UseSelectedItem();
+
 	UFUNCTION()//武器ドロップ
 	void DropCurrentWeapon();
 
@@ -182,14 +193,15 @@ public:
 
 	private:
 
-		UPROPERTY(VisibleAnywhere)
+		/*UPROPERTY(VisibleAnywhere)
 		class UTextRenderComponent* DebugInventoryText;
 
-		void ShowInventoryDebug();
+		void ShowInventoryDebug();*/
 
 
 		UPROPERTY(VisibleAnywhere, Category = "Weapon")
 		TSubclassOf<AWeaponBase> GunComponentVault;
 
+		int MaxHP = 100;
 		
 };

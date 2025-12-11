@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/TextBlock.h"
+#include "Components/ProgressBar.h"
 #include "AmmoDisplayWidget.generated.h"
 
 UCLASS()
@@ -19,6 +20,10 @@ public:
     UPROPERTY(meta = (BindWidget))
     UTextBlock* ReloadTextBlock;
 
+    //追加：HPゲージのProgressBar
+    UPROPERTY(meta = (BindWidget))
+    UProgressBar* HPBar;
+
     UPROPERTY(meta = (BindWidget))
     UTextBlock* HPTextBlock;
 
@@ -32,5 +37,5 @@ public:
 
     // HP更新関数
     UFUNCTION(BlueprintCallable)
-    void UpdateHPText(int32 RestHP);
+    void UpdateHP(float CurrentHP, float MaxHP);
 };

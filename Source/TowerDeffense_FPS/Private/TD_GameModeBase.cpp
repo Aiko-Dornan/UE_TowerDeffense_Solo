@@ -100,6 +100,16 @@ void ATD_GameModeBase::BeginPlay()
         }
     }
 
+    // HUD¶¬
+    if (DefenseBaseHPWidgetClass)
+    {
+        DefenseBaseHPWidget = CreateWidget<UDefenseBaseHPWidget>(GetWorld(), DefenseBaseHPWidgetClass);
+        if (DefenseBaseHPWidget)
+        {
+            DefenseBaseHPWidget->AddToViewport();
+        }
+    }
+
     // EnemySpawnerWave‚ğ’T‚µ‚ÄƒoƒCƒ“ƒh
     TArray<AActor*> FoundSpawners;
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemySpawnerWave::StaticClass(), FoundSpawners);

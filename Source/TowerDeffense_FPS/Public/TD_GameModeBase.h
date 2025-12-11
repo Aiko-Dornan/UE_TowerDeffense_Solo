@@ -11,6 +11,7 @@
 #include"AllyCharacter.h"
 #include"DroneSpawner.h"
 #include "WaveWidget.h"
+#include "DefenseBaseHPWidget.h"
 #include "TD_GameModeBase.generated.h"
 
 UCLASS()
@@ -39,6 +40,11 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
     TSubclassOf<UUserWidget> GameClearWidgetClass;
 
+    UPROPERTY()
+    UDefenseBaseHPWidget* DefenseBaseHPWidget;
+
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<UUserWidget> DefenseBaseHPWidgetClass;
 
     UFUNCTION(BlueprintCallable)
     void GameClear();

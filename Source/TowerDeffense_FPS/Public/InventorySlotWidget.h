@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include"InventorySlot.h"
+#include "Components/Border.h"
 #include "InventorySlotWidget.generated.h"
 
 UCLASS()
@@ -26,4 +27,12 @@ public:
     // スロット更新関数
     UFUNCTION(BlueprintCallable)
     void UpdateSlot(UTexture2D* ItemIcon, int32 Quantity, const FString& ItemName);
+
+    UFUNCTION(BlueprintCallable)
+    void SetHighlighted(bool bHighlight);
+
+    UPROPERTY(meta = (BindWidget))
+    class UImage* Image_Highlight; // 選択中のハイライト画像（初期Hidden）
+    UPROPERTY(meta = (BindWidget))
+    class UImage* Image_Frame;     // 枠線（常時表示）
 };

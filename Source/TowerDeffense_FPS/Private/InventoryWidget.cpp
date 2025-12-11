@@ -22,17 +22,7 @@ void UInventoryWidget::NativeConstruct()
     SlotWidgets.Empty();
     SlotContainer->ClearChildren();
 
-    //// SlotCount ŒÂ‚ÌƒXƒƒbƒg‚ğ©“®¶¬
-    //for (int32 i = 0; i < SlotCount; i++)
-    //{
-    //    UInventorySlotWidget* NewSlot = CreateWidget<UInventorySlotWidget>(this, SlotWidgetClass);
-
-    //    if (NewSlot)
-    //    {
-    //        SlotContainer->AddChild(NewSlot);
-    //        SlotWidgets.Add(NewSlot);
-    //    }
-    //}
+    
 
     FVector2D StartOffset(300.f, 0.f); // ‰¡‚É50px‚¸‚ç‚µ‚½‚¢ê‡
 
@@ -88,5 +78,14 @@ void UInventoryWidget::UpdateInventory(const TArray<FInventorySlot>& Inventory)
 
             SlotW->UpdateSlot(ItemCDO->ItemIcon, SlotData.Quantity, ItemName);
         }
+    }
+}
+
+void UInventoryWidget::HighlightSlot(int32 Index)
+{
+    for (int32 i = 0; i < SlotWidgets.Num(); i++)
+    {
+        if (SlotWidgets[i])
+            SlotWidgets[i]->SetHighlighted(i == Index);
     }
 }

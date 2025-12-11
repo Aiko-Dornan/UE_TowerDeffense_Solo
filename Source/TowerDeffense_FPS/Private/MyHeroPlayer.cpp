@@ -43,11 +43,11 @@ AMyHeroPlayer::AMyHeroPlayer()
 	CurrentWeapon = nullptr;
 
 	// コンストラクタで初期化
-	DebugInventoryText = CreateDefaultSubobject<UTextRenderComponent>(TEXT("DebugInventoryText"));
-	DebugInventoryText->SetupAttachment(RootComponent);
-	DebugInventoryText->SetRelativeLocation(FVector(0, 0, 200)); // プレイヤー頭上など
-	DebugInventoryText->SetHorizontalAlignment(EHTA_Center);
-	DebugInventoryText->SetWorldSize(30.f);
+	//DebugInventoryText = CreateDefaultSubobject<UTextRenderComponent>(TEXT("DebugInventoryText"));
+	//DebugInventoryText->SetupAttachment(RootComponent);
+	//DebugInventoryText->SetRelativeLocation(FVector(0, 0, 200)); // プレイヤー頭上など
+	//DebugInventoryText->SetHorizontalAlignment(EHTA_Center);
+	//DebugInventoryText->SetWorldSize(30.f);
 
 }
 
@@ -110,6 +110,9 @@ void AMyHeroPlayer::BeginPlay()
 			InventoryWidget->UpdateInventory(Inventory);
 		}
 	}
+
+	MaxHP = PlayerHP;
+
 
 	// インベントリ初期化
 	//ConsumableInventory.SetNum(InventorySlots);
@@ -177,6 +180,9 @@ void AMyHeroPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &AMyHeroPlayer::ItemInteract);
 	PlayerInputComponent->BindAction("Switch", IE_Pressed, this, &AMyHeroPlayer::SwitchWeapon);
 
+	PlayerInputComponent->BindAxis("MouseWheel", this, &AMyHeroPlayer::OnMouseWheel);
+	PlayerInputComponent->BindAction("UseItem", IE_Pressed, this, &AMyHeroPlayer::UseSelectedItem);
+
 	//PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMyHeroPlayer::HandleFire);
 	// クリックで射撃
 	
@@ -184,6 +190,8 @@ void AMyHeroPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &AMyHeroPlayer::OnReloadPressed);
 	PlayerInputComponent->BindAction("Zoom", IE_Pressed, this, &AMyHeroPlayer::BeginZoom);
 	PlayerInputComponent->BindAction("Zoom", IE_Released, this, &AMyHeroPlayer::EndZoom);
+
+
 
 }
 
@@ -354,74 +362,135 @@ void AMyHeroPlayer::AddItemToInventory(TSubclassOf<AItemBase> ItemClass, int32 Q
 {
 	if (!ItemClass) return;
 
-	// 既存スロットに追加できるかチェック
+	//既存の同じアイテムにスタック
 	for (FInventorySlot& Slot : Inventory)
 	{
 		if (Slot.ItemClass == ItemClass)
 		{
 			Slot.Quantity += Quantity;
-			UE_LOG(LogTemp, Warning, TEXT("Added %d to existing slot: %s, new qty: %d"), Quantity, *ItemClass->GetName(), Slot.Quantity);
-		
 			return;
 		}
 	}
 
-	// 新しいスロットに追加
+	// 空スロットに追加（これが大事！！）
+	for (FInventorySlot& Slot : Inventory)
+	{
+		if (Slot.IsEmpty())
+		{
+			Slot.ItemClass = ItemClass;
+			Slot.Quantity = Quantity;
+			return;
+		}
+	}
+
+	// 空が全く無い場合のみ、新枠として追加
 	FInventorySlot NewSlot;
 	NewSlot.ItemClass = ItemClass;
 	NewSlot.Quantity = Quantity;
 	Inventory.Add(NewSlot);
-
-	UE_LOG(LogTemp, Warning, TEXT("Added new slot: %s, qty: %d"), *ItemClass->GetName(), NewSlot.Quantity);
-
 }
 
-void AMyHeroPlayer::ShowInventoryDebug()
+//void AMyHeroPlayer::ShowInventoryDebug()
+//{
+//	FString InventoryStr = TEXT("Inventory:\n");
+//	for (const FInventorySlot& Slot : Inventory)
+//	{
+//		if (Slot.IsEmpty())
+//			InventoryStr += TEXT("- Empty\n");
+//		else
+//		{
+//			AItemBase* DefaultItem = Slot.ItemClass->GetDefaultObject<AItemBase>();
+//			InventoryStr += FString::Printf(TEXT("- %s x%d\n"), *DefaultItem->GetName(), Slot.Quantity);
+//		}
+//	}
+//
+//	if (DebugInventoryText)
+//		DebugInventoryText->SetText(FText::FromString(InventoryStr));
+//}
+
+//bool AMyHeroPlayer::UseConsumable(int32 SlotIndex)
+//{
+//	if (!ConsumableInventory.IsValidIndex(SlotIndex)) return false;
+//
+//	FInventorySlot& Slot = ConsumableInventory[SlotIndex];
+//	if (Slot.IsEmpty()) return false;
+//
+//	// 回復処理
+//	if (Slot.ItemClass)
+//	{
+//		AItemBase* TempItem = GetWorld()->SpawnActor<AItemBase>(Slot.ItemClass);
+//		if (TempItem && TempItem->HealAmount > 0.f)
+//		{
+//			// HP回復
+//			//PlayerHP = FMath::Clamp(PlayerHP + TempItem->HealAmount, 0.f, MaxHP);
+//			if (AmmoWidget)
+//				AmmoWidget->UpdateHP(PlayerHP, MaxHP);
+//
+//			TempItem->Destroy();
+//		}
+//	}
+//
+//	// スタック減少
+//	Slot.Quantity--;
+//	if (Slot.Quantity <= 0)
+//		Slot.ItemClass = nullptr;
+//
+//	return true;
+//}
+
+void AMyHeroPlayer::UseSelectedItem()
 {
-	FString InventoryStr = TEXT("Inventory:\n");
-	for (const FInventorySlot& Slot : Inventory)
+	if (!Inventory.IsValidIndex(SelectedSlotIndex))
+		return;
+
+	FInventorySlot& Slot = Inventory[SelectedSlotIndex];
+
+	if (Slot.IsEmpty())
 	{
-		if (Slot.IsEmpty())
-			InventoryStr += TEXT("- Empty\n");
-		else
-		{
-			AItemBase* DefaultItem = Slot.ItemClass->GetDefaultObject<AItemBase>();
-			InventoryStr += FString::Printf(TEXT("- %s x%d\n"), *DefaultItem->GetName(), Slot.Quantity);
-		}
+		UE_LOG(LogTemp, Warning, TEXT("Slot empty"));
+		return;
 	}
 
-	if (DebugInventoryText)
-		DebugInventoryText->SetText(FText::FromString(InventoryStr));
+	AItemBase* ItemCDO = Slot.ItemClass->GetDefaultObject<AItemBase>();
+
+	if (ItemCDO->ItemType == EItemType::IT_Consumable)
+	{
+		// ★ 消耗品を使用
+		Slot.Quantity--;
+
+		if (Slot.Quantity <= 0)
+			Slot.ItemClass = nullptr;
+
+		// 回復処理
+		PlayerHP = FMath::Clamp(PlayerHP + ItemCDO->HealAmount, 0.f, MaxHP);
+
+		if (AmmoWidget)
+			AmmoWidget->UpdateHP(PlayerHP, MaxHP);
+
+		UE_LOG(LogTemp, Warning, TEXT("Used item: %s"), *ItemCDO->GetName());
+
+		// UI更新
+		if (InventoryWidget)
+			InventoryWidget->UpdateInventory(Inventory);
+	}
 }
 
-bool AMyHeroPlayer::UseConsumable(int32 SlotIndex)
+void AMyHeroPlayer::OnMouseWheel(float Value)
 {
-	if (!ConsumableInventory.IsValidIndex(SlotIndex)) return false;
-
-	FInventorySlot& Slot = ConsumableInventory[SlotIndex];
-	if (Slot.IsEmpty()) return false;
-
-	// 回復処理
-	if (Slot.ItemClass)
+	if (Value > 0)
 	{
-		AItemBase* TempItem = GetWorld()->SpawnActor<AItemBase>(Slot.ItemClass);
-		if (TempItem && TempItem->HealAmount > 0.f)
-		{
-			// HP回復
-			//PlayerHP = FMath::Clamp(PlayerHP + TempItem->HealAmount, 0.f, MaxHP);
-			if (AmmoWidget)
-				AmmoWidget->UpdateHPText(PlayerHP);
-
-			TempItem->Destroy();
-		}
+		SelectedSlotIndex = (SelectedSlotIndex + 1) % MaxInventorySlots;
+	}
+	else if (Value < 0)
+	{
+		SelectedSlotIndex = (SelectedSlotIndex - 1 + MaxInventorySlots) % MaxInventorySlots;
 	}
 
-	// スタック減少
-	Slot.Quantity--;
-	if (Slot.Quantity <= 0)
-		Slot.ItemClass = nullptr;
+	UE_LOG(LogTemp, Warning, TEXT("Selected Slot = %d"), SelectedSlotIndex);
 
-	return true;
+	// UI側に知らせる
+	if (InventoryWidget)
+		InventoryWidget->HighlightSlot(SelectedSlotIndex);
 }
 
 void AMyHeroPlayer::PickupItem(AItemBase* Item)
@@ -566,12 +635,15 @@ float AMyHeroPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 {
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	PlayerHP -= ActualDamage;
+	//PlayerHP -= ActualDamage;
+	PlayerHP = FMath::Clamp(PlayerHP - ActualDamage, 0.0f, MaxHP);
+
+
 	UE_LOG(LogTemp, Warning, TEXT("Player took %f damage! HP = %f"), ActualDamage, PlayerHP);
 
 	if (AmmoWidget)
 	{
-		AmmoWidget->UpdateHPText(PlayerHP);
+		AmmoWidget->UpdateHP(PlayerHP, MaxHP);
 	}
 
 	if (PlayerHP <= 0.0f)

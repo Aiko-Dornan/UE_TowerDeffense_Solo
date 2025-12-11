@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"   // ← これ大事！AActorを使うため
 #include "Delegates/DelegateCombinations.h"
+#include "Components/WidgetComponent.h"
 #include "DefenseBase.generated.h" // ← 必ず最後に書く
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBaseDestroyed);
@@ -35,7 +36,10 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Base Mesh")
     UStaticMeshComponent* BaseMesh;
 
-    
+    //// HP表示用
+    //UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+    //UWidgetComponent* HPWidgetComponent;
+
 
     UPROPERTY(BlueprintAssignable, Category = "Events")
     FOnBaseDestroyed OnBaseDestroyed;

@@ -31,6 +31,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
     int32 SlotCount = 20;
 
+    UFUNCTION(BlueprintCallable)
+    void HighlightSlot(int32 Index);
+
     virtual void NativeConstruct() override;
 
     UFUNCTION(BlueprintCallable)

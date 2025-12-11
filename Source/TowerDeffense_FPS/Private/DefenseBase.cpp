@@ -1,4 +1,5 @@
 #include "DefenseBase.h"
+#include "DefenseBaseHPWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/StaticMeshComponent.h"
 #include"TD_GameModeBase.h"
@@ -13,12 +14,21 @@ ADefenseBase::ADefenseBase()
 
     MaxHealth = 500.0f;
     CurrentHealth = MaxHealth;
+
+   
 }
 
 void ADefenseBase::BeginPlay()
 {
     Super::BeginPlay();
     CurrentHealth = MaxHealth;
+
+    ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+    if (GM && GM->DefenseBaseHPWidget)
+    {
+        GM->DefenseBaseHPWidget->UpdateHP(CurrentHealth, MaxHealth);
+    }
+
 }
 
 void ADefenseBase::Tick(float DeltaTime)
@@ -35,6 +45,13 @@ float ADefenseBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 
     CurrentHealth -= ActualDamage;
     UE_LOG(LogTemp, Warning, TEXT("Base took %f damage! HP: %f/%f"), ActualDamage, CurrentHealth, MaxHealth);
+
+    // HUDçXêV
+    ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+    if (GM && GM->DefenseBaseHPWidget)
+    {
+        GM->DefenseBaseHPWidget->UpdateHP(CurrentHealth, MaxHealth);
+    }
 
     if (CurrentHealth <= 0.f)
     {
