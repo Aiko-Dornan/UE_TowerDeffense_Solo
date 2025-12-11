@@ -19,6 +19,11 @@ public:
     UPROPERTY(meta = (BindWidget))
     class UTextBlock* QuantityText;
 
+    // アイテム名表示（新規追加）
+    UPROPERTY(meta = (BindWidget))
+    UTextBlock* ItemNameText;
+
+    // スロット更新関数
     UFUNCTION(BlueprintCallable)
-    void UpdateSlot(UTexture2D* ItemIcon, int32 Quantity);
+    void UpdateSlot(UTexture2D* ItemIcon, int32 Quantity, const FString& ItemName);
 };

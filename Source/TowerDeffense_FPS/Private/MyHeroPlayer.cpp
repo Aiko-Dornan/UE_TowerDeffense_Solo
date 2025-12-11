@@ -443,17 +443,19 @@ void AMyHeroPlayer::PickupItem(AItemBase* Item)
 	// 消耗品（インベントリへ入れる）
 	else if (Item->ItemType == EItemType::IT_Consumable)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("UpdateInventory called!"));
 		AddItemToInventory(Item->GetClass(), 1);
 
 		// UI更新
 		if (InventoryWidget)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("UpdateInventory called2!"));
 			InventoryWidget->UpdateInventory(Inventory);
 		}
 	}
 
 	// デバッグ表示
-	ShowInventoryDebug();
+	//ShowInventoryDebug();
 
 	Item->Destroy();
 	UE_LOG(LogTemp, Warning, TEXT("Picked up item: %s"), *Item->GetName());
