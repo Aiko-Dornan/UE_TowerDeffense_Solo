@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include"DropPointActor.h"
+#include "NiagaraSystem.h"
 #include "AmmoBox.generated.h"
 
 UCLASS()
@@ -16,6 +17,7 @@ class TOWERDEFFENSE_FPS_API AAmmoBox : public AActor
 public:
 	AAmmoBox();
 
+	void PlayNiagaraEffect();
 protected:
 	virtual void BeginPlay() override;
 
@@ -78,6 +80,9 @@ public:
 
 	UPROPERTY()
 	ADropPointActor* LinkedDropPoint;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UNiagaraSystem* NiagaraEffect;
 
 private:
 	bool IsAmmoGet = false;

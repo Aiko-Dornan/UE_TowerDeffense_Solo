@@ -103,6 +103,8 @@ void AAmmoBox::BeginPlay()
 void AAmmoBox::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	PlayNiagaraEffect();
 }
 
 //void AAmmoBox::OnOverlapBegin(
@@ -199,6 +201,24 @@ void AAmmoBox::OnRangeEnd(UPrimitiveComponent* OverlappedComp,
 	}
 }
 
+void AAmmoBox::PlayNiagaraEffect()
+{
+	if (NiagaraEffect)
+	{
+		// ワールド上のこのアクタの位置にパーティクルをスポーン
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			NiagaraEffect,
+			GetActorLocation(),
+			FRotator::ZeroRotator,
+			FVector(4.0f),  // スケール
+			true,           // 自動破棄
+			true,           // 自動アクティブ
+			ENCPoolMethod::None,
+			true
+		);
+	}
+}
 
 //void AAmmoBox::OnRangeBegin(UPrimitiveComponent* OverlappedComp,
 //	AActor* OtherActor, UPrimitiveComponent* OtherComp,
