@@ -183,10 +183,11 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
         return;
     }
 
-    if (GetVelocity().Size() < 0.1f) // 動いていなければ
+    if (law_speed_flag) // 動いていなければ
     {
+
         FVector Dir = (CurrentTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-        AddMovementInput(Dir, MoveEnemySpeed); // これならNavMeshや物理と自然に共存できる
+        AddMovementInput(Dir, MoveEnemySpeed*5.0f); // これならNavMeshや物理と自然に共存できる
 
         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
         {
@@ -469,6 +470,19 @@ void AEnemyCharacterBase::UpdateTarget()
             }
         }
     }
+
+    if (GetVelocity().Size() < MoveEnemySpeed/2)
+    {
+        law_speed_flag = true;
+        UE_LOG(LogTemp, Warning, TEXT("{{{%s}}}LAW SPEED!!!!!!!!!!!!11!"), *GetName());
+    }
+    else
+    {
+        law_speed_flag = false;
+        UE_LOG(LogTemp, Warning, TEXT("{{{%s}}}HIGH SPEED!!!!!!!!!!!!11!"), *GetName());
+    }
+
+
 }
 
 
@@ -973,6 +987,8 @@ void AEnemyCharacterBase::Die()
         }
     }
 
+    PlayNiagaraEffect();
+
     Destroy();
 }
 
@@ -1000,4 +1016,22 @@ float AEnemyCharacterBase::GetEffectiveAttackRange(AActor* Target) const
     return AttackRange;
 }
 
+void AEnemyCharacterBase::PlayNiagaraEffect()
+{
+    if (NiagaraEffect)
+    {
+        // ワールド上のこのアクタの位置にパーティクルをスポーン
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+            GetWorld(),
+            NiagaraEffect,
+            GetActorLocation(),
+            FRotator::ZeroRotator,
+            FVector(4.0f),  // スケール
+            true,           // 自動破棄
+            true,           // 自動アクティブ
+            ENCPoolMethod::None,
+            true
+        );
+    }
+}
 

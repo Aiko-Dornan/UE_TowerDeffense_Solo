@@ -14,7 +14,11 @@ class TOWERDEFFENSE_FPS_API UDefenseBaseHPWidget : public UUserWidget
 public:
     UPROPERTY(meta = (BindWidget))
     UProgressBar* HPBar;
+   
+    /*float CHP = 500.f;
+    float MHP = 500.f;*/
 
+    //void NativeConstruct();
     UFUNCTION(BlueprintCallable)
     void UpdateHP(float CurrentHP, float MaxHP);
    

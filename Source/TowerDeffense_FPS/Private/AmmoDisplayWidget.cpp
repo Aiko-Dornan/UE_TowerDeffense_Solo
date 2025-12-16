@@ -31,6 +31,14 @@ void UAmmoDisplay::SetReloading(bool bIsReloading)
     }
 }
 
+void UAmmoDisplay::NativeConstruct()
+{
+    Super::NativeConstruct();
+
+    // ここで初期値をセット
+    UpdateHP(CHP, MHP);
+}
+
 void UAmmoDisplay::UpdateHP(float CurrentHP, float MaxHP)
 {
     if (HPBar)

@@ -191,6 +191,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	float ammo_magazine_sub = 0;
 
+	float GetMaxHP() const;
+	float GetCurrentHP() const;
+
 	private:
 
 		/*UPROPERTY(VisibleAnywhere)

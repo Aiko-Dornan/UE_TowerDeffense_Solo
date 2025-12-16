@@ -18,6 +18,13 @@ void ATD_GameModeBase::BeginPlay()
 {
     Super::BeginPlay();
 
+    APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+    if (PC)
+    {
+        PC->bShowMouseCursor = false;
+        PC->SetInputMode(FInputModeGameOnly());
+    }
+
     if (DefenseBaseClass)
     {
         FVector SpawnLocation(0.0f, 14520.f, 0.0f);
@@ -107,6 +114,11 @@ void ATD_GameModeBase::BeginPlay()
         if (DefenseBaseHPWidget)
         {
             DefenseBaseHPWidget->AddToViewport();
+
+            ADefenseBase* DB = Cast<ADefenseBase>(UGameplayStatics::GetActorOfClass(GetWorld(), ADefenseBase::StaticClass()));
+            if (DB)
+            DefenseBaseHPWidget->UpdateHP(DB->GetCurrentHP(), DB->GetMaxHP());
+            
         }
     }
 

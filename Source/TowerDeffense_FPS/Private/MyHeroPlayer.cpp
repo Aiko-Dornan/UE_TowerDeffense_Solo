@@ -95,6 +95,7 @@ void AMyHeroPlayer::BeginPlay()
 		{
 			AmmoWidget->AddToViewport();
 			AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
+			AmmoWidget->UpdateHP(GetCurrentHP(), GetMaxHP());
 		}
 	}
 
@@ -774,3 +775,12 @@ void AMyHeroPlayer::OnReloadStateChanged(bool bIsReloading)
 	}
 }
 
+float AMyHeroPlayer::GetCurrentHP() const
+{
+	return (float)PlayerHP;
+}
+
+float AMyHeroPlayer::GetMaxHP() const
+{
+	return (float)MaxHP;
+}

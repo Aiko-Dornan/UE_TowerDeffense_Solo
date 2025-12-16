@@ -5,6 +5,14 @@
 #include "Components/TextBlock.h"
 #include "Kismet/GameplayStatics.h"
 
+//void UDefenseBaseHPWidget::NativeConstruct()
+//{
+//    Super::NativeConstruct();
+//
+//    // ここで初期値をセット
+//    UpdateHP(CHP, MHP);
+//}
+
 void UDefenseBaseHPWidget::UpdateHP(float CurrentHP, float MaxHP)
 {
     if (HPBar)

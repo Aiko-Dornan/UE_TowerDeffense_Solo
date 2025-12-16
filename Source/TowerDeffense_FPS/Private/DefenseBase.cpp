@@ -23,17 +23,18 @@ void ADefenseBase::BeginPlay()
     Super::BeginPlay();
     CurrentHealth = MaxHealth;
 
-    ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+    /*ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
     if (GM && GM->DefenseBaseHPWidget)
     {
         GM->DefenseBaseHPWidget->UpdateHP(CurrentHealth, MaxHealth);
-    }
+    }*/
 
 }
 
 void ADefenseBase::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+   
 }
 
 float ADefenseBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
@@ -76,4 +77,14 @@ void ADefenseBase::OnDestroyedBase()
     // 破壊アニメやエフェクトなどを追加可能
     // ここでは単純に消す
     Destroy();
+}
+
+float ADefenseBase::GetCurrentHP() const
+{  
+        return (float)CurrentHealth;
+}
+
+float ADefenseBase::GetMaxHP() const
+{
+    return (float)MaxHealth;
 }

@@ -26,6 +26,8 @@ protected:
 
     void OnDestroyedBase();
 
+  
+
 public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base Stats")
     float MaxHealth = 500.0f;
@@ -40,6 +42,8 @@ public:
     //UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
     //UWidgetComponent* HPWidgetComponent;
 
+    float GetMaxHP() const;
+    float GetCurrentHP() const;
 
     UPROPERTY(BlueprintAssignable, Category = "Events")
     FOnBaseDestroyed OnBaseDestroyed;

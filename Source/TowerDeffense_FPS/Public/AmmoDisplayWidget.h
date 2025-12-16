@@ -27,6 +27,11 @@ public:
     UPROPERTY(meta = (BindWidget))
     UTextBlock* HPTextBlock;
 
+    float CHP = 100.f;
+    float MHP = 100.f;
+
+    void NativeConstruct();
+
     // íeêîçXêVä÷êî
     UFUNCTION(BlueprintCallable)
     void UpdateAmmoText(int32 CurrentAmmo, int32 StockAmmo);

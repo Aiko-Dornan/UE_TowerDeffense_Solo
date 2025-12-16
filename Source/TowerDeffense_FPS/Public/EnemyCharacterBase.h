@@ -83,6 +83,8 @@ public:
 
     void Die();
 
+    void PlayNiagaraEffect();
+
     void StartMovingToTarget();
     void TryStartAI();
 
@@ -138,6 +140,12 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
     float AmountAreaAtacck=500.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    UNiagaraSystem* NiagaraEffect;
+
+    UPROPERTY(EditAnywhere,BlueprintReadOnly)
+    bool law_speed_flag = true;
+
 private:
    
     UPROPERTY()
@@ -159,8 +167,7 @@ private:
     float LastBarrierCheckTime = 0.f;
     float BarrierCheckCooldown = 1.0f; // 1秒に1回だけチェック
 
-
-    bool law_inteli_flag = true;
+   
 
     bool bHasLoggedStuck = false;
 
