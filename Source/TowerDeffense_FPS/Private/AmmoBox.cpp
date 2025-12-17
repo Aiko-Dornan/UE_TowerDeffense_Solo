@@ -82,6 +82,9 @@ void AAmmoBox::BeginPlay()
 		IsParentDrone = false;
 		UE_LOG(LogTemp, Warning, TEXT("This AmmoBox has no Pawn/Character parent"));
 	}
+
+	//PlayNiagaraEffect();
+
 	//// ★ Spawn した瞬間に範囲内にいるプレイヤーをチェックする
 	//TArray<AActor*> OverlappingActors;
 	//RangeCollision->GetOverlappingActors(OverlappingActors, AMyHeroPlayer::StaticClass());
@@ -104,7 +107,7 @@ void AAmmoBox::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	PlayNiagaraEffect();
+	//PlayNiagaraEffect();
 }
 
 //void AAmmoBox::OnOverlapBegin(
@@ -162,7 +165,8 @@ void AAmmoBox::TryGiveAmmo(AWeaponBase* Weapon)
 				}
 
 			}
-			
+			;
+			NiagaraComp->Deactivate();
 			Destroy();
 		}
 		
@@ -206,18 +210,21 @@ void AAmmoBox::PlayNiagaraEffect()
 	if (NiagaraEffect)
 	{
 		// ワールド上のこのアクタの位置にパーティクルをスポーン
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		NiagaraComp= UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 			GetWorld(),
 			NiagaraEffect,
 			GetActorLocation(),
 			FRotator::ZeroRotator,
 			FVector(4.0f),  // スケール
-			true,           // 自動破棄
+			false,           // 自動破棄
 			true,           // 自動アクティブ
 			ENCPoolMethod::None,
 			true
 		);
+
+		UE_LOG(LogTemp, Warning, TEXT("AmmoBox: Niagara"));
 	}
+	
 }
 
 //void AAmmoBox::OnRangeBegin(UPrimitiveComponent* OverlappedComp,

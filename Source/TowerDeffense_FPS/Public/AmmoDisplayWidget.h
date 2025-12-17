@@ -12,7 +12,11 @@ class TOWERDEFFENSE_FPS_API UAmmoDisplay : public UUserWidget
 {
     GENERATED_BODY()
 
+protected:
+    
 public:
+
+    
 
     UPROPERTY(meta = (BindWidget))
     UTextBlock* AmmoTextBlock;
@@ -26,6 +30,10 @@ public:
 
     UPROPERTY(meta = (BindWidget))
     UTextBlock* HPTextBlock;
+
+    UPROPERTY(meta = (BindWidget))
+    UTextBlock* DroneTextBlock;
+
 
     float CHP = 100.f;
     float MHP = 100.f;
@@ -43,4 +51,14 @@ public:
     // HP更新関数
     UFUNCTION(BlueprintCallable)
     void UpdateHP(float CurrentHP, float MaxHP);
+
+    UFUNCTION(BlueprintCallable)
+    void UpdateDroneText(int Case);
+
+    UFUNCTION(BlueprintCallable)
+    void ClearDroneText();
+
+private:
+    FTimerHandle UpdateTextTimerHandle;
+    float UpdateTextInterval = 1.5f; // 1.5秒ごとにターゲット更新
 };

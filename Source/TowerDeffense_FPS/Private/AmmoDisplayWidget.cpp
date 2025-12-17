@@ -1,7 +1,12 @@
-#include "AmmoDisplayWidget.h"
+﻿#include "AmmoDisplayWidget.h"
 #include "Components/TextBlock.h"
 #include "Kismet/GameplayStatics.h"
 #include "MyHeroPlayer.h"
+#include "TimerManager.h"
+
+#define LOCTEXT_NAMESPACE "AmmoDisplayWidget"
+
+
 
 void UAmmoDisplay::UpdateAmmoText(int32 CurrentAmmo, int32 StockAmmo)
 {
@@ -35,7 +40,7 @@ void UAmmoDisplay::NativeConstruct()
 {
     Super::NativeConstruct();
 
-    // �����ŏ����l���Z�b�g
+    // ここで初期値をセット
     UpdateHP(CHP, MHP);
 }
 
@@ -54,3 +59,55 @@ void UAmmoDisplay::UpdateHP(float CurrentHP, float MaxHP)
         HPTextBlock->SetText(FText::AsNumber(FMath::RoundToInt(CurrentHP)));
     }
 }
+
+void UAmmoDisplay::UpdateDroneText(int Case)
+{
+    if (!DroneTextBlock)
+    {
+        return;
+    }
+
+    switch (Case)
+    {
+    case 0: // die
+        DroneTextBlock->SetText(
+            LOCTEXT("DroneDie", "補給ドローンが墜落しました...")
+        );
+        break;
+
+    case 1: // spawn
+        DroneTextBlock->SetText(
+            LOCTEXT("DroneSpawn", "補給ドローンが前線に到着しました")
+        );
+        break;
+
+    case 2: // arrive
+        DroneTextBlock->SetText(
+            LOCTEXT("DroneArrive", "補給ドローンが物資を投下しました")
+        );
+        break;
+
+    default:
+        DroneTextBlock->SetText(FText::GetEmpty());
+        break;
+    }
+
+    GetWorld()->GetTimerManager().SetTimer(
+        UpdateTextTimerHandle,
+        this,
+        &UAmmoDisplay::ClearDroneText,
+        UpdateTextInterval,
+        true
+    );
+
+}
+
+void UAmmoDisplay::ClearDroneText()
+{
+    if (DroneTextBlock)
+    {
+        DroneTextBlock->SetText(FText::GetEmpty());
+    }
+}
+
+#undef LOCTEXT_NAMESPACE

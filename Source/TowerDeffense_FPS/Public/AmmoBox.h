@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"
 #include"DropPointActor.h"
 #include "NiagaraSystem.h"
+#include "NiagaraComponent.h"
 #include "AmmoBox.generated.h"
 
 UCLASS()
@@ -11,7 +12,7 @@ class TOWERDEFFENSE_FPS_API AAmmoBox : public AActor
 {
 	UPROPERTY()
 	class AMyHeroPlayer* OverlappingPlayer;
-
+	
 	GENERATED_BODY()
 
 public:
@@ -83,6 +84,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UNiagaraSystem* NiagaraEffect;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UNiagaraComponent* NiagaraComp;
 
 private:
 	bool IsAmmoGet = false;

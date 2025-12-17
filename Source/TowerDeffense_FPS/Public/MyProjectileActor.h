@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/Actor.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
 #include "MyProjectileActor.generated.h"
 
 UCLASS()
@@ -43,6 +45,14 @@ public:
 	// 弾同士の衝突を無効にするか
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
 	bool bIgnoreOtherProjectiles = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UNiagaraSystem* NiagaraEffect;
+
+	// パーティクルを再生する関数
+	UFUNCTION(BlueprintCallable, Category = "Effects")
+	void PlayNiagaraEffect();
+
 
 	/*UFUNCTION()
 	void OnOverlap(UPrimitiveComponent* OverlappedComp,

@@ -74,7 +74,7 @@ void UInventoryWidget::UpdateInventory(const TArray<FInventorySlot>& Inventory)
             const FInventorySlot& SlotData = Inventory[i];
             AItemBase* ItemCDO = SlotData.ItemClass->GetDefaultObject<AItemBase>();
 
-            FString ItemName = ItemCDO->GetName(); // ‚Ü‚½‚Í ItemCDO->CustomName ‚ðŽg‚¤
+            FString ItemName = ItemCDO->ItemName; // ‚Ü‚½‚Í ItemCDO->CustomName ‚ðŽg‚¤
 
             SlotW->UpdateSlot(ItemCDO->ItemIcon, SlotData.Quantity, ItemName);
         }

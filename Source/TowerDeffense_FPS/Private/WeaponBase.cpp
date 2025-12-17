@@ -9,11 +9,13 @@
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
 #include "GameFramework/DamageType.h"
-
+#include"MyHeroPlayer.h"
 
 #include"Kismet/GameplayStatics.h"
 #include"Kismet/KismetMathLibrary.h"
 
+#include "Sound/SoundAttenuation.h"     // USoundAttenuation, FAttenuationSettings
+#include "Sound/SoundBase.h"            // USoundBase
 
 // Sets default values
 AWeaponBase::AWeaponBase()
@@ -41,6 +43,21 @@ AWeaponBase::AWeaponBase()
 	FireRate = 0.5f;
 	FireRange = 3000.0f;
 	FireSpread = 2.5f;
+
+	// ===== FireSound用の距離減衰設定を作成 =====
+	FireSoundAttenuation = NewObject<USoundAttenuation>(this, TEXT("FireSoundAttenuation"));
+	if (FireSoundAttenuation)
+	{
+		//FAttenuationSettings& AttenuationSettings = FireSoundAttenuation->Attenuation;
+
+		FireSoundAttenuation->Attenuation.bAttenuate = true;          // 距離減衰ON
+		FireSoundAttenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere; // 球形
+		FireSoundAttenuation->Attenuation.AttenuationShapeExtents = FVector(0.f);        // 球の半径は0でOK
+		FireSoundAttenuation->Attenuation.FalloffDistance = 10.f;      // 減衰開始距離
+		FireSoundAttenuation->Attenuation.dBAttenuationAtMax = -100.f;    // 最大距離で音量を下げる量
+		FireSoundAttenuation->Attenuation.bSpatialize = true;           // 3D音
+		
+	}
 
 }
 
@@ -246,7 +263,19 @@ void AWeaponBase::FireEffect()
 
 	if (FireSound!=nullptr)
 	{
-		UGameplayStatics::PlaySound2D(this, FireSound);
+		// 銃の位置を取得
+		FVector MuzzleLocation = Mesh->GetSocketLocation("FireSocket");
+
+		// Attenuationを指定して3D音を再生
+		UGameplayStatics::PlaySoundAtLocation(
+			this,
+			FireSound,
+			MuzzleLocation,
+			1.0f,           // 音量
+			1.0f,           // ピッチ
+			0.0f,           // 開始時間
+			FireSoundAttenuation // Attenuationを指定
+		);
 	}
 
 }
@@ -369,3 +398,4 @@ void AWeaponBase::FinishReload()
 	OnReloadStateChanged.Broadcast(false); //  リロード終了を通知
 	OnAmmoChanged.Broadcast((int32)Ammo, (int32)StockAmmo);
 }
+

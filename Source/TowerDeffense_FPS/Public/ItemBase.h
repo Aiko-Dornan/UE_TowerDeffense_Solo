@@ -33,6 +33,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     bool bIsConsumable = true; // Á–Õ•i‚©‚Ç‚¤‚©
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+    FString ItemName;
+
     // •Šíê—p
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
     bool bIsWeapon = false;

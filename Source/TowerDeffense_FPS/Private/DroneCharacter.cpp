@@ -5,6 +5,8 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include"AmmoDisplayWidget.h"
+#include"MyHeroPlayer.h"
 
 ADroneCharacter::ADroneCharacter()
 {
@@ -31,13 +33,17 @@ void ADroneCharacter::BeginPlay()
 		//AICon->MoveToLocation(TargetLocation);
 	}
 
+	TArray<AActor*> FoundPlayer;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMyHeroPlayer::StaticClass(), FoundPlayer);
+	MHP = Cast<AMyHeroPlayer>(FoundPlayer[0]);
+
 	// 弾薬箱をスポーン
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
 	SpawnParams.Instigator = GetInstigator();
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	// ★ 必ず場所と回転を渡す
+	//  必ず場所と回転を渡す
 	AAmmoBox* SpawnedAB = GetWorld()->SpawnActor<AAmmoBox>(
 		AmmoBoxClass,
 		FVector::ZeroVector,
@@ -68,7 +74,7 @@ void ADroneCharacter::BeginPlay()
 	/*UE_LOG(LogTemp, Warning, TEXT("AttachParent: %s"),
 		*SpawnedAB->GetAttachParentActor()->GetName());*/
 
-		// ▼ タグ "TargetPoint" を持つアクタをすべて取得
+		//  タグ "TargetPoint" を持つアクタをすべて取得
 	
 	
 
@@ -91,6 +97,11 @@ void ADroneCharacter::BeginPlay()
 	// });
 
 	MoveToNextTarget();
+
+	if (MHP!=nullptr&&MHP->AmmoWidget!=nullptr)
+	{
+		MHP->AmmoWidget->UpdateDroneText(1);
+	}
 
 	
 }
@@ -234,12 +245,15 @@ void ADroneCharacter::DropAmmoBox()
 
 	if (Box)
 	{
+		Box->PlayNiagaraEffect();
 		for (TActorIterator<ADroneCharacter> It(GetWorld()); It; ++It)
 		{
 			It->RefreshTargetList();
 		}
 		// どのポイントから落とされたかを覚えさせる
 		Box->LinkedDropPoint = CurrentTarget;
+
+		MHP->AmmoWidget->UpdateDroneText(2);
 
 		Destroy();
 	}
@@ -308,6 +322,8 @@ void ADroneCharacter::Die()
 {
 	if (bIsDead) return;
 	bIsDead = true;
+
+	MHP->AmmoWidget->UpdateDroneText(0);
 
 	Destroy();
 }

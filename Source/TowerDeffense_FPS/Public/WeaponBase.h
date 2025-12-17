@@ -12,6 +12,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAmmoChanged, int32, CurrentAmmo,
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnReloadStateChanged, bool, bIsReloading);
 
+// 前方宣言
+class USoundBase;
+class USoundAttenuation;
+
+
 UCLASS()
 class TOWERDEFFENSE_FPS_API AWeaponBase : public AActor
 {
@@ -76,7 +81,9 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Gameplay")
 	void SetCanFire();
 
-	
+	// 銃声用の距離減衰設定
+	UPROPERTY()
+	class USoundAttenuation* FireSoundAttenuation;
 
 	bool bIsFiring = false; // 現在射撃中か
 
@@ -90,6 +97,12 @@ protected:
 public:	
 	/*UFUNCTION(BlueprintPure,Category="Weapon")
 	bool IsFullAuto();*/
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	class UBoxComponent* CollisionBox;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	class UBoxComponent* RangeCollision;
 
 	//FORCEINLINE class USkeletalMeshComponent* GetMesh() const { return Mesh; }
 	FORCEINLINE class UStaticMeshComponent* GetMesh() const { return Mesh; }
@@ -156,5 +169,9 @@ public:
 	// ==== リロード ====
 	void StartReload();
 	void FinishReload();
+
+	
+	private:
+		
 
 };

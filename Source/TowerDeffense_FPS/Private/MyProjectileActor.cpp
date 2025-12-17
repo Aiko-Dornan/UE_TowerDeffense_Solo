@@ -183,9 +183,28 @@ void AMyProjectileActor::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor,
 			OtherActor->IsA(AEnemyCharacterBase::StaticClass()))
 		{
 			UGameplayStatics::ApplyPointDamage(OtherActor, Damage, GetVelocity().GetSafeNormal(), Hit, nullptr, this, nullptr);
+			PlayNiagaraEffect();
 		}
 		
 		Destroy(); // 弾を消す
 	}
 }
 
+void AMyProjectileActor::PlayNiagaraEffect()
+{
+	if (NiagaraEffect)
+	{
+		// ワールド上のこのアクタの位置にパーティクルをスポーン
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			NiagaraEffect,
+			GetActorLocation(),
+			FRotator::ZeroRotator,
+			FVector(0.2f),  // スケール
+			true,           // 自動破棄
+			true,           // 自動アクティブ
+			ENCPoolMethod::None,
+			true
+		);
+	}
+}

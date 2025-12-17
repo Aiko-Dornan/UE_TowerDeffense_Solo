@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include"DropPointActor.h"
+#include"AmmoDisplayWidget.h"
+#include"MyHeroPlayer.h"
 #include "DroneCharacter.generated.h"
 
 UCLASS()
@@ -35,6 +37,12 @@ public:
 	UPROPERTY()
 	TArray<AActor*> TargetActors;
 
+	UPROPERTY()
+	class AMyHeroPlayer* MHP;
+
+	/*UPROPERTY()
+	UAmmoDisplay* AmmoD;*/
+
 	int32 CurrentTargetIndex = 0;
 
 	// ====================================
@@ -54,6 +62,7 @@ public:
 
 private:
 	
+
 	bool bIsDead = false;
 
 	float CurrentHealth;
