@@ -12,6 +12,8 @@
 #include"InventorySlotWidget.h"
 #include"InventoryWidget.h"
 #include "Components/TextRenderComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "DrawDebugHelpers.h"
 #include "MyHeroPlayer.generated.h"
 
 UCLASS()
@@ -77,7 +79,20 @@ protected:
 	void BeginZoom();
 	void EndZoom();
 
-	
+	// ===== グレネード軌道表示 =====
+	UPROPERTY(EditAnywhere, Category = "Grenade|Aim")
+	float GrenadeThrowSpeed = 1200.f;
+
+	UPROPERTY(EditAnywhere, Category = "Grenade|Aim")
+	float TrajectorySimTime = 2.5f;
+
+	UPROPERTY(EditAnywhere, Category = "Grenade|Aim")
+	float TrajectoryFrequency = 30.f;
+
+	UPROPERTY(EditAnywhere, Category = "Grenade|Aim")
+	bool bShowGrenadeTrajectory = false;
+
+	void DrawGrenadeTrajectory();
 
 protected:
 	
@@ -138,6 +153,8 @@ public:
 	void OnMouseWheel(float Value);
 	void UseSelectedItem();
 
+	void ThrowGrenade(AItemBase* ItemCDO);
+
 	UFUNCTION()//武器ドロップ
 	void DropCurrentWeapon();
 
@@ -176,8 +193,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player Stats")
 	float PlayerHP = 100.0f;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsDead = false;
+
 	// ダメージ処理
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+	//死亡処理
+	UFUNCTION()
+	void EnterSpectatorMode();
 
 	UFUNCTION()
 	void VaultAmmoNum();

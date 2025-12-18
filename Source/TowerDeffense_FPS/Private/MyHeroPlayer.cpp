@@ -14,6 +14,11 @@
 #include "Components/StaticMeshComponent.h"   // ★ WeaponMesh の参照用
 #include "Components/BoxComponent.h"          // ★ DroppedItem->CollisionBox 用
 #include"InventorySlotWidget.h"
+#include"MySpectatorPawn.h"
+#include "Kismet/GameplayStatics.h"
+#include"EnemyCharacterBase.h"
+#include"MyGrenadeProjectileActor.h"
+#include"TD_GameInstance.h"
 
 // Sets default values
 AMyHeroPlayer::AMyHeroPlayer()
@@ -56,64 +61,79 @@ void AMyHeroPlayer::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (CameraComponent)
-	{
-		DefaultFOV = CameraComponent->FieldOfView;
-	}
+	FString CurrentLevel = GetWorld()->GetMapName();
 
-
-	// ゲーム開始時に銃を装備
-	if (GunComponent)
+	if (CurrentLevel.Contains("BaseMap")) // ゲームプレイ画面の場合のみ
 	{
-		EquipWeapon(GunComponent);
-	}
 
-	// 装備したメイン武器の弾数を保存
-	if (CurrentWeapon)
-	{
-		ammo_stock_main = CurrentWeapon->StockAmmo;
-		ammo_magazine_main = CurrentWeapon->Ammo;
-	}
-
-	// サブ武器も初期化（まだ装備しないが弾数だけ保存したい場合）
-	if (GunComponentSub)
-	{
-		// 一時的にスポーンして弾数だけ取って破棄する
-		AWeaponBase* TempSub = GetWorld()->SpawnActor<AWeaponBase>(GunComponentSub);
-		if (TempSub)
+		if (CameraComponent)
 		{
-			ammo_stock_sub = TempSub->StockAmmo;
-			ammo_magazine_sub = TempSub->Ammo;
-			TempSub->Destroy();
+			DefaultFOV = CameraComponent->FieldOfView;
 		}
-	}
 
-	if (AmmoWidgetClass)
-	{
-		AmmoWidget = CreateWidget<UAmmoDisplay>(GetWorld(), AmmoWidgetClass);
-		if (AmmoWidget)
+
+		// ゲーム開始時に銃を装備
+		if (GunComponent)
 		{
-			AmmoWidget->AddToViewport();
-			AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
-			AmmoWidget->UpdateHP(GetCurrentHP(), GetMaxHP());
-		}
-	}
+			if (UTD_GameInstance* GI = Cast<UTD_GameInstance>(GetGameInstance()))
+			{
+				if (GI->SelectedMainWeapon)
+					GunComponent = GI->SelectedMainWeapon;
 
-	// ------------------ InventoryWidget の生成 ------------------
-	if (InventoryWidgetClass)
-	{
-		InventoryWidget = CreateWidget<UInventoryWidget>(GetWorld(), InventoryWidgetClass);
-		if (InventoryWidget)
+				if (GI->SelectedSubWeapon)
+					GunComponentSub = GI->SelectedSubWeapon;
+			}
+
+			EquipWeapon(GunComponent);
+		}
+
+		// 装備したメイン武器の弾数を保存
+		if (CurrentWeapon)
 		{
-			InventoryWidget->AddToViewport();
-
-			// 初期表示用に Inventory を反映
-			InventoryWidget->UpdateInventory(Inventory);
+			ammo_stock_main = CurrentWeapon->StockAmmo;
+			ammo_magazine_main = CurrentWeapon->Ammo;
 		}
+
+		// サブ武器も初期化（まだ装備しないが弾数だけ保存したい場合）
+		if (GunComponentSub)
+		{
+			// 一時的にスポーンして弾数だけ取って破棄する
+			AWeaponBase* TempSub = GetWorld()->SpawnActor<AWeaponBase>(GunComponentSub);
+			if (TempSub)
+			{
+				ammo_stock_sub = TempSub->StockAmmo;
+				ammo_magazine_sub = TempSub->Ammo;
+				TempSub->Destroy();
+			}
+		}
+
+		if (AmmoWidgetClass)
+		{
+			AmmoWidget = CreateWidget<UAmmoDisplay>(GetWorld(), AmmoWidgetClass);
+			if (AmmoWidget)
+			{
+				AmmoWidget->AddToViewport();
+				AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
+				AmmoWidget->UpdateHP(GetCurrentHP(), GetMaxHP());
+			}
+		}
+
+		// ------------------ InventoryWidget の生成 ------------------
+		if (InventoryWidgetClass)
+		{
+			InventoryWidget = CreateWidget<UInventoryWidget>(GetWorld(), InventoryWidgetClass);
+			if (InventoryWidget)
+			{
+				InventoryWidget->AddToViewport();
+
+				// 初期表示用に Inventory を反映
+				InventoryWidget->UpdateInventory(Inventory);
+			}
+		}
+
+		MaxHP = PlayerHP;
+
 	}
-
-	MaxHP = PlayerHP;
-
 
 	// インベントリ初期化
 	//ConsumableInventory.SetNum(InventorySlots);
@@ -160,6 +180,13 @@ void AMyHeroPlayer::Tick(float DeltaTime)
 		ZoomInterpSpeed
 	);
 	CameraComponent->SetFieldOfView(NewFOV);
+
+	if (bShowGrenadeTrajectory)
+	{
+		DrawGrenadeTrajectory();
+	}
+
+	
 
 }
 
@@ -330,7 +357,7 @@ void AMyHeroPlayer::ItemInteract()
 
 bool AMyHeroPlayer::AddConsumableToInventory(AItemBase* Item, int32 Quantity)
 {
-	if (!Item || Item->ItemType != EItemType::IT_Consumable) return false;
+	if (!Item || Item->ItemType != EItemType::IT_Consumable || Item->ItemType != EItemType::IT_Grenade) return false;
 
 	// 既存の同じアイテムにスタック
 	for (FInventorySlot& Slot : ConsumableInventory)
@@ -366,7 +393,7 @@ void AMyHeroPlayer::AddItemToInventory(TSubclassOf<AItemBase> ItemClass, int32 Q
 	//既存の同じアイテムにスタック
 	for (FInventorySlot& Slot : Inventory)
 	{
-		if (Slot.ItemClass == ItemClass)
+		if (Slot.ItemClass == ItemClass&&Slot.Quantity<3)
 		{
 			Slot.Quantity += Quantity;
 			return;
@@ -474,6 +501,22 @@ void AMyHeroPlayer::UseSelectedItem()
 		if (InventoryWidget)
 			InventoryWidget->UpdateInventory(Inventory);
 	}
+	if (ItemCDO->ItemType == EItemType::IT_Grenade)
+	{
+		// ★ 消耗品を使用
+		Slot.Quantity--;
+
+		if (Slot.Quantity <= 0)
+			Slot.ItemClass = nullptr;
+
+		//ここでグレネードを投げる(スポーンさせる)処理がしたい
+		ThrowGrenade(ItemCDO);
+
+		// UI更新
+		if (InventoryWidget)
+			InventoryWidget->UpdateInventory(Inventory);
+	}
+
 }
 
 void AMyHeroPlayer::OnMouseWheel(float Value)
@@ -488,6 +531,23 @@ void AMyHeroPlayer::OnMouseWheel(float Value)
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Selected Slot = %d"), SelectedSlotIndex);
+
+	
+	// ===== グレネードかどうか判定 =====
+	bShowGrenadeTrajectory = false;
+
+	if (Inventory.IsValidIndex(SelectedSlotIndex))
+	{
+		const FInventorySlot& Slot = Inventory[SelectedSlotIndex];
+		if (!Slot.IsEmpty())
+		{
+			AItemBase* ItemCDO = Slot.ItemClass->GetDefaultObject<AItemBase>();
+			if (ItemCDO && ItemCDO->ItemType == EItemType::IT_Grenade)
+			{
+				bShowGrenadeTrajectory = true;
+			}
+		}
+	}
 
 	// UI側に知らせる
 	if (InventoryWidget)
@@ -511,7 +571,7 @@ void AMyHeroPlayer::PickupItem(AItemBase* Item)
 	}
 
 	// 消耗品（インベントリへ入れる）
-	else if (Item->ItemType == EItemType::IT_Consumable)
+	else if (Item->ItemType == EItemType::IT_Consumable|| Item->ItemType == EItemType::IT_Grenade)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UpdateInventory called!"));
 		AddItemToInventory(Item->GetClass(), 1);
@@ -531,6 +591,48 @@ void AMyHeroPlayer::PickupItem(AItemBase* Item)
 	UE_LOG(LogTemp, Warning, TEXT("Picked up item: %s"), *Item->GetName());
 }
 
+void AMyHeroPlayer::ThrowGrenade(AItemBase* ItemCDO)
+{
+	if (!ItemCDO || !ItemCDO->GrenadeActorClass) return;
+
+	FVector SpawnLocation =
+		CameraComponent->GetComponentLocation()
+		+ CameraComponent->GetForwardVector() * 100.f;
+
+	FRotator SpawnRotation = CameraComponent->GetComponentRotation();
+
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.Instigator = this;
+
+	AMyGrenadeProjectileActor* Grenade = GetWorld()->SpawnActor<AMyGrenadeProjectileActor>(
+		ItemCDO->GrenadeActorClass,
+		SpawnLocation,
+		SpawnRotation,
+		Params
+	);
+
+	if (Grenade)
+	{
+		Grenade->Damage;
+		Grenade->AmountAreaAtacck;
+		FVector ShootDir = SpawnRotation.Vector();
+		Grenade->TargetLocation = SpawnLocation + ShootDir * 20000.f;
+		
+		
+	
+		Grenade->CalculateLaunchVelocity(); // ここで velocity を計算
+		/*UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(Grenade->GetRootComponent());
+		if (Prim)
+		{
+			Prim->AddImpulse(
+				CameraComponent->GetForwardVector() * 1200.f,
+				NAME_None,
+				true
+			);
+		}*/
+	}
+}
 
 //void AMyHeroPlayer::PickupItem(AItemBase* Item)
 //{
@@ -651,10 +753,66 @@ float AMyHeroPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Player is dead!"));
 		// TODO: 死亡処理（リスポーン・ゲームオーバーUIなど）
-
+		
+		EnterSpectatorMode();
 	}
 
 	return ActualDamage;
+}
+
+void AMyHeroPlayer::EnterSpectatorMode()
+{
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC) return;
+
+	bIsDead = true;
+
+	TArray<AActor*> Enemies;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemyCharacterBase::StaticClass(), Enemies);
+
+	for (AActor* Enemy : Enemies)
+	{
+		if (AEnemyCharacterBase* E = Cast<AEnemyCharacterBase>(Enemy))
+		{
+			if (E->CurrentTarget == this)
+			{
+				E->ChooseTargetBP();
+			}
+		}
+	}
+
+	// ===== プレイヤーキャラを無効化 =====
+	DisableInput(PC);
+	GetCharacterMovement()->DisableMovement();
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetVisibility(false);
+
+	// 武器を非表示（Destroy しないのがポイント）
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->SetActorHiddenInGame(true);
+		CurrentWeapon->SetActorEnableCollision(false);
+	}
+
+	// ===== SpectatorPawn をスポーン =====
+	FActorSpawnParameters Params;
+	Params.Owner = PC;
+
+	ASpectatorPawn* Spectator = GetWorld()->SpawnActor<ASpectatorPawn>(
+		ASpectatorPawn::StaticClass(),
+		GetActorLocation(),
+		GetActorRotation(),
+		Params
+	);
+
+	if (Spectator)
+	{
+		PC->Possess(Spectator);
+	}
+
+
+
+
 }
 
 void AMyHeroPlayer::VaultAmmoNum()
@@ -783,4 +941,63 @@ float AMyHeroPlayer::GetCurrentHP() const
 float AMyHeroPlayer::GetMaxHP() const
 {
 	return (float)MaxHP;
+}
+
+void AMyHeroPlayer::DrawGrenadeTrajectory()
+{
+	FVector StartLocation =
+		CameraComponent->GetComponentLocation()
+		+ CameraComponent->GetForwardVector() * 50.f;
+
+	FVector LaunchVelocity =
+		CameraComponent->GetForwardVector() * GrenadeThrowSpeed;
+
+	FPredictProjectilePathParams Params;
+	Params.StartLocation = StartLocation;
+	Params.LaunchVelocity = LaunchVelocity;
+	Params.bTraceWithCollision = true;
+	Params.ProjectileRadius = 5.f;
+	Params.MaxSimTime = TrajectorySimTime;
+	Params.SimFrequency = TrajectoryFrequency;
+	Params.OverrideGravityZ = 0.f; // 0 = WorldGravity
+	Params.TraceChannel = ECC_Visibility;
+	Params.ActorsToIgnore.Add(this);
+	Params.DrawDebugType = EDrawDebugTrace::None;
+
+	FPredictProjectilePathResult Result;
+
+	bool bHit = UGameplayStatics::PredictProjectilePath(
+		this,
+		Params,
+		Result
+	);
+
+	// ===== 点線描画 =====
+	for (int32 i = 0; i < Result.PathData.Num() - 1; i++)
+	{
+		DrawDebugLine(
+			GetWorld(),
+			Result.PathData[i].Location,
+			Result.PathData[i + 1].Location,
+			FColor::Green,
+			false,
+			0.f,
+			0,
+			2.f
+		);
+	}
+
+	// ===== 着地点 =====
+	/*if (bHit)
+	{
+		DrawDebugSphere(
+			GetWorld(),
+			Result.HitResult.Location,
+			12.f,
+			12,
+			FColor::Red,
+			false,
+			0.f
+		);
+	}*/
 }

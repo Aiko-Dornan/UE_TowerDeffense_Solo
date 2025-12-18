@@ -22,5 +22,8 @@ void UTD_StageSelectWidget::OnStage1Clicked()
         GI->SelectedStage = 1;
     }
 
+    // 武器選択マップへ
+    //UGameplayStatics::OpenLevel(this, FName("WeaponSelectMap"));
+
     UGameplayStatics::OpenLevel(this, FName("BaseMap"));
 }

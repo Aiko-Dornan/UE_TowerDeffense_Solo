@@ -82,7 +82,7 @@ protected:
 	void SetCanFire();
 
 	// eº—p‚Ì‹——£Œ¸Šİ’è
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
 	class USoundAttenuation* FireSoundAttenuation;
 
 	bool bIsFiring = false; // Œ»İËŒ‚’†‚©

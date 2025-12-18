@@ -44,20 +44,7 @@ AWeaponBase::AWeaponBase()
 	FireRange = 3000.0f;
 	FireSpread = 2.5f;
 
-	// ===== FireSound用の距離減衰設定を作成 =====
-	FireSoundAttenuation = NewObject<USoundAttenuation>(this, TEXT("FireSoundAttenuation"));
-	if (FireSoundAttenuation)
-	{
-		//FAttenuationSettings& AttenuationSettings = FireSoundAttenuation->Attenuation;
-
-		FireSoundAttenuation->Attenuation.bAttenuate = true;          // 距離減衰ON
-		FireSoundAttenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere; // 球形
-		FireSoundAttenuation->Attenuation.AttenuationShapeExtents = FVector(0.f);        // 球の半径は0でOK
-		FireSoundAttenuation->Attenuation.FalloffDistance = 10.f;      // 減衰開始距離
-		FireSoundAttenuation->Attenuation.dBAttenuationAtMax = -100.f;    // 最大距離で音量を下げる量
-		FireSoundAttenuation->Attenuation.bSpatialize = true;           // 3D音
-		
-	}
+	
 
 }
 

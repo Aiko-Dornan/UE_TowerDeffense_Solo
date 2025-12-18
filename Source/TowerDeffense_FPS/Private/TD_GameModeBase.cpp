@@ -5,13 +5,14 @@
 #include"DefenseBase.h"
 #include"DroneSpawner.h"
 #include "Blueprint/UserWidget.h"
-
+#include "MySpectatorPawn.h"
 
 
 ATD_GameModeBase::ATD_GameModeBase()
 {
     static ConstructorHelpers::FClassFinder<APawn> PlayerPawnClassFinder(TEXT("/Game/BluePrint/MyMyHeroPlayer"));
     DefaultPawnClass = PlayerPawnClassFinder.Class;
+    SpectatorClass = AMySpectatorPawn::StaticClass();
 }
 
 void ATD_GameModeBase::BeginPlay()

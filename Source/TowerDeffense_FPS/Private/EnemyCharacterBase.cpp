@@ -185,9 +185,10 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
 
     if (law_speed_flag) // 動いていなければ
     {
+        MoveEnemySpeed *= 5.0f;
 
         FVector Dir = (CurrentTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-        AddMovementInput(Dir, MoveEnemySpeed*5.0f); // これならNavMeshや物理と自然に共存できる
+        AddMovementInput(Dir, MoveEnemySpeed); // これならNavMeshや物理と自然に共存できる
 
         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
         {
@@ -195,6 +196,11 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
             AI->SetFocus(CurrentTarget);
             //AI->ClearFocus(EAIFocusPriority::Gameplay);
         }
+
+    }
+    else
+    {
+       // MoveEnemySpeed /= 5.0f;
 
     }
 
@@ -278,7 +284,7 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
             bUseDirectMove = true;
 
             FVector Dir = (BlockingStructure->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-            AddMovementInput(Dir, 5.0f); // これならNavMeshや物理と自然に共存できる
+            AddMovementInput(Dir, MoveEnemySpeed); // これならNavMeshや物理と自然に共存できる
 
         }
     }
@@ -292,11 +298,11 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
             AI->SetFocus(CurrentTarget);
             if (RangeAttack)
             {
-                AI->MoveToActor(CurrentTarget, EffectiveAttackRange-600.0f);
+                AI->MoveToActor(CurrentTarget, /*EffectiveAttackRange-600.0f*/200.0f);
             }
             else
             {
-                AI->MoveToActor(CurrentTarget, EffectiveAttackRange - 200.0f);
+                AI->MoveToActor(CurrentTarget,/* EffectiveAttackRange - 200.0f*/10.0f);
             }
 
 
@@ -607,15 +613,19 @@ AActor* AEnemyCharacterBase::ChooseTarget_Default()
     TArray<FTargetCandidate> Candidates;
 
     // --- プレイヤー ---
-    if (IsValid(PlayerCharacter))
+    if (AMyHeroPlayer* Hero = Cast<AMyHeroPlayer>(PlayerCharacter))
     {
-        const float Dist = FVector::Dist(GetActorLocation(), PlayerCharacter->GetActorLocation());
-        if (Dist < MaxConsiderRange)
+        if (!Hero->bIsDead)
         {
-            FTargetCandidate Candidate;
-            Candidate.Actor = PlayerCharacter;
-            Candidate.Score = PlayerPriority * FMath::Clamp(1.f - (Dist / MaxConsiderRange), 0.f, 1.f);
-            Candidates.Add(Candidate);
+            const float Dist = FVector::Dist(GetActorLocation(), Hero->GetActorLocation());
+            if (Dist < MaxConsiderRange)
+            {
+                FTargetCandidate Candidate;
+                Candidate.Actor = Hero;
+                Candidate.Score =
+                    PlayerPriority * FMath::Clamp(1.f - (Dist / MaxConsiderRange), 0.f, 1.f);
+                Candidates.Add(Candidate);
+            }
         }
     }
 

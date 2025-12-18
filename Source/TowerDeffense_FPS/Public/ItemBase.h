@@ -3,13 +3,15 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "WeaponBase.h"
+#include "MyGrenadeProjectileActor.h"
 #include "ItemBase.generated.h"
 
 UENUM(BlueprintType)
 enum class EItemType : uint8
 {
     IT_Consumable UMETA(DisplayName = "Consumable"), // 回復アイテムなど
-    IT_Weapon     UMETA(DisplayName = "Weapon")     // 武器（インベントリには入れない）
+    IT_Weapon     UMETA(DisplayName = "Weapon"),     // 武器（インベントリには入れない）
+    IT_Grenade    UMETA(DisplayName="Grenadde"),
 };
 
 UCLASS()
@@ -52,6 +54,9 @@ public:
     // 消耗品用（回復量）
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     float HealAmount = 0.f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Grenade")
+    TSubclassOf<class AMyGrenadeProjectileActor> GrenadeActorClass;
 
     UFUNCTION(BlueprintCallable, Category = "Item")
     void OnPickedUp(class AMyHeroPlayer* Player);

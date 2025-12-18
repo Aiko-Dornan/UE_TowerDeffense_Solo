@@ -146,10 +146,11 @@ public:
     UPROPERTY(EditAnywhere,BlueprintReadOnly)
     bool law_speed_flag = true;
 
-private:
-   
     UPROPERTY()
     AActor* CurrentTarget = nullptr;
+private:
+   
+   
     UPROPERTY()
     AActor* PreviousTarget = nullptr; // Œš•¨”j‰óŒã‚É–ß‚é—p
 
