@@ -73,15 +73,12 @@ void AMyHeroPlayer::BeginPlay()
 
 
 		// ゲーム開始時に銃を装備
-		if (GunComponent)
+		//if (GunComponent)
 		{
 			if (UTD_GameInstance* GI = Cast<UTD_GameInstance>(GetGameInstance()))
 			{
-				if (GI->SelectedMainWeapon)
-					GunComponent = GI->SelectedMainWeapon;
-
-				if (GI->SelectedSubWeapon)
-					GunComponentSub = GI->SelectedSubWeapon;
+				GunComponent = GI->ResolveWeapon(GI->SelectedMainWeaponID);
+				GunComponentSub = GI->ResolveWeapon(GI->SelectedSubWeaponID);
 			}
 
 			EquipWeapon(GunComponent);
@@ -891,9 +888,11 @@ void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
 		CurrentWeapon = SpawnedWeapon;
 	}
 
-	// 新しい武器のデリゲート登録
-	CurrentWeapon->OnAmmoChanged.AddDynamic(this, &AMyHeroPlayer::OnAmmoChanged);
-	CurrentWeapon->OnReloadStateChanged.AddDynamic(this, &AMyHeroPlayer::OnReloadStateChanged);
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->OnAmmoChanged.AddDynamic(this, &AMyHeroPlayer::OnAmmoChanged);
+		CurrentWeapon->OnReloadStateChanged.AddDynamic(this, &AMyHeroPlayer::OnReloadStateChanged);
+	}
 
 	
 }

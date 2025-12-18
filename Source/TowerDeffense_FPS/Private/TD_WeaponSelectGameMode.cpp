@@ -12,9 +12,15 @@ void ATD_WeaponSelectGameMode::BeginPlay()
         PC->bShowMouseCursor = true;
         PC->SetInputMode(FInputModeUIOnly());
     }
-
+    GEngine->AddOnScreenDebugMessage(
+        -1, 5.f, FColor::Green, TEXT("Weapon Select UI Test")
+    );
     if (WeaponSelectWidgetClass)
     {
-        CreateWidget<UUserWidget>(GetWorld(), WeaponSelectWidgetClass)->AddToViewport();
+        CreateWidget<UTD_WeaponSelectWidget>(GetWorld(), WeaponSelectWidgetClass)->AddToViewport();
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("WeaponSelectWidgetClass is NULL"));
     }
 }

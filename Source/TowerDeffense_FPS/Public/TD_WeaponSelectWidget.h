@@ -1,8 +1,9 @@
-// TD_WeaponSelectWidget.h
 #pragma once
 #include "Blueprint/UserWidget.h"
-#include"WeaponBase.h"
+#include "WeaponID.h"
 #include "TD_WeaponSelectWidget.generated.h"
+
+class UButton;
 
 UCLASS()
 class TOWERDEFFENSE_FPS_API UTD_WeaponSelectWidget : public UUserWidget
@@ -12,16 +13,42 @@ class TOWERDEFFENSE_FPS_API UTD_WeaponSelectWidget : public UUserWidget
 protected:
     virtual bool Initialize() override;
 
-    UFUNCTION()
-    void OnMainWeaponSelected(TSubclassOf<AWeaponBase> WeaponClass);
+    // ===== BindWidget =====
+    UPROPERTY(meta = (BindWidget))
+    UButton* Btn_Main_AR;
 
-    UFUNCTION()
-    void OnSubWeaponSelected(TSubclassOf<AWeaponBase> WeaponClass);
+    UPROPERTY(meta = (BindWidget))
+    UButton* Btn_Main_SG;
 
-    UFUNCTION()
-    void OnConfirmSelection();
+    UPROPERTY(meta = (BindWidget))
+    UButton* Btn_Sub_Pistol;
+
+    UPROPERTY(meta = (BindWidget))
+    UButton* Btn_Sub_SMG;
+
+    UPROPERTY(meta = (BindWidget))
+    UButton* Btn_Confirm;
 
 private:
-    TSubclassOf<AWeaponBase> TempMainWeapon;
-    TSubclassOf<AWeaponBase> TempSubWeapon;
+    // ===== ëIëèÛë‘ =====
+    EWeaponID TempMainWeaponID = EWeaponID::AssaultRifle;
+    EWeaponID TempSubWeaponID = EWeaponID::Pistol;
+
+    // ===== ÉnÉìÉhÉâ =====
+    UFUNCTION()
+    void OnMainAR();
+
+    UFUNCTION()
+    void OnMainShotgun();
+
+    UFUNCTION()
+    void OnSubPistol();
+
+    UFUNCTION()
+    void OnSubSMG();
+
+    UFUNCTION()
+    void OnConfirm();
+
+    void UpdateButtonVisuals();
 };

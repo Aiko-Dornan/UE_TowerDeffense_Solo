@@ -1,5 +1,6 @@
 #pragma once
 #include "GameFramework/GameModeBase.h"
+#include"TD_WeaponSelectWidget.h"
 #include "TD_WeaponSelectGameMode.generated.h"
 
 UCLASS()
@@ -11,6 +12,6 @@ protected:
     virtual void BeginPlay() override;
 
 public:
-    UPROPERTY(EditAnywhere)
-    TSubclassOf<UUserWidget> WeaponSelectWidgetClass;
+    UPROPERTY(EditAnywhere,BlueprintReadWrite)
+    TSubclassOf<UTD_WeaponSelectWidget> WeaponSelectWidgetClass;
 };

@@ -23,7 +23,7 @@ public:
     AItemBase();
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    UStaticMeshComponent* Mesh;
+   class UStaticMeshComponent* Mesh;
 
     // アイテムタイプ
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")

@@ -17,13 +17,13 @@ bool UTD_StageSelectWidget::Initialize()
 
 void UTD_StageSelectWidget::OnStage1Clicked()
 {
-    if (UTD_GameInstance* GI = Cast<UTD_GameInstance>(GetGameInstance()))
+    /*if (UTD_GameInstance* GI = Cast<UTD_GameInstance>(GetGameInstance()))
     {
         GI->SelectedStage = 1;
-    }
+    }*/
 
     // 武器選択マップへ
-    //UGameplayStatics::OpenLevel(this, FName("WeaponSelectMap"));
+    UGameplayStatics::OpenLevel(this, FName("WeaponSelectMap"));
 
-    UGameplayStatics::OpenLevel(this, FName("BaseMap"));
+    //UGameplayStatics::OpenLevel(this, FName("BaseMap"));
 }

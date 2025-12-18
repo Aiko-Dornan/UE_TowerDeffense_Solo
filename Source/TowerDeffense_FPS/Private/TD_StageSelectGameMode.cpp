@@ -23,4 +23,8 @@ void ATD_StageSelectGameMode::BeginPlay()
     {
         CreateWidget<UUserWidget>(GetWorld(), StageSelectWidgetClass)->AddToViewport();
     }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("WeaponSelectWidgetClass is NULL"));
+    }
 }

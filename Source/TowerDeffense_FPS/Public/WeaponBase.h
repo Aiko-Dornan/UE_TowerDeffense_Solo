@@ -44,7 +44,10 @@ public:
 	FOnReloadStateChanged OnReloadStateChanged;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
-	UStaticMeshComponent* Mesh;
+	class UStaticMeshComponent* Mesh;
+
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
+	//USphereComponent* CollisionComp;
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Gameplay")
 	USoundBase* FireSound;
@@ -103,6 +106,8 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	class UBoxComponent* RangeCollision;
+
+
 
 	//FORCEINLINE class USkeletalMeshComponent* GetMesh() const { return Mesh; }
 	FORCEINLINE class UStaticMeshComponent* GetMesh() const { return Mesh; }

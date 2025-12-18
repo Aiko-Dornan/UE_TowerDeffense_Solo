@@ -25,7 +25,16 @@ AWeaponBase::AWeaponBase()
 	PrimaryActorTick.bStartWithTickEnabled = false;
 
 	/*Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));*/
+	
+	/*CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
+	CollisionComp->InitSphereRadius(1.0f);
+	CollisionComp->SetCollisionProfileName("BlockAll");
+	CollisionComp->SetNotifyRigidBodyCollision(true);
+	
+	RootComponent = CollisionComp;*/
+	
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+	//Mesh->SetupAttachment(RootComponent);
 	RootComponent = Mesh;
 
 	bCanFire = true;
@@ -53,7 +62,17 @@ void AWeaponBase::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	Mesh = Cast<UStaticMeshComponent>(GetRootComponent());
+	//Mesh = Cast<UStaticMeshComponent>(GetRootComponent());
+
+	//AActor* OwnerActor = GetOwner();
+	//if (OwnerActor)
+	//{
+	//	// プレイヤーの向きを取得
+	//	FRotator PlayerRot = OwnerActor->GetActorRotation();
+
+	//	// 銃をプレイヤーと同じ方向に回転
+	//	SetActorRotation(PlayerRot);
+	//}
 
 }
 
