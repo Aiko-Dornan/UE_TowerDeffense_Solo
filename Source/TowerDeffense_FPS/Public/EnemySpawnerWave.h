@@ -4,6 +4,9 @@
 #include "GameFramework/Actor.h"
 #include "WaveWidget.h"  // WaveWidget を追加
 #include "EnemyCharacterBase.h"
+#include"AmmoDisplayWidget.h"
+#include"MyHeroPlayer.h"
+
 #include "EnemySpawnerWave.generated.h"
 
 // ウェーブ更新通知イベント
@@ -37,7 +40,8 @@ protected:
     // 次のウェーブへ進行
     void StartNextWave();
 
-    
+    UPROPERTY()
+    class AMyHeroPlayer* MHP;
 
 public:
     // 敵のクラス1Base

@@ -3,6 +3,9 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "TimerManager.h"
+#include"AmmoDisplayWidget.h"
+#include"MyHeroPlayer.h"
+
 #include "AllyCharacter.generated.h"
 
 class AEnemyCharacterBase;
@@ -21,7 +24,8 @@ protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
 
-    
+    UPROPERTY()
+    class AMyHeroPlayer* MHP;
 
 public:
     /** ƒ_ƒ[ƒWˆ— */

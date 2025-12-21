@@ -333,10 +333,15 @@ void AWeaponBase::StartFire()
 	if (bIsFiring || bIsReloading) return;
 	bIsFiring = true;
 
-	Fire();
+	
 
 	if (bIsFullAuto)
 	{
+		GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AWeaponBase::Fire, FireRate, true);
+	}
+	else
+	{
+		//Fire();
 		GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AWeaponBase::Fire, FireRate, true);
 	}
 

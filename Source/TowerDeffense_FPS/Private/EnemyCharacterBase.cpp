@@ -14,6 +14,8 @@
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "EnemySpawnerWave.h"
+#include"AmmoDisplayWidget.h"
+#include"MyHeroPlayer.h"
 
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -67,7 +69,10 @@ void AEnemyCharacterBase::BeginPlay()
     if (FoundPlayers.Num() > 0)
     {
         PlayerCharacter = Cast<AMyHeroPlayer>(FoundPlayers[0]);
+      
     }
+
+    
 
     // ターゲット設定
     if (!IsValid(BaseStructure))
@@ -986,6 +991,15 @@ void AEnemyCharacterBase::Die()
     bIsDead = true;
 
     UE_LOG(LogTemp, Warning, TEXT("Enemy %s died!"), *GetName());
+
+   /* TArray<AActor*> FoundPlayer;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMyHeroPlayer::StaticClass(), FoundPlayer);
+    MHP = Cast<AMyHeroPlayer>(FoundPlayer[0]);
+
+    if (MHP != nullptr && MHP->AmmoWidget != nullptr)
+    {
+        MHP->AmmoWidget->UpdateDroneText(5);
+    }*/
 
     if (!bNotifiedSpawner)
     {

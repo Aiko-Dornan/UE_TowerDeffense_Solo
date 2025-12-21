@@ -4,6 +4,7 @@
 #include "GameFramework/Character.h"
 #include"MyGrenadeProjectileActor.h"
 
+
 #include "EnemyCharacterBase.generated.h"
 
 class ADefenseBase;
@@ -46,6 +47,8 @@ protected:
     bool bIsRecognitionExtended = false;
 
     void CheckIfStopped();
+
+   
 
 public:
     virtual void Tick(float DeltaTime) override;

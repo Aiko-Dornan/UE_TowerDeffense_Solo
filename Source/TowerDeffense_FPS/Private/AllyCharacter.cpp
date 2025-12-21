@@ -10,6 +10,8 @@
 #include "NavigationPath.h"
 #include "DrawDebugHelpers.h"
 #include"ItemBase.h"
+#include"AmmoDisplayWidget.h"
+#include"MyHeroPlayer.h"
 
 AAllyCharacter::AAllyCharacter()
 {
@@ -34,6 +36,10 @@ void AAllyCharacter::BeginPlay()
             EquippedWeapon->SetOwner(this);
         }
     }
+
+    TArray<AActor*> FoundPlayer;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMyHeroPlayer::StaticClass(), FoundPlayer);
+    MHP = Cast<AMyHeroPlayer>(FoundPlayer[0]);
 
     GetWorldTimerManager().SetTimer(TargetUpdateTimer, this, &AAllyCharacter::FindNearestEnemy, 0.5f, true);
 }
@@ -336,6 +342,14 @@ float AAllyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 void AAllyCharacter::Die()
 {
     UE_LOG(LogTemp, Warning, TEXT("Ally %s died!"), *GetName());
+
+    
+
+    if (MHP != nullptr && MHP->AmmoWidget != nullptr)
+    {
+        MHP->AmmoWidget->UpdateDroneText(3);
+    }
+
     DropCurrentWeapon();
     Destroy();
 }

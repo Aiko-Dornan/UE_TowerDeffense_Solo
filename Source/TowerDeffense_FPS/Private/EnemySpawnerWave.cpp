@@ -4,7 +4,8 @@
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "Math/UnrealMathUtility.h"
-
+#include"AmmoDisplayWidget.h"
+#include"MyHeroPlayer.h"
 
 AEnemySpawnerWave::AEnemySpawnerWave()
 {
@@ -23,6 +24,9 @@ void AEnemySpawnerWave::BeginPlay()
         IsPendingKillPending() ? 1 : 0,
         HasAnyFlags(RF_ClassDefaultObject) ? 1 : 0);
 
+    TArray<AActor*> FoundPlayer;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMyHeroPlayer::StaticClass(), FoundPlayer);
+    MHP = Cast<AMyHeroPlayer>(FoundPlayer[0]);
 
     GenerateRandomSpawnPoints();
     // 最初のウェーブを開始
@@ -457,6 +461,18 @@ void AEnemySpawnerWave::SpawnWave()
     // ウィジェットへ通知
     OnWaveChanged.Broadcast(CurrentWave); // 1引数の場合
 
+   /* TArray<AActor*> FoundPlayer;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMyHeroPlayer::StaticClass(), FoundPlayer);
+    MHP = Cast<AMyHeroPlayer>(FoundPlayer[0]);
+
+    if (MHP != nullptr && MHP->AmmoWidget != nullptr)
+    {
+        MHP->AmmoWidget->UpdateDroneText(3);
+    }*/
+    if (MHP != nullptr && MHP->AmmoWidget != nullptr)
+    {
+        MHP->AmmoWidget->UpdateDroneText(4);
+    }
    // all_spawn = true;
 }
 
