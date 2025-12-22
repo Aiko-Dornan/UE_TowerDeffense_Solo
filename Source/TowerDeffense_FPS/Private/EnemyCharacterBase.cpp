@@ -188,9 +188,9 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
         return;
     }
 
-    if (law_speed_flag) // 動いていなければ
+    if (GetVelocity().Size() < 1.0f) // 動いていなければ
     {
-        MoveEnemySpeed *= 5.0f;
+        //MoveEnemySpeed =MoveEnemySpeed*5;
 
         FVector Dir = (CurrentTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
         AddMovementInput(Dir, MoveEnemySpeed); // これならNavMeshや物理と自然に共存できる
@@ -203,11 +203,11 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
         }
 
     }
-    else
-    {
-       // MoveEnemySpeed /= 5.0f;
+    //else
+    //{
+    //   // MoveEnemySpeed /= 5.0f;
 
-    }
+    //}
 
     // すでにターゲットを認識しているか
     if (CurrentTarget && !bHasLoggedStuck)
@@ -281,7 +281,7 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
 
             if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
             {
-                AI->StopMovement();
+                //AI->StopMovement();
                 AI->SetFocus(CurrentTarget);
                 //AI->ClearFocus(EAIFocusPriority::Gameplay);
             }
@@ -289,7 +289,7 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
             bUseDirectMove = true;
 
             FVector Dir = (BlockingStructure->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-            AddMovementInput(Dir, MoveEnemySpeed); // これならNavMeshや物理と自然に共存できる
+            AddMovementInput(Dir, 5.0f); // これならNavMeshや物理と自然に共存できる
 
         }
     }
@@ -398,7 +398,7 @@ AActor* AEnemyCharacterBase::CheckBlockingStructure(AActor* MainTarget)
         Params
     );
 
-    DrawDebugLine(GetWorld(), Start, End, FColor::Cyan, false, 0.1f, 0, 1.5f);
+   // DrawDebugLine(GetWorld(), Start, End, FColor::Cyan, false, 0.1f, 0, 1.5f);
 
     if (bHit)
     {
@@ -441,6 +441,9 @@ void AEnemyCharacterBase::UpdateTarget()
     }
 
     // ---  新ターゲットがバリケードでない場合のみ遮蔽物をチェック ---
+
+
+
     AActor* BlockingStructure = nullptr;
     if (!NewTarget->IsA(ADefenseStructure::StaticClass()))
     {
@@ -611,7 +614,7 @@ AActor* AEnemyCharacterBase::ChooseTarget_Default()
 {
     // 停止中なら認識範囲を2倍に
     const float MaxConsiderRangeBase = bIsRecognitionExtended ? ExtendedConsiderRange : DefaultConsiderRange;
-    const float MaxConsiderRange = 4000.0f;
+    const float MaxConsiderRange = 8000.0f;
 
     const float BlockCheckAngle = 45.f;
 

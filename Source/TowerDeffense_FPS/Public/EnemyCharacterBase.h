@@ -147,7 +147,7 @@ public:
     UNiagaraSystem* NiagaraEffect;
 
     UPROPERTY(EditAnywhere,BlueprintReadOnly)
-    bool law_speed_flag = true;
+    bool law_speed_flag = false;
 
     UPROPERTY()
     AActor* CurrentTarget = nullptr;
