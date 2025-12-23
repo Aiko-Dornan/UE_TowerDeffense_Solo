@@ -4,6 +4,7 @@
 #include "TD_WeaponSelectWidget.generated.h"
 
 class UButton;
+class USoundBase;
 
 UCLASS()
 class TOWERDEFFENSE_FPS_API UTD_WeaponSelectWidget : public UUserWidget
@@ -28,6 +29,12 @@ protected:
 
     UPROPERTY(meta = (BindWidget))
     UButton* Btn_Confirm;
+
+    // çƒê∂ÇµÇΩÇ¢SE
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
+    USoundBase* ClickSE;
+
+    void SEPlay();
 
 private:
     // ===== ëIëèÛë‘ =====

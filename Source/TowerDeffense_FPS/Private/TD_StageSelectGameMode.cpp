@@ -36,7 +36,8 @@ void ATD_StageSelectGameMode::BeginPlay()
 
     if (UTD_GameInstance* GI = GetGameInstance<UTD_GameInstance>())
     {
-        GI->PlayBGM(SelectBGM, 1.0f);
+        //GI->PlayBGM(SelectBGM, 1.0f);
+        GI->PlayBGMByType(EBGMType::Field, 1.0f,false);
     }
 
    /* if (BGMSound && BGMAudioComponent)

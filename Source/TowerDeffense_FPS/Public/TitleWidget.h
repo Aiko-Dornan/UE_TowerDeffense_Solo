@@ -5,6 +5,8 @@
 
 #include "TitleWidget.generated.h"
 
+class USoundBase;
+
 UCLASS()
 class TOWERDEFFENSE_FPS_API UTitleWidget : public UUserWidget
 {
@@ -15,6 +17,10 @@ protected:
 
     UFUNCTION()
     void OnStartClicked();
+
+    // çƒê∂ÇµÇΩÇ¢SE
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
+    USoundBase* ClickSE;
 
 public:
     UPROPERTY(meta = (BindWidget))

@@ -35,7 +35,7 @@ void ATitleGameMode::BeginPlay()
     if (UTD_GameInstance* GI = GetGameInstance<UTD_GameInstance>())
     {
         /*GI->PlayBGM(TitleBGM, 1.0f);*/
-        GI->PlayBGMByType(EBGMType::Field,1.0f);
+        GI->PlayBGMByType(EBGMType::Title,1.0f,true);
         UE_LOG(LogTemp, Warning, TEXT("BGM Start!!"));
     }
 

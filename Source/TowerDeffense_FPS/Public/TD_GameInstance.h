@@ -29,6 +29,10 @@ public:
     UFUNCTION(BlueprintCallable)
     void PlayBGM(USoundBase* NewBGM, float FadeInTime = 1.0f);
 
+    //// 現在のBGM取得
+    //USoundBase* GetCurrentBGM() const { return CurrentBGM; }
+
+
    /* UFUNCTION(BlueprintCallable)
     void StopBGM(float FadeOutTime = 1.0f);*/
 
@@ -52,7 +56,7 @@ public:
     UPROPERTY(EditDefaultsOnly)
     TMap<EBGMType, USoundBase*> BGMTable;
 
-    void PlayBGMByType(EBGMType Type, float FadeInTime);
+    void PlayBGMByType(EBGMType Type, float FadeInTime, bool bForceRestart=false);
 
 protected:
     // C++専用（BP不要）

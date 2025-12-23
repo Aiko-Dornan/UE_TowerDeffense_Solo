@@ -80,4 +80,16 @@ void UTD_WeaponSelectWidget::UpdateButtonVisuals()
         Btn_Sub_Pistol->SetBackgroundColor(TempSubWeaponID == EWeaponID::Pistol ? SelectedColor : DefaultColor);
     if (Btn_Sub_SMG)
         Btn_Sub_SMG->SetBackgroundColor(TempSubWeaponID == EWeaponID::SMG ? SelectedColor : DefaultColor);
+    
+    SEPlay();
+}
+
+void UTD_WeaponSelectWidget::SEPlay()
+{
+
+    if (ClickSE)
+    {
+        UGameplayStatics::PlaySound2D(this, ClickSE);
+    }
+
 }

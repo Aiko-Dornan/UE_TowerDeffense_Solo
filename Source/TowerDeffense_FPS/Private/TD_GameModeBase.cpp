@@ -6,7 +6,7 @@
 #include"DroneSpawner.h"
 #include "Blueprint/UserWidget.h"
 #include "MySpectatorPawn.h"
-
+#include"TD_GameInstance.h"
 
 ATD_GameModeBase::ATD_GameModeBase()
 {
@@ -141,6 +141,13 @@ void ATD_GameModeBase::BeginPlay()
     {
         NavSys->Build();
     }*/
+
+    if (UTD_GameInstance* GI = GetGameInstance<UTD_GameInstance>())
+    {
+        /*GI->PlayBGM(TitleBGM, 1.0f);*/
+        GI->PlayBGMByType(EBGMType::Battle, 1.0f,true);
+        UE_LOG(LogTemp, Warning, TEXT("BGM Start!!"));
+    }
 
 }
 

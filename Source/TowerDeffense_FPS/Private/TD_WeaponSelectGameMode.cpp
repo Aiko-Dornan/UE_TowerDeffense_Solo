@@ -27,7 +27,7 @@ void ATD_WeaponSelectGameMode::BeginPlay()
 
     if (UTD_GameInstance* GI = GetGameInstance<UTD_GameInstance>())
     {
-       GI->PlayBGM(SelectBGM, 0.0f);
+        GI->PlayBGMByType(EBGMType::Field, 0.0f,false);
     }
 
 }
