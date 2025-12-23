@@ -3,9 +3,15 @@
 
 #include "TitleGameMode.h"
 #include "Blueprint/UserWidget.h"
-
+#include"TD_GameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
+
+//ATitleGameMode::ATitleGameMode()
+//{
+//    BGMAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("BGMAudioComponent"));
+//    BGMAudioComponent->bAutoActivate = false; // é©ìÆçƒê∂OFF
+//}
 
 void ATitleGameMode::BeginPlay()
 {
@@ -25,4 +31,20 @@ void ATitleGameMode::BeginPlay()
     {
         CreateWidget<UUserWidget>(GetWorld(), TitleWidgetClass)->AddToViewport();
     }
+
+    if (UTD_GameInstance* GI = GetGameInstance<UTD_GameInstance>())
+    {
+        /*GI->PlayBGM(TitleBGM, 1.0f);*/
+        GI->PlayBGMByType(EBGMType::Field,1.0f);
+        UE_LOG(LogTemp, Warning, TEXT("BGM Start!!"));
+    }
+
+  /*  if (BGMSound && BGMAudioComponent)
+    {
+        
+        BGMAudioComponent->SetSound(BGMSound);
+        BGMAudioComponent->Play();
+        UE_LOG(LogTemp, Warning, TEXT("BGM Start!!"));
+    }*/
+
 }

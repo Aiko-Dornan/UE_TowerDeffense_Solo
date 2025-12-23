@@ -96,7 +96,11 @@ void UAmmoDisplay::UpdateDroneText(int Case)
             LOCTEXT("DroneArrive", "敵が出現しました!")
         );
         break;
-    
+    case 5: //enemy spawn
+        DroneTextBlock->SetText(
+            LOCTEXT("DroneArrive", "バリケードが破壊されました!")
+        );
+        break;
 
     default:
         DroneTextBlock->SetText(FText::GetEmpty());

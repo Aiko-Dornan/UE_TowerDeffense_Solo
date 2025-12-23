@@ -4,6 +4,8 @@
 #include "Sound/SoundBase.h"
 #include "Engine/World.h"
 #include "NavigationSystem.h"
+#include"AmmoDisplayWidget.h"
+#include"MyHeroPlayer.h"
 
 ADefenseStructure::ADefenseStructure()
 {
@@ -30,6 +32,11 @@ void ADefenseStructure::BeginPlay()
 
     // Damage イベントを受け取れるようにする
     SetCanBeDamaged(true);
+
+
+    TArray<AActor*> FoundPlayer;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMyHeroPlayer::StaticClass(), FoundPlayer);
+    MHP = Cast<AMyHeroPlayer>(FoundPlayer[0]);
 
     UE_LOG(LogTemp, Warning, TEXT("%s can take damage: %d"), *GetName(), CanBeDamaged());
 
@@ -97,8 +104,15 @@ void ADefenseStructure::OnDestroyedByEnemy()
         // NavMeshシステムがDynamic Runtime設定であれば、自動的に部分再生成される
     }
 
+
+
     //  少し遅らせて削除（NavSystemが更新完了するまで待機）
     SetLifeSpan(0.2f);
+
+    if (MHP != nullptr && MHP->AmmoWidget != nullptr)
+    {
+        MHP->AmmoWidget->UpdateDroneText(5);
+    }
 
     //if (bIsDestroyed) return;
     //bIsDestroyed = true;

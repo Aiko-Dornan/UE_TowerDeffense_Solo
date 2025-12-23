@@ -23,6 +23,9 @@ public:
     // ‰ó‚ê‚éˆ—
     void OnDestroyedByEnemy();
 
+    UPROPERTY()
+    class AMyHeroPlayer* MHP;
+
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defense")
     float MaxHealth = 200.0f;

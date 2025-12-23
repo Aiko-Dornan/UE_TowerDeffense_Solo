@@ -3,7 +3,13 @@
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
+#include"TD_GameInstance.h"
 
+//ATD_StageSelectGameMode::ATD_StageSelectGameMode()
+//{
+//    BGMAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("BGMAudioComponent"));
+//    BGMAudioComponent->bAutoActivate = false; // é©ìÆçƒê∂OFF
+//}
 
 void ATD_StageSelectGameMode::BeginPlay()
 {
@@ -27,4 +33,18 @@ void ATD_StageSelectGameMode::BeginPlay()
     {
         UE_LOG(LogTemp, Error, TEXT("WeaponSelectWidgetClass is NULL"));
     }
+
+    if (UTD_GameInstance* GI = GetGameInstance<UTD_GameInstance>())
+    {
+        GI->PlayBGM(SelectBGM, 1.0f);
+    }
+
+   /* if (BGMSound && BGMAudioComponent)
+    {
+
+        BGMAudioComponent->SetSound(BGMSound);
+        BGMAudioComponent->Play();
+        UE_LOG(LogTemp, Warning, TEXT("BGM Start!!"));
+    }*/
+
 }

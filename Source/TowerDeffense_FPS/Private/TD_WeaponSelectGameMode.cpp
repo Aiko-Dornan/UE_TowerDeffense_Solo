@@ -2,6 +2,7 @@
 #include "TD_WeaponSelectGameMode.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
+#include"TD_GameInstance.h"
 
 void ATD_WeaponSelectGameMode::BeginPlay()
 {
@@ -23,4 +24,10 @@ void ATD_WeaponSelectGameMode::BeginPlay()
     {
         UE_LOG(LogTemp, Error, TEXT("WeaponSelectWidgetClass is NULL"));
     }
+
+    if (UTD_GameInstance* GI = GetGameInstance<UTD_GameInstance>())
+    {
+       GI->PlayBGM(SelectBGM, 0.0f);
+    }
+
 }
