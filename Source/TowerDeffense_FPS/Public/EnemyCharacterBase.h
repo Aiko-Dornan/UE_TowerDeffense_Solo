@@ -46,12 +46,14 @@ protected:
     float TimeSinceLastMove = 0.f;
     bool bIsRecognitionExtended = false;
 
-    void CheckIfStopped();
+    //void CheckIfStopped();
 
    
 
 public:
     virtual void Tick(float DeltaTime) override;
+
+   
 
     // --- オーバーラップイベント ---
     UFUNCTION()
@@ -195,6 +197,12 @@ private:
     FTimerHandle TryStartTimerHandle;
 
     float LastMoveCommandTime = 0.0f;
+
+    float GetNavPathLengthToTarget(AActor* Target) const;
+
+    // ===== 追加：NavMesh 到達判定 =====
+    //bool CanReachTargetByNav(AActor* Target) const;
+
 };
 
 

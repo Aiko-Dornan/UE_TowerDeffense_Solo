@@ -111,7 +111,7 @@ void AEnemyAIController::BeginPlay()
     if (FoundBases.Num() > 0)
     {
         TargetActor = FoundBases[0]; // Å‰‚Ì–h‰q‘ÎÛ‚ð–Ú“I’n‚É
-        MoveToActor(TargetActor, 50.0f);
+        MoveToActor(TargetActor, 0.0f);
         UE_LOG(LogTemp, Warning, TEXT("EnemyAI target set to DefenseBase: %s"), *TargetActor->GetName());
     }
 

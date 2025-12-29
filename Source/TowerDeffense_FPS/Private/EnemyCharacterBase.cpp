@@ -10,13 +10,12 @@
 #include "TimerManager.h"
 #include "UObject/WeakObjectPtr.h"
 #include "DefenseStructure.h"
-#include "NavigationSystem.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "EnemySpawnerWave.h"
 #include"AmmoDisplayWidget.h"
-#include"MyHeroPlayer.h"
-
+#include "NavigationSystem.h"
+#include "NavigationPath.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 
@@ -188,21 +187,23 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
         return;
     }
 
-    if (GetVelocity().Size() < 1.0f) // 動いていなければ
-    {
-        //MoveEnemySpeed =MoveEnemySpeed*5;
+    //if (GetVelocity().Size() < 1.0f) // 動いていなければ
+    //{
+    //    //MoveEnemySpeed =MoveEnemySpeed*5;
 
-        FVector Dir = (CurrentTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-        AddMovementInput(Dir, MoveEnemySpeed); // これならNavMeshや物理と自然に共存できる
+    //    FVector Dir = (CurrentTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+    //    // ★ 速度を強制的に指定
+    //    GetCharacterMovement()->Velocity =
+    //        Dir * GetCharacterMovement()->MaxWalkSpeed;
 
-        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
-        {
+    //    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+    //    {
 
-            AI->SetFocus(CurrentTarget);
-            //AI->ClearFocus(EAIFocusPriority::Gameplay);
-        }
+    //        AI->SetFocus(CurrentTarget);
+    //        //AI->ClearFocus(EAIFocusPriority::Gameplay);
+    //    }
 
-    }
+    //}
     //else
     //{
     //   // MoveEnemySpeed /= 5.0f;
@@ -237,22 +238,47 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     // ==========================
     // 現在ターゲットへの直線上にバリケードがあるかチェック
     // ==========================
-    AActor* BlockingStructure = CheckBlockingStructure(CurrentTarget);
-    bUseDirectMove = false;
+   // AActor* BlockingStructure = CheckBlockingStructure(CurrentTarget);
+    //bUseDirectMove = false;
 
+    //// ★判断用フラグ（ここで定義）
+    //bool bChooseDirectMove = false;
 
-    if (BlockingStructure != CurrentTarget && BlockingStructure)
-    {
-        PreviousTarget = CurrentTarget;
-        CurrentTarget = BlockingStructure;
+    //if (BlockingStructure && BlockingStructure != CurrentTarget)
+    //{
+    //    const float StraightDist =
+    //        FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
 
-        // 建物破壊通知を受け取る
-        if (ADefenseStructure* Struct = Cast<ADefenseStructure>(BlockingStructure))
-        {
-            Struct->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
-        }
-        bUseDirectMove = true; // バリケード直進フラグ
-    }
+    //    const float NavDist =
+    //        GetNavPathLengthToTarget(CurrentTarget);
+
+    //    // ★直線を選ぶ条件
+    //    bChooseDirectMove =
+    //        (NavDist == FLT_MAX) ||
+    //        (NavDist > StraightDist * 2.0f);
+    //}
+
+    //// ★判断結果を実行に反映
+    //if (bChooseDirectMove && BlockingStructure)
+    //{
+    //    // 直線移動＝必ず障害物をターゲットにする
+    //    if (CurrentTarget != BlockingStructure)
+    //    {
+    //        PreviousTarget = CurrentTarget;
+    //        CurrentTarget = BlockingStructure;
+
+    //        /*if (ADefenseStructure* Struct =
+    //            Cast<ADefenseStructure>(BlockingStructure))
+    //        {
+    //            Struct->OnDestroyed.AddDynamic(
+    //                this,
+    //                &AEnemyCharacterBase::OnTargetDestroyed
+    //            );
+    //        }*/
+    //    }
+
+    //    bUseDirectMove = true;
+    //}
 
 
 
@@ -271,39 +297,57 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     // 移動処理
     // ==========================
 
-    if (bUseDirectMove)
-    {
-        // バリケードに対しては手動で移動
-        if (Distance > DesiredDistance)
-        {
-            /*FVector NewLocation = GetActorLocation() + Direction * GetCharacterMovement()->MaxWalkSpeed * DeltaTime;
-            SetActorLocation(NewLocation, true);*/
+   
 
-            if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
-            {
-                //AI->StopMovement();
-                AI->SetFocus(CurrentTarget);
-                //AI->ClearFocus(EAIFocusPriority::Gameplay);
-            }
+    //if (bUseDirectMove)
+    //{
+    //    // バリケードに対しては手動で移動
+    //    if (Distance > DesiredDistance)
+    //    {
+    //        /*FVector NewLocation = GetActorLocation() + Direction * GetCharacterMovement()->MaxWalkSpeed * DeltaTime;
+    //        SetActorLocation(NewLocation, true);*/
 
-            bUseDirectMove = true;
+    //        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+    //        {
+    //            //AI->StopMovement();
+    //            if (!bUseDirectMove)
+    //            {
+    //                AI->SetFocus(CurrentTarget);
+    //            }
+    //            else
+    //            {
+    //                AI->ClearFocus(EAIFocusPriority::Gameplay);
+    //            }
+    //            //AI->ClearFocus(EAIFocusPriority::Gameplay);
+    //        }
 
-            FVector Dir = (BlockingStructure->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-            AddMovementInput(Dir, 5.0f); // これならNavMeshや物理と自然に共存できる
+    //        bUseDirectMove = true;
 
-        }
-    }
-    else
+    //        FVector Dir = (BlockingStructure->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+    //        // ★ 速度を強制的に指定
+    //        GetCharacterMovement()->Velocity =
+    //            Dir * GetCharacterMovement()->MaxWalkSpeed;
+
+    //    }
+    //}
+    //else
     {
         // それ以外はAIに任せる
         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
         {
-            bUseDirectMove = false;
-
+           // bUseDirectMove = false;
             AI->SetFocus(CurrentTarget);
+           /* if (!bUseDirectMove)
+            {
+                AI->SetFocus(CurrentTarget);
+            }
+            else
+            {
+                AI->ClearFocus(EAIFocusPriority::Gameplay);
+            }*/
             if (RangeAttack)
             {
-                AI->MoveToActor(CurrentTarget, /*EffectiveAttackRange-600.0f*/200.0f);
+                AI->MoveToActor(CurrentTarget, /*EffectiveAttackRange-600.0f*/10.0f);
             }
             else
             {
@@ -325,7 +369,7 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
 
 
 
-    SetActorRotation(Direction.Rotation());
+    //SetActorRotation(Direction.Rotation());
 
     // ==========================
     // 攻撃
@@ -366,8 +410,52 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
          }
      }*/
 }
+//bool AEnemyCharacterBase::CanReachTargetByNav(AActor* Target) const
+//{
+//    if (!Target) return false;
+//
+//    UNavigationSystemV1* NavSys =
+//        FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+//    if (!NavSys) return false;
+//
+//    UNavigationPath* Path = NavSys->FindPathToActorSynchronously(
+//        GetWorld(),
+//        GetActorLocation(),
+//        Target
+//    );
+//
+//
+//    return Path && Path->IsValid() && !Path->IsPartial();
+//}
 
+float AEnemyCharacterBase::GetNavPathLengthToTarget(AActor* Target) const
+{
+    if (!Target) return FLT_MAX;
 
+    UNavigationSystemV1* NavSys =
+        FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+    if (!NavSys) return FLT_MAX;
+
+    UNavigationPath* Path = NavSys->FindPathToActorSynchronously(
+        GetWorld(),
+        GetActorLocation(),
+        Target
+    );
+
+    if (!Path || !Path->IsValid() || Path->PathPoints.Num() < 2)
+        return FLT_MAX;
+
+    float TotalLength = 0.f;
+    for (int32 i = 1; i < Path->PathPoints.Num(); ++i)
+    {
+        TotalLength += FVector::Dist(
+            Path->PathPoints[i - 1],
+            Path->PathPoints[i]
+        );
+    }
+
+    return TotalLength;
+}
 
 
 
@@ -442,22 +530,50 @@ void AEnemyCharacterBase::UpdateTarget()
 
     // ---  新ターゲットがバリケードでない場合のみ遮蔽物をチェック ---
 
-
-
+    
+    
+    // --- 直線上の障害物チェック ---
     AActor* BlockingStructure = nullptr;
-    if (!NewTarget->IsA(ADefenseStructure::StaticClass()))
+
+    /*if (NewTarget && !NewTarget->IsA(ADefenseStructure::StaticClass()))
     {
         BlockingStructure = CheckBlockingStructure(NewTarget);
+    }*/
 
-        if (IsValid(BlockingStructure))
+    BlockingStructure = CheckBlockingStructure(NewTarget);
+
+    if (BlockingStructure)
+    {
+        //  直進距離（障害物無視）
+        const float StraightDist =
+            FVector::Dist(GetActorLocation(), NewTarget->GetActorLocation());
+
+        //  NavMesh 迂回距離
+        const float NavDist =
+            GetNavPathLengthToTarget(NewTarget);
+
+        //  直線移動を選ぶか？
+        const bool bChooseDirectMove =
+            (NavDist == FLT_MAX) ||
+            (NavDist > StraightDist * 2.0f);
+
+        if (bChooseDirectMove)
         {
+            // ★ 直線移動 = 障害物を必ずターゲットにする
             PreviousTarget = NewTarget;
             NewTarget = BlockingStructure;
 
-            // 破壊通知
-            BlockingStructure->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
+            /*if (ADefenseStructure* Struct =
+                Cast<ADefenseStructure>(BlockingStructure))
+            {
+                Struct->OnDestroyed.AddDynamic(
+                    this,
+                    &AEnemyCharacterBase::OnTargetDestroyed
+                );
+            }*/
         }
     }
+
 
     // ---  ターゲット変更が必要な場合のみ更新 ---
     if (NewTarget != CurrentTarget)
@@ -764,34 +880,34 @@ AActor* AEnemyCharacterBase::ChooseTarget_Default()
     //return Candidates[0].Actor;
 }
 
-void AEnemyCharacterBase::CheckIfStopped()
-{
-    if (bIsDead) return;
-
-    const float Speed = GetVelocity().Size();
-    if (CurrentTarget == BaseStructure) {
-
-        if (Speed < StopThresholdSpeed)
-        {
-            TimeSinceLastMove += StopCheckInterval;
-
-            // 一定時間停止していたら認識距離を拡張
-            if (TimeSinceLastMove >= StopDurationToExtend && !bIsRecognitionExtended)
-            {
-                UE_LOG(LogTemp, Warning, TEXT("%s stopped  extending recognition range!"), *GetName());
-                bIsRecognitionExtended = true;
-            }
-        }
-        else
-        {
-            // 動いてるならリセット
-            TimeSinceLastMove = 0.f;
-            bIsRecognitionExtended = false;
-        }
-
-    }
-
-}
+//void AEnemyCharacterBase::CheckIfStopped()
+//{
+//    if (bIsDead) return;
+//
+//    const float Speed = GetVelocity().Size();
+//    if (CurrentTarget == BaseStructure) {
+//
+//        if (Speed < StopThresholdSpeed)
+//        {
+//            TimeSinceLastMove += StopCheckInterval;
+//
+//            // 一定時間停止していたら認識距離を拡張
+//            if (TimeSinceLastMove >= StopDurationToExtend && !bIsRecognitionExtended)
+//            {
+//                UE_LOG(LogTemp, Warning, TEXT("%s stopped  extending recognition range!"), *GetName());
+//                bIsRecognitionExtended = true;
+//            }
+//        }
+//        else
+//        {
+//            // 動いてるならリセット
+//            TimeSinceLastMove = 0.f;
+//            bIsRecognitionExtended = false;
+//        }
+//
+//    }
+//
+//}
 
 
 
