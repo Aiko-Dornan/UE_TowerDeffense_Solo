@@ -97,14 +97,25 @@ public:
 
     float GetEffectiveAttackRange(AActor* Target) const;
 
-    AActor* CheckBlockingStructure(AActor* MainTarget);
+    AActor* CheckBlockingStructure(AActor* MainTarget)const;
 
     FORCEINLINE AActor* GetCurrentTarget() const { return CurrentTarget; }
     FORCEINLINE void SetCurrentTarget(AActor* NewTarget) { CurrentTarget = NewTarget; }
 
     bool CanReachTarget(AActor* Target) const;
+    bool ShouldSwitchToBlocking(AActor* Target, AActor*& OutBlocking) const;
+
+    bool ShouldAttackBlockingStructure(
+        AActor* Target,
+        AActor*& OutBlocking
+    ) const;
 
     //void UpdateTarget();
+
+    // どこまでの迂回を許すか（1.5 = 50%増しまでOK）
+    UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "AI|Target")
+    float AllowDetourRatio = 1.5f;
+
 
         // --- ターゲット優先度を変数化 ---
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
