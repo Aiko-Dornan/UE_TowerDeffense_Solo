@@ -527,7 +527,7 @@ void AMyHeroPlayer::OnMouseWheel(float Value)
 		SelectedSlotIndex = (SelectedSlotIndex - 1 + MaxInventorySlots) % MaxInventorySlots;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Selected Slot = %d"), SelectedSlotIndex);
+	//UE_LOG(LogTemp, Warning, TEXT("Selected Slot = %d"), SelectedSlotIndex);
 
 	
 	// ===== グレネードかどうか判定 =====

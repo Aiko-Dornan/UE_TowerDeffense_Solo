@@ -46,6 +46,8 @@ protected:
     float TimeSinceLastMove = 0.f;
     bool bIsRecognitionExtended = false;
 
+    bool blocking_flag{ false };
+
     //void CheckIfStopped();
 
    
@@ -99,6 +101,8 @@ public:
 
     FORCEINLINE AActor* GetCurrentTarget() const { return CurrentTarget; }
     FORCEINLINE void SetCurrentTarget(AActor* NewTarget) { CurrentTarget = NewTarget; }
+
+    bool CanReachTarget(AActor* Target) const;
 
     //void UpdateTarget();
 
