@@ -206,7 +206,7 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     if (bIsDead) return;
     if (!IsValid(CurrentTarget)) {
         UE_LOG(LogTemp, Warning, TEXT("{{{%s}}}No Target!!!!!!!!!!!!11!"), *GetName());
-       // CurrentTarget = BaseStructure;
+        //CurrentTarget = BaseStructure;
         //UE_LOG(LogTemp, Warning, TEXT("{{{%s}}}!!!!!!!!!!!!11!"), *CurrentTarget->GetName());
         return;
     }
@@ -402,6 +402,7 @@ bool AEnemyCharacterBase::ShouldAttackBlockingStructure(
     // ★ 迂回が許容範囲なら「壊さない」
     if (NavDist <= StraightDist * AllowDetourRatio)
     {
+        
         return false; // 迂回する
     }
 
@@ -500,8 +501,8 @@ AActor* AEnemyCharacterBase::CheckBlockingStructure(AActor* MainTarget)const
 {
     if (!IsValid(MainTarget)) return nullptr;
 
-    FVector Start = GetActorLocation() + FVector(0, 0, 50.f);
-    FVector End = MainTarget->GetActorLocation() + FVector(0, 0, 50.f);
+    FVector Start = GetActorLocation() + FVector(0, 0, 10.f);
+    FVector End = MainTarget->GetActorLocation() + FVector(0, 0, 10.f);
 
     FHitResult Hit;
     FCollisionQueryParams Params;
@@ -709,6 +710,19 @@ void AEnemyCharacterBase::UpdateTarget()
 {
     if (bIsDead) return;
 
+    if (!IsValid(CurrentTarget))
+    {
+        LockTarget = false;
+    }
+
+    if (LockTarget)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("%s Locked Target!"),
+            *GetName());
+        return;
+    }
+
+
     AActor* NewTarget = ChooseTargetBP();
     if (!IsValid(NewTarget))
     {
@@ -721,7 +735,7 @@ void AEnemyCharacterBase::UpdateTarget()
     {
         PreviousTarget = NewTarget;
         NewTarget = Blocking;
-
+        LockTarget = true;
         if (ADefenseStructure* Struct = Cast<ADefenseStructure>(Blocking))
         {
             Struct->OnDestroyed.AddDynamic(
@@ -730,8 +744,23 @@ void AEnemyCharacterBase::UpdateTarget()
             );
         }
     }
+    else
+    {
+        LockTarget = false;
+        return;
+    }
 
     if (NewTarget == CurrentTarget) return;
+
+   /* if (!IsValid(CurrentTarget)||NewTarget!=Blocking)
+    {
+        LockTarget = false;
+    }
+
+    if (LockTarget)
+    {
+        return;
+    }*/
 
     CurrentTarget = NewTarget;
 
@@ -742,7 +771,7 @@ void AEnemyCharacterBase::UpdateTarget()
 
         float Radius = FMath::Max(
             50.0f,
-            GetEffectiveAttackRange(CurrentTarget) - 100.0f
+           RangeAttack? GetEffectiveAttackRange(CurrentTarget) - 200.0f: GetEffectiveAttackRange(CurrentTarget) - 20.0f
         );
 
         AI->MoveToActor(CurrentTarget, Radius);
@@ -772,7 +801,7 @@ void AEnemyCharacterBase::OnEnemyBeginOverlap(AActor* OverlappedActor, AActor* O
         // 建物が破壊されたら通知を受け取る
         HitStructure->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
 
-        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+       /* if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
         {
             if (IsValid(CurrentTarget) && CurrentTarget != BaseStructure)
             {
@@ -780,7 +809,7 @@ void AEnemyCharacterBase::OnEnemyBeginOverlap(AActor* OverlappedActor, AActor* O
                 float Radius = FMath::Max(50.0f, GetEffectiveAttackRange(CurrentTarget) - 100.0f);
                 AI->MoveToActor(CurrentTarget, Radius);
             }
-        }
+        }*/
         return;
     }
 
@@ -818,6 +847,7 @@ void AEnemyCharacterBase::OnTargetDestroyed(AActor* DestroyedActor)
 
     if (CurrentTarget == DestroyedActor)
     {
+        LockTarget = false;
         bUseDirectMove = false; // ←これを追加
         //CurrentTarget = nullptr;
         /*CurrentTarget = ChooseTarget_Default();*/
@@ -836,14 +866,14 @@ void AEnemyCharacterBase::OnTargetDestroyed(AActor* DestroyedActor)
         }
         else
         {
-            CurrentTarget = ChooseTargetBP();
+            UpdateTarget();
         }
 
         // --- フォーカスをリセット ---
         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
         {
            // AI->ClearFocus(EAIFocusPriority::Gameplay);
-            AI->StopMovement();
+            //AI->StopMovement();
 
             if (IsValid(CurrentTarget)/*&&!law_inteli_flag*/)
             {
@@ -1198,6 +1228,8 @@ float AEnemyCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& Da
     CurrentHealth -= ActualDamage;
     UE_LOG(LogTemp, Warning, TEXT("%s took %f damage! HP: %f/%f"),
         *GetName(), ActualDamage, CurrentHealth, MaxHealth);
+
+    LockTarget = false;
 
     if (CurrentHealth <= 0.0f)
     {

@@ -218,6 +218,8 @@ private:
     // ===== ’Ç‰ÁFNavMesh “’B”»’è =====
     //bool CanReachTargetByNav(AActor* Target) const;
 
+    bool LockTarget = false;
+
 };
 
 
