@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "NavModifierComponent.h"
 #include "DefenseStructure.generated.h"
 
 UCLASS()
@@ -43,6 +44,9 @@ protected:
     // 壊れたときのサウンド
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defense")
     USoundBase* DestroySound;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defense")
+    UNavModifierComponent* NavModifierComp;
 
     // 死亡フラグ
     bool bIsDestroyed = false;

@@ -4,6 +4,7 @@
 #include "Sound/SoundBase.h"
 #include "Engine/World.h"
 #include "NavigationSystem.h"
+#include "NavModifierComponent.h"
 #include"AmmoDisplayWidget.h"
 #include"MyHeroPlayer.h"
 
@@ -23,6 +24,9 @@ ADefenseStructure::ADefenseStructure()
     MeshComp->SetCollisionObjectType(ECC_WorldDynamic);
     MeshComp->SetCollisionResponseToAllChannels(ECR_Block);
     MeshComp->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+
+    NavModifierComp = CreateDefaultSubobject<UNavModifierComponent>(TEXT("NavModifierComp"));
+
 }
 
 void ADefenseStructure::BeginPlay()

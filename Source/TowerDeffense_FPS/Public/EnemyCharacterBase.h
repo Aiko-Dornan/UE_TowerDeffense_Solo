@@ -166,8 +166,11 @@ public:
     UPROPERTY(EditAnywhere,BlueprintReadOnly)
     bool law_speed_flag = false;
 
-    UPROPERTY()
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
     AActor* CurrentTarget = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly )
+    bool LockTarget = false;
 private:
    
    
@@ -218,7 +221,7 @@ private:
     // ===== í«â¡ÅFNavMesh ìûíBîªíË =====
     //bool CanReachTargetByNav(AActor* Target) const;
 
-    bool LockTarget = false;
+    AActor* BlockStructure = nullptr;
 
 };
 
