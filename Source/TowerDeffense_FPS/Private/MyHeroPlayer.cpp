@@ -183,7 +183,13 @@ void AMyHeroPlayer::Tick(float DeltaTime)
 		DrawGrenadeTrajectory();
 	}
 
-	
+	if (!GetWorld()->GetFirstPlayerController()->IsInputKeyDown(EKeys::LeftShift))
+	{
+		DashFlag = false;
+		NowStamina++;
+	}
+
+	DashFlag ? MoveSpeed = 20.0f : MoveSpeed = 1.0f;
 
 }
 
@@ -216,7 +222,7 @@ void AMyHeroPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	PlayerInputComponent->BindAction("Zoom", IE_Pressed, this, &AMyHeroPlayer::BeginZoom);
 	PlayerInputComponent->BindAction("Zoom", IE_Released, this, &AMyHeroPlayer::EndZoom);
 
-
+	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyHeroPlayer::Dash);
 
 }
 
@@ -701,6 +707,21 @@ void AMyHeroPlayer::DropCurrentWeapon()
 	CurrentWeapon = nullptr;
 }
 
+void AMyHeroPlayer::Dash()
+{
+	if (NowStamina>MaxStamina/10)
+	{
+		DashFlag = true;
+		NowStamina--;
+		UE_LOG(LogTemp, Warning, TEXT("Dash."));
+	}
+	else
+	{
+		DashFlag = false;
+	}
+
+
+}
 
 void AMyHeroPlayer::CheatGunEquip(TSubclassOf<AWeaponBase> NewWeaponClass)
 {
@@ -712,13 +733,13 @@ void AMyHeroPlayer::CheatGunEquip(TSubclassOf<AWeaponBase> NewWeaponClass)
 void AMyHeroPlayer::MoveForward(float value)
 {
 	FVector Direction = FRotationMatrix(Controller->GetControlRotation()).GetScaledAxis(EAxis::X);
-	AddMovementInput(Direction, value);
+	AddMovementInput(Direction*MoveSpeed, value);
 }
 
 void AMyHeroPlayer::MoveRight(float value)
 {
 	FVector Direction = FRotationMatrix(Controller->GetControlRotation()).GetScaledAxis(EAxis::Y);
-	AddMovementInput(Direction, value);
+	AddMovementInput(Direction*MoveSpeed, value);
 }
 
 void AMyHeroPlayer::StartJump()

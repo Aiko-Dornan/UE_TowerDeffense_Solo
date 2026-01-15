@@ -95,6 +95,8 @@ public:
     void StartMovingToTarget();
     void TryStartAI();
 
+    void PlayAnimation(int Case);
+
     float GetEffectiveAttackRange(AActor* Target) const;
 
     AActor* CheckBlockingStructure(AActor* MainTarget)const;
@@ -171,6 +173,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly )
     bool LockTarget = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    AActor* BlockTarget = nullptr;
 private:
    
    
@@ -221,7 +226,7 @@ private:
     // ===== í«â¡ÅFNavMesh ìûíBîªíË =====
     //bool CanReachTargetByNav(AActor* Target) const;
 
-    AActor* BlockStructure = nullptr;
+    
 
 };
 

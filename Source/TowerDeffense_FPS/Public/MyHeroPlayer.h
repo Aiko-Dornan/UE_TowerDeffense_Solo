@@ -218,6 +218,8 @@ public:
 	float GetMaxHP() const;
 	float GetCurrentHP() const;
 
+	void Dash();
+
 	private:
 
 		/*UPROPERTY(VisibleAnywhere)
@@ -230,5 +232,11 @@ public:
 		TSubclassOf<AWeaponBase> GunComponentVault;
 
 		int MaxHP = 100;
+		
+		int MaxStamina = 20000;
+		int NowStamina = 20000;
+
+		bool DashFlag=false;
+		float MoveSpeed = 1.0f;
 		
 };
