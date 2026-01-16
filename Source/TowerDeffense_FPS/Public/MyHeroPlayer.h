@@ -219,6 +219,8 @@ public:
 	float GetCurrentHP() const;
 
 	void Dash();
+	void DashStart();
+	void DashEnd();
 
 	private:
 
