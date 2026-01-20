@@ -14,6 +14,19 @@ class AAllyCharacter;
 class ADroneCharacter;
 class AEnemyAIController;
 
+UENUM(BlueprintType)
+enum class /*EEnemyState*/EEnemyAnimType : uint8
+{
+    Idle       /* UMETA(DisplayName = "Idle")*/,
+    Move       /* UMETA(DisplayName = "Move")*/,
+    Attack      /*UMETA(DisplayName = "Attack")*/,
+    RangeAttack /*UMETA(DisplayName = "RangeAttack")*/,
+    Dead        /*UMETA(DisplayName = "Dead")*/,
+    Damage,
+};
+
+
+
 USTRUCT(BlueprintType)
 struct FTargetCandidate
 {
@@ -48,7 +61,16 @@ protected:
 
     bool blocking_flag{ false };
 
-    //void CheckIfStopped();
+    enum EEnemyState :uint8
+    {
+        Idle   ,
+        Move      ,
+        Attack    ,
+        RangeATtack ,
+        Dead,
+        Damage,
+
+    };
 
    
 
@@ -95,7 +117,50 @@ public:
     void StartMovingToTarget();
     void TryStartAI();
 
-    void PlayAnimation(int Case);
+    //Animation
+
+    USkeletalMeshComponent* Mesh;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UAnimationAsset* IdleAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UAnimationAsset* MoveAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UAnimationAsset* AttackAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UAnimationAsset* RangeAttackAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UAnimationAsset* DeadAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UAnimationAsset* DamageAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Animation")
+    EEnemyAnimType EnemyState = EEnemyAnimType::Idle;
+
+    UFUNCTION(BlueprintCallable, Category = "Enemy|Animation")
+   // void SetEnemyState(EEnemyState NewState);
+
+    void PlayAnimation(EEnemyAnimType NewType, bool bLoop);
+
+    UAnimationAsset* GetAnimByType(EEnemyAnimType Type) const;
+
+    // 再生中ロック
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Animation")
+    bool bIsAnimationLocked = false;
+
+    // 現在再生中のアニメ種別
+    EEnemyAnimType CurrentAnimType;
+
+    // ロック対象のアニメか？
+    bool IsLockedAnim(EEnemyAnimType Type) const;
+
+    void LockRelease();
+    FTimerHandle LockReleaseHandle;
 
     float GetEffectiveAttackRange(AActor* Target) const;
 
@@ -230,102 +295,3 @@ private:
 
 };
 
-
-
-//#pragma once
-//
-//#include "CoreMinimal.h"
-//#include "GameFramework/Character.h"
-//#include "EnemyCharacterBase.generated.h"
-//
-//class AEnemyAIController;
-//class AMyHeroPlayer;
-//class ADefenseBase;
-//
-//UCLASS()
-//class TOWERDEFFENSE_FPS_API AEnemyCharacterBase : public ACharacter
-//{
-//    GENERATED_BODY()
-//
-//public:
-//    AEnemyCharacterBase();
-//
-//    virtual void Tick(float DeltaTime) override;
-//    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
-//        AController* EventInstigator, AActor* DamageCauser) override;
-//
-//    void PerformAttack();
-//    float GetEffectiveAttackRange(AActor* Target) const;
-//
-//    // --- Blueprintでオーバーライド可能なターゲット選定 ---
-//    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "AI|Targeting")
-//    AActor* ChooseTargetBP();
-//    virtual AActor* ChooseTargetBP_Implementation();
-//
-//    AActor* ChooseTarget();  // ターゲット選択関数
-//
-//protected:
-//    virtual void BeginPlay() override;
-//    
-//    void ResetAttack();
-//    void Die();  // 死亡処理
-//
-//public:
-//    // 攻撃設定
-//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-//    float AttackRange;
-//
-//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-//    float AttackCooldown;
-//
-//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-//    float AttackDamage = 10.0f;
-//
-//    // === HP関連 ===
-//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy Stats")
-//    float MaxHealth = 100.0f;
-//
-//    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy Stats")
-//    float CurrentHealth;
-//
-//    //1回攻撃したら自滅するフラグ
-//    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy Stats")
-//    bool KillMeFlag;
-//
-//    // --- ターゲット優先度を変数化 ---
-//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
-//    float PlayerPriority = 100.f;
-//
-//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
-//    float AllyPriority = 80.f;
-//
-//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
-//    float BasePriority = 50.f;
-//
-//    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Targeting")
-//    float StructurePriority = 60.f;
-//
-//    USTRUCT(BlueprintType)
-//        struct FTargetCandidate
-//    {
-//        GENERATED_BODY()
-//
-//        UPROPERTY(BlueprintReadWrite)
-//        AActor* Actor = nullptr;
-//
-//        UPROPERTY(BlueprintReadWrite)
-//        float Score = 0.f;
-//    };
-//
-//
-//private:
-//    bool bCanAttack = true;
-//    bool bIsDead = false;
-//    bool bNotifiedSpawner = false;
-//
-//    FTimerHandle AttackCooldownTimerHandle;
-//    AMyHeroPlayer* PlayerCharacter;
-//    ADefenseBase* BaseStructure;
-//
-//    AActor* CurrentTarget;  // 現在狙っている対象
-//};

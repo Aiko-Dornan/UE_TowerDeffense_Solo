@@ -41,7 +41,7 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 
     GetCharacterMovement()->MaxWalkSpeed = MoveEnemySpeed;
 
-
+    Mesh = GetMesh();
 
     AIControllerClass = AEnemyAIController::StaticClass();
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
@@ -104,16 +104,6 @@ void AEnemyCharacterBase::BeginPlay()
         TargetUpdateInterval,
         true
     );
-
-
-    //GetWorldTimerManager().SetTimer(
-    //    TryStartTimerHandle,
-    //    this,
-    //    &AEnemyCharacterBase::TryStartAI,
-    //    1.5f,   // 0.2秒後に実行（AI Possessを待つ）
-    //    false
-    //);
-
    
 }
 
@@ -240,51 +230,7 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     // ==========================
     // 現在ターゲットへの直線上にバリケードがあるかチェック
     // ==========================
-   // AActor* BlockingStructure = CheckBlockingStructure(CurrentTarget);
-   //// bUseDirectMove = false;
-
-   // // ★判断用フラグ（ここで定義）
-   // bool bChooseDirectMove = false;
-
-   // if (BlockingStructure && BlockingStructure != CurrentTarget)
-   // {
-   //     const float StraightDist =
-   //         FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
-
-   //     const float NavDist =
-   //         GetNavPathLengthToTarget(CurrentTarget);
-
-   //     // ★直線を選ぶ条件
-   //     bChooseDirectMove =
-   //         (NavDist == FLT_MAX) ||
-   //         (NavDist > StraightDist * 2.0f);
-   // }
-
-   // // ★判断結果を実行に反映
-   // if (BlockingStructure)
-   // {
-   //     // 直線移動＝必ず障害物をターゲットにする
-   //     if (CurrentTarget != BlockingStructure)
-   //     {
-   //         PreviousTarget = CurrentTarget;
-   //         CurrentTarget = BlockingStructure;
-
-   //         if (ADefenseStructure* Struct =
-   //             Cast<ADefenseStructure>(BlockingStructure))
-   //         {
-   //             Struct->OnDestroyed.AddDynamic(
-   //                 this,
-   //                 &AEnemyCharacterBase::OnTargetDestroyed
-   //             );
-   //         }
-   //     }
-
-   //    // bUseDirectMove = true;
-   // }
-
-
-
-
+ 
     // ==========================
     // 攻撃距離チェック
     // ==========================
@@ -298,6 +244,9 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     // ==========================
     // 移動処理
     // ==========================
+
+   
+
 
         // それ以外はAIに任せる
         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
@@ -564,149 +513,6 @@ AActor* AEnemyCharacterBase::CheckBlockingStructure(AActor* MainTarget)const
 
 
 
-//AActor* AEnemyCharacterBase::CheckBlockingStructure(AActor* MainTarget)
-//{
-//    if (!IsValid(MainTarget)) return nullptr;
-//
-//    // すでにターゲットがバリケードならチェック不要
-//    if (MainTarget->IsA(ADefenseStructure::StaticClass()))
-//        return nullptr;
-//
-//    UCapsuleComponent* Capsule = GetCapsuleComponent();
-//    float HalfHeight = Capsule ? Capsule->GetScaledCapsuleHalfHeight() : 0.f;
-//
-//    FVector Start = GetActorLocation() - FVector(0, 0, HalfHeight - 20.f);
-//    FVector End = MainTarget->GetActorLocation() + FVector(0, 0, 20.f);
-//
-//    FHitResult Hit;
-//    FCollisionQueryParams Params;
-//    Params.AddIgnoredActor(this);
-//
-//    bool bHit = GetWorld()->LineTraceSingleByChannel(
-//        Hit,
-//        Start,
-//        End,
-//        ECC_WorldStatic/*ECC_Visibility*//*ECC_GameTraceChannel1*/,
-//        Params
-//    );
-//
-//    DrawDebugLine(GetWorld(), Start, End, FColor::Cyan, false, 0.1f, 0, 1.5f);
-//
-//    if (bHit)
-//    {
-//        if (ADefenseStructure* HitStructure = Cast<ADefenseStructure>(Hit.GetActor()))
-//        {
-//            // 目標より手前のバリケードのみ有効
-//            float DistToHit = FVector::Dist(GetActorLocation(), HitStructure->GetActorLocation());
-//            float DistToTarget = FVector::Dist(GetActorLocation(), MainTarget->GetActorLocation());
-//
-//            if (DistToHit < DistToTarget)
-//                return HitStructure;
-//        }
-//    }
-//
-//    return nullptr;
-//}
-
-
-//void AEnemyCharacterBase::UpdateTarget()
-//{
-//    if (bIsDead) return;
-//
-//
-//
-//    // ---  ターゲットの基本選定 ---
-//    //AActor* NewTarget = ChooseTarget_Default(); // バリケード以外を含む通常のロジック
-//    AActor* NewTarget = ChooseTargetBP(); // バリケード以外を含む通常のロジック
-//
-//    // 無効ターゲットなら基地へフォールバック
-//    if (!IsValid(NewTarget))
-//    {
-//        if (IsValid(BaseStructure))
-//            NewTarget = BaseStructure;
-//        // UE_LOG(LogTemp, Warning, TEXT("%s Base Target!"),*GetName());
-//
-//        else
-//            UE_LOG(LogTemp, Warning, TEXT("No Target!!!! %s No Target!"),
-//                *GetName());
-//        return;
-//    }
-//
-//    // ---  新ターゲットがバリケードでない場合のみ遮蔽物をチェック ---
-//
-//    
-//    
-//    // --- 直線上の障害物チェック ---
-//    AActor* BlockingStructure = nullptr;
-//
-//    /*if (NewTarget && !NewTarget->IsA(ADefenseStructure::StaticClass()))
-//    {
-//        BlockingStructure = CheckBlockingStructure(NewTarget);
-//    }*/
-//
-//    BlockingStructure = CheckBlockingStructure(NewTarget);
-//
-//    if (BlockingStructure)
-//    {
-//        const float StraightDist =
-//            FVector::Dist(GetActorLocation(), NewTarget->GetActorLocation());
-//
-//        const float NavDist =
-//            GetNavPathLengthToTarget(NewTarget);
-//
-//        const bool bChooseDirectMove =
-//            !CanReachTarget(NewTarget) ||     // ★追加
-//            (NavDist == FLT_MAX) ||
-//            (NavDist > StraightDist * 2.0f);
-//
-//        if (bChooseDirectMove)
-//        {
-//            PreviousTarget = NewTarget;
-//            NewTarget = BlockingStructure;
-//        }
-//    }
-//
-//
-//    // ---  ターゲット変更が必要な場合のみ更新 ---
-//    if (NewTarget != CurrentTarget)
-//    {
-//        CurrentTarget = NewTarget;
-//
-//        //// 破壊通知登録（既存の建物以外にも適用）
-//        //if (IsValid(CurrentTarget))
-//        //{
-//        //    CurrentTarget->OnDestroyed.AddDynamic(this, &AEnemyCharacterBase::OnTargetDestroyed);
-//        //}
-//
-//        //law_inteli_flag = false;
-//
-//        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
-//        {
-//           // AI->ClearFocus(EAIFocusPriority::Gameplay);
-//            AI->StopMovement();
-//
-//            if (IsValid(CurrentTarget)/*&&!law_inteli_flag*/)
-//            {
-//                AI->SetFocus(CurrentTarget);
-//                float Radius = FMath::Max(50.0f, GetEffectiveAttackRange(CurrentTarget) - 100.0f);
-//                AI->MoveToActor(CurrentTarget, Radius);
-//            }
-//        }
-//    }
-//
-//    /*if (GetVelocity().Size() < MoveEnemySpeed/2)
-//    {
-//        law_speed_flag = true;
-//        UE_LOG(LogTemp, Warning, TEXT("{{{%s}}}LAW SPEED!!!!!!!!!!!!11!"), *GetName());
-//    }
-//    else
-//    {
-//        law_speed_flag = false;
-//        UE_LOG(LogTemp, Warning, TEXT("{{{%s}}}HIGH SPEED!!!!!!!!!!!!11!"), *GetName());
-//    }*/
-//
-//
-//}
 
 void AEnemyCharacterBase::UpdateTarget()
 {
@@ -716,6 +522,8 @@ void AEnemyCharacterBase::UpdateTarget()
     {
         LockTarget = false;
     }
+
+   
 
     if (IsValid(CurrentTarget))
     {
@@ -831,6 +639,39 @@ void AEnemyCharacterBase::UpdateTarget()
 
         AI->MoveToActor(CurrentTarget,Radius);
     }
+
+    if (GetVelocity().Size() > 1.f)
+    {
+        if (MoveAnim)
+        {
+           /* if (CurrentAnimType == EEnemyAnimType::Move)
+            {
+                return;
+            }
+            else*/
+            {
+                PlayAnimation(EEnemyAnimType::Move, true);
+                //UE_LOG(LogTemp, Warning, TEXT("RUNNING!"));
+            }
+        }
+    }
+    else
+    {
+        if (IdleAnim)
+        {
+           /* if (CurrentAnimType == EEnemyAnimType::Idle)
+            {
+                return;
+            }
+            else*/
+            {
+                PlayAnimation(EEnemyAnimType::Move, true);
+                //UE_LOG(LogTemp, Warning, TEXT("IDLING!"));
+            }
+        }
+
+    }
+
 }
 
 
@@ -1028,51 +869,7 @@ AActor* AEnemyCharacterBase::ChooseTarget_Default()
         }
     }
 
-    //// --- 防衛建物（進行ルート上のみ）---
-    //if (IsValid(DefenseBase))
-    //{
-    //    TArray<AActor*> FoundStructures;
-    //    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseStructure::StaticClass(), FoundStructures);
-
-    //    FVector ToBaseDir = (DefenseBase->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-
-    //    for (AActor* StructureActor : FoundStructures)
-    //    {
-    //        if (!IsValid(StructureActor)) continue;
-
-    //        FVector ToStructureDir = (StructureActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-    //        float Angle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(ToBaseDir, ToStructureDir)));
-
-    //        if (Angle < BlockCheckAngle)
-    //        {
-    //            FHitResult Hit;
-    //            FCollisionQueryParams Params;
-    //            Params.AddIgnoredActor(this);
-
-    //            bool bHit = GetWorld()->LineTraceSingleByChannel(
-    //                Hit,
-    //                GetActorLocation() + FVector(0, 0, 50.f),
-    //                StructureActor->GetActorLocation() + FVector(0, 0, 50.f),
-    //                ECC_Visibility, Params);
-
-    //            if (bHit && Hit.GetActor() == StructureActor)
-    //            {
-    //                const float Dist = FVector::Dist(GetActorLocation(), StructureActor->GetActorLocation());
-    //                FTargetCandidate Candidate;
-    //                Candidate.Actor = StructureActor;
-    //                Candidate.Score = StructurePriority * FMath::Clamp(1.f - (Dist / (MaxConsiderRange * 0.5f)), 0.f, 1.f);
-    //                Candidates.Add(Candidate);
-
-
-
-    //            }
-
-
-
-    //        }
-
-    //    }
-    //}
+    
 
     // --- ソート ---
     Candidates.Sort([](const FTargetCandidate& A, const FTargetCandidate& B)
@@ -1116,14 +913,17 @@ void AEnemyCharacterBase::PerformAttack()//近距離
     UE_LOG(LogTemp, Warning, TEXT("%s attacks %s!"),
         *GetName(), *CurrentTarget->GetName());
 
-    UGameplayStatics::ApplyDamage(CurrentTarget, AttackDamage, GetController(), this, nullptr);
+  
 
-
+    if (AttackAnim)
+    {
+        PlayAnimation(EEnemyAnimType::Attack, false);
+    }
 
     GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
         &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
 
-   
+    UGameplayStatics::ApplyDamage(CurrentTarget, AttackDamage, GetController(), this, nullptr);
 
 }
 
@@ -1147,6 +947,13 @@ void AEnemyCharacterBase::AllRangeAttack()
         UE_LOG(LogTemp, Error, TEXT("ProjectileClass is NULL!!"));
         return;
     }
+
+    if (RangeAttackAnim)
+    {
+        PlayAnimation(EEnemyAnimType::RangeAttack, false);
+    }
+
+    
 
     // 敵 Mesh を取得
     USkeletalMeshComponent* MeshComp = GetMesh();
@@ -1270,6 +1077,7 @@ void AEnemyCharacterBase::ApplyAreaDamage(float DamageAmount, float Radius)
 void AEnemyCharacterBase::ResetAttack()
 {
     bCanAttack = true;
+    bIsAnimationLocked = false;
 }
 
 // ==================== 被ダメージ処理 ====================
@@ -1285,14 +1093,36 @@ float AEnemyCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& Da
     UE_LOG(LogTemp, Warning, TEXT("%s took %f damage! HP: %f/%f"),
         *GetName(), ActualDamage, CurrentHealth, MaxHealth);
 
+    if (DamageAnim)
+    {
+        
+        PlayAnimation(EEnemyAnimType::Damage, false);
+    }
+
+    GetCharacterMovement()->MaxWalkSpeed = 0.0f;
+
     LockTarget = false;
+
+   
 
     if (CurrentHealth <= 0.0f)
     {
+        bIsAnimationLocked = false;
         Die();
     }
-
-    UpdateTarget();
+    else
+    {
+        GetWorldTimerManager().SetTimer(
+            LockReleaseHandle,
+            this,
+            &AEnemyCharacterBase::LockRelease,
+            0.3f,
+            false
+        );
+    }
+   
+   
+   
 
     return ActualDamage;
 }
@@ -1305,6 +1135,14 @@ void AEnemyCharacterBase::Die()
     bIsDead = true;
 
     UE_LOG(LogTemp, Warning, TEXT("Enemy %s died!"), *GetName());
+
+    if (DeadAnim)
+    {
+      /*  Mesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);*/
+       PlayAnimation(EEnemyAnimType::Dead,false); // Dead
+    }
+
+    MoveEnemySpeed = 0.0f;
 
    /* TArray<AActor*> FoundPlayer;
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMyHeroPlayer::StaticClass(), FoundPlayer);
@@ -1325,9 +1163,15 @@ void AEnemyCharacterBase::Die()
         }
     }
 
-    PlayNiagaraEffect();
+    GetWorldTimerManager().SetTimer(
+        LockReleaseHandle,
+        this,
+        &AEnemyCharacterBase::LockRelease,
+        2.3f,
+        false
+    );
 
-    Destroy();
+   
 }
 
 // ==================== 攻撃レンジ設定 ====================
@@ -1373,10 +1217,92 @@ void AEnemyCharacterBase::PlayNiagaraEffect()
     }
 }
 
-void PlayAnimation(int Case)
+//void AEnemyCharacterBase::SetEnemyState(EEnemyState NewState)
+//{
+//    if (EnemyState == NewState) return;
+//
+//    EnemyState = NewState;
+//
+//    // AnimBP に即時反映させたい場合
+//    if (USkeletalMeshComponent* MeshComp = GetMesh())
+//    {
+//        if (UAnimInstance* Anim = MeshComp->GetAnimInstance())
+//        {
+//            // AnimBP 側は EnemyState を直接参照するだけでOK
+//        }
+//    }
+//}
+
+UAnimationAsset* AEnemyCharacterBase::GetAnimByType(EEnemyAnimType Type) const
+{
+    switch (Type)
+    {
+    case EEnemyAnimType::Idle:   return IdleAnim;
+    case EEnemyAnimType::Move:   return MoveAnim;
+    case EEnemyAnimType::Attack: return AttackAnim;
+    case EEnemyAnimType::RangeAttack: return RangeAttackAnim;
+    case EEnemyAnimType::Dead:   return DeadAnim;
+    case EEnemyAnimType::Damage:   return DamageAnim;
+    default:                     return nullptr;
+
+    
+    }
+}
+
+void AEnemyCharacterBase::PlayAnimation(EEnemyAnimType NewType, bool bLoop)
+{
+   
+    
+
+    // ロック中は無視
+    if (bIsAnimationLocked)
+    {
+        return;
+    }
+
+    UAnimationAsset* Anim = GetAnimByType(NewType);
+    if (!Anim) { 
+        UE_LOG(LogTemp, Warning, TEXT("No Anime"));
+        return; }
+
+    USkeletalMeshComponent* USMesh = GetMesh();
+    if (!USMesh) return;
+
+    USMesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+    USMesh->PlayAnimation(Anim, bLoop);
+
+    CurrentAnimType = NewType;
+
+    // ロック対象ならロック
+    if (IsLockedAnim(NewType))
+    {
+        bIsAnimationLocked = true;
+    }
+
+}
+
+bool AEnemyCharacterBase::IsLockedAnim(EEnemyAnimType Type) const
+{
+    return Type == EEnemyAnimType::Attack
+        || Type == EEnemyAnimType::Dead
+        || Type==EEnemyAnimType::Damage;
+}
+
+void AEnemyCharacterBase::LockRelease()
 {
 
+    bIsAnimationLocked = false;
+    
+    if (bIsDead)
+    {
+        PlayNiagaraEffect();
 
-
+        Destroy();
+    }
+    else
+    {
+        GetCharacterMovement()->MaxWalkSpeed = MoveEnemySpeed;
+        UpdateTarget();
+    }
 
 }
