@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include"MyGrenadeProjectileActor.h"
-
+#include"Components/BoxComponent.h"
 
 #include "EnemyCharacterBase.generated.h"
 
@@ -108,6 +108,20 @@ public:
     UFUNCTION(BlueprintCallable)
     void ApplyAreaDamage(float DamageAmount, float Radius);
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+    UBoxComponent* AttackCollision;
+
+    UPROPERTY()
+    TSet<AActor*> HitActors; // 多段ヒット防止
+
+    UFUNCTION()
+    void OnAttackOverlap(UPrimitiveComponent* OverlappedComponent,
+        AActor* OtherActor,
+        UPrimitiveComponent* OtherComp,
+        int32 OtherBodyIndex,
+        bool bFromSweep,
+        const FHitResult& SweepResult);
+
     float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
     void Die();
@@ -154,6 +168,7 @@ public:
     bool bIsAnimationLocked = false;
 
     // 現在再生中のアニメ種別
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Animation")
     EEnemyAnimType CurrentAnimType;
 
     // ロック対象のアニメか？
@@ -161,6 +176,12 @@ public:
 
     void LockRelease();
     FTimerHandle LockReleaseHandle;
+
+    void MoveORIdle();
+
+    UFUNCTION()
+    void OnAttackHit();
+
 
     float GetEffectiveAttackRange(AActor* Target) const;
 

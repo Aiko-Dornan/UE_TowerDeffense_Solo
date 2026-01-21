@@ -45,6 +45,18 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 
     AIControllerClass = AEnemyAIController::StaticClass();
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+
+    AttackCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollision"));
+    AttackCollision->SetupAttachment(GetMesh(), TEXT("RightHandSocket"));
+    // ※ ソケット名は実際のものに合わせて
+
+    AttackCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    AttackCollision->SetCollisionObjectType(ECC_WorldDynamic);
+    AttackCollision->SetCollisionResponseToAllChannels(ECR_Ignore);
+    AttackCollision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+
+    AttackCollision->OnComponentBeginOverlap.AddDynamic(
+        this, &AEnemyCharacterBase::OnAttackOverlap);
 }
 
 // ==================== BeginPlay ====================
@@ -553,7 +565,7 @@ void AEnemyCharacterBase::UpdateTarget()
                 );
 
                 AI->MoveToActor(CurrentTarget, Radius);
-                return;
+                //return;
             }
         }
     }
@@ -611,7 +623,9 @@ void AEnemyCharacterBase::UpdateTarget()
 
                 AI->MoveToActor(NewTarget, Radius);
             }
-            return; }
+            MoveORIdle();
+            return; 
+                                        }
         CurrentTarget = NewTarget;
     }
    /* if (!IsValid(CurrentTarget)||NewTarget!=Blocking)
@@ -624,7 +638,8 @@ void AEnemyCharacterBase::UpdateTarget()
         return;
     }*/
 
-  
+    UE_LOG(LogTemp, Warning, TEXT("%s is Dash or Idle?"),
+        *GetName());
 
     if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
     {
@@ -640,17 +655,29 @@ void AEnemyCharacterBase::UpdateTarget()
         AI->MoveToActor(CurrentTarget,Radius);
     }
 
-    if (GetVelocity().Size() > 1.f)
+    MoveORIdle();
+
+}
+
+void AEnemyCharacterBase::MoveORIdle()
+{
+    UE_LOG(LogTemp, Warning, TEXT("%s is %f! !"),
+        *GetName(), GetVelocity().Size());
+
+    if (GetVelocity().Size() < 1.0f)
     {
         if (MoveAnim)
         {
-           /* if (CurrentAnimType == EEnemyAnimType::Move)
+            if (CurrentAnimType == EEnemyAnimType::Move)
             {
+                UE_LOG(LogTemp, Warning, TEXT("%s is Dash! !"),
+                    *GetName());
                 return;
             }
-            else*/
+            else
             {
                 PlayAnimation(EEnemyAnimType::Move, true);
+               
                 //UE_LOG(LogTemp, Warning, TEXT("RUNNING!"));
             }
         }
@@ -659,22 +686,21 @@ void AEnemyCharacterBase::UpdateTarget()
     {
         if (IdleAnim)
         {
-           /* if (CurrentAnimType == EEnemyAnimType::Idle)
+            if (CurrentAnimType == EEnemyAnimType::Idle)
             {
+               
                 return;
             }
-            else*/
+            else
             {
-                PlayAnimation(EEnemyAnimType::Move, true);
+                PlayAnimation(EEnemyAnimType::Idle, true);
+              
                 //UE_LOG(LogTemp, Warning, TEXT("IDLING!"));
             }
         }
 
     }
-
 }
-
-
 
 
 // ==================== オーバーラップイベント ====================
@@ -923,7 +949,7 @@ void AEnemyCharacterBase::PerformAttack()//近距離
     GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
         &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
 
-    UGameplayStatics::ApplyDamage(CurrentTarget, AttackDamage, GetController(), this, nullptr);
+    //UGameplayStatics::ApplyDamage(CurrentTarget, AttackDamage, GetController(), this, nullptr);
 
 }
 
@@ -1080,6 +1106,54 @@ void AEnemyCharacterBase::ResetAttack()
     bIsAnimationLocked = false;
 }
 
+void AEnemyCharacterBase::OnAttackHit()
+{
+    if (bIsDead || !IsValid(CurrentTarget)) return;
+
+    UE_LOG(LogTemp, Warning, TEXT("Attack Hit!"));
+
+    UGameplayStatics::ApplyDamage(
+        CurrentTarget,
+        AttackDamage,
+        GetController(),
+        this,
+        nullptr
+    );
+}
+
+void AEnemyCharacterBase::OnAttackOverlap(
+    UPrimitiveComponent* OverlappedComponent,
+    AActor* OtherActor,
+    UPrimitiveComponent* OtherComp,
+    int32 OtherBodyIndex,
+    bool bFromSweep,
+    const FHitResult& SweepResult)
+{
+    if (!bCanAttack) return;
+    if (!OtherActor || OtherActor == this) return;
+    if (HitActors.Contains(OtherActor)) return;
+
+    // 対象チェック
+   /* if (OtherActor->IsA(AMyHeroPlayer::StaticClass()) ||
+        OtherActor->IsA(AAllyCharacter::StaticClass()) ||
+        OtherActor->IsA(ADroneCharacter::StaticClass()))*/
+    {
+        //HitActors.Add(OtherActor);
+
+        UGameplayStatics::ApplyDamage(
+            CurrentTarget,
+            AttackDamage,
+            GetController(),
+            this,
+            nullptr
+        );
+
+        UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s"), *OtherActor->GetName());
+    }
+}
+
+
+
 // ==================== 被ダメージ処理 ====================
 
 float AEnemyCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
@@ -1087,6 +1161,7 @@ float AEnemyCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& Da
 {
     if (bIsDead) return 0.f;
 
+    bIsAnimationLocked = false;
     const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
     CurrentHealth -= ActualDamage;
