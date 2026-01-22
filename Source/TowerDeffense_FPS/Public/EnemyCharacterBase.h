@@ -99,6 +99,7 @@ public:
     void PerformAttack();
     void ResetAttack();
     FTimerHandle AttackCooldownTimerHandle;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
     float AttackCooldown;
     bool bCanAttack = true;
 
@@ -265,11 +266,12 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     AActor* BlockTarget = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    AActor* PreviousTarget = nullptr; // Œš•¨”j‰óŒã‚É–ß‚é—p
 private:
    
    
-    UPROPERTY()
-    AActor* PreviousTarget = nullptr; // Œš•¨”j‰óŒã‚É–ß‚é—p
+    
 
     bool bIsDead = false;
    

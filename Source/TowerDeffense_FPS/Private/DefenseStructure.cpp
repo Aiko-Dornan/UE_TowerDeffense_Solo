@@ -5,6 +5,7 @@
 #include "Engine/World.h"
 #include "NavigationSystem.h"
 #include "NavModifierComponent.h"
+#include "NavMesh/NavMeshBoundsVolume.h"
 #include"AmmoDisplayWidget.h"
 #include"MyHeroPlayer.h"
 
@@ -26,6 +27,19 @@ ADefenseStructure::ADefenseStructure()
     MeshComp->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
     NavModifierComp = CreateDefaultSubobject<UNavModifierComponent>(TEXT("NavModifierComp"));
+
+    //// 1. ANavMeshBoundsVolumeのポインタを取得 (事前に取得方法を確立しておく必要あり)
+    //ANavMeshBoundsVolume* NavVolume = ...; // 例: TActorIteratorで検索
+
+    //if (NavVolume)
+    //{
+    //    // 2. サイズを変更 (例: 2倍にする)
+    //    FVector NewScale = FVector(2.0f, 2.0f, 2.0f);
+    //    NavVolume->SetActorScale3D(NewScale);
+
+    //    // 3. 変更を確定させる (Registerしないと反映されない場合がある)
+    //    NavVolume->MarkComponentsRenderStateDirty();
+    //}
 
 }
 
