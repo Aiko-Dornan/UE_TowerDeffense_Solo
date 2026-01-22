@@ -98,6 +98,9 @@ public:
 
     void PerformAttack();
     void ResetAttack();
+    FTimerHandle AttackCooldownTimerHandle;
+    float AttackCooldown;
+    bool bCanAttack = true;
 
     UPROPERTY(EditDefaultsOnly, Category = "Weapon")
     TSubclassOf<class AMyGrenadeProjectileActor> ProjectileClass;
@@ -269,11 +272,11 @@ private:
     AActor* PreviousTarget = nullptr; // Œš•¨”j‰óŒã‚É–ß‚é—p
 
     bool bIsDead = false;
-    bool bCanAttack = true;
+   
     bool bNotifiedSpawner = false;
 
     float AttackRange;
-    float AttackCooldown;
+    
     
 
     
@@ -288,8 +291,7 @@ private:
 
     bool bUseDirectMove = false;
 
-    FTimerHandle AttackCooldownTimerHandle;
-
+    
     UPROPERTY()
     AMyHeroPlayer* PlayerCharacter = nullptr;
 

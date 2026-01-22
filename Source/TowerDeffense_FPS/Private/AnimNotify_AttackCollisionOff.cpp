@@ -13,5 +13,8 @@ void UAnimNotify_AttackCollisionOff::Notify(USkeletalMeshComponent* MeshComp,
     {
         Enemy->AttackCollision->SetCollisionEnabled(
             ECollisionEnabled::NoCollision);
+        Enemy->bCanAttack = false;
+        Enemy->GetWorldTimerManager().SetTimer(Enemy->AttackCooldownTimerHandle, Enemy,
+           &AEnemyCharacterBase::ResetAttack, Enemy->AttackCooldown, false);
     }
 }

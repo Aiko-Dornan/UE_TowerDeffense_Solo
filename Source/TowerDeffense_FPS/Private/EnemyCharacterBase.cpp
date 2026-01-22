@@ -565,7 +565,8 @@ void AEnemyCharacterBase::UpdateTarget()
                 );
 
                 AI->MoveToActor(CurrentTarget, Radius);
-                //return;
+                //MoveORIdle();
+                return;
             }
         }
     }
@@ -934,7 +935,7 @@ void AEnemyCharacterBase::PerformAttack()//近距離
 {
     if (!bCanAttack || bIsDead || !IsValid(CurrentTarget)) return;
 
-    bCanAttack = false;
+   
 
     UE_LOG(LogTemp, Warning, TEXT("%s attacks %s!"),
         *GetName(), *CurrentTarget->GetName());
@@ -944,10 +945,11 @@ void AEnemyCharacterBase::PerformAttack()//近距離
     if (AttackAnim)
     {
         PlayAnimation(EEnemyAnimType::Attack, false);
+        /*GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
+            &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);*/
     }
-
-    GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
-        &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);
+  
+  
 
     //UGameplayStatics::ApplyDamage(CurrentTarget, AttackDamage, GetController(), this, nullptr);
 
@@ -1129,14 +1131,28 @@ void AEnemyCharacterBase::OnAttackOverlap(
     bool bFromSweep,
     const FHitResult& SweepResult)
 {
+    UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s:1"), *OtherActor->GetName());
     if (!bCanAttack) return;
-    if (!OtherActor || OtherActor == this) return;
-    if (HitActors.Contains(OtherActor)) return;
+    UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s:2"), *OtherActor->GetName());
 
+    if (!OtherActor)
+    {
+        return;
+    }
+    if (OtherActor == this) { 
+        /*return;*/
+        //UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s:MyOwn"), *OtherActor->GetName());
+       // OtherActor = CurrentTarget;
+    }
+    UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s:3"), *OtherActor->GetName());
+    //if (HitActors.Contains(OtherActor)) return;
+    /*UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s:4"), *OtherActor->GetName());*/
     // 対象チェック
-   /* if (OtherActor->IsA(AMyHeroPlayer::StaticClass()) ||
+    if (OtherActor->IsA(AMyHeroPlayer::StaticClass())  ||
         OtherActor->IsA(AAllyCharacter::StaticClass()) ||
-        OtherActor->IsA(ADroneCharacter::StaticClass()))*/
+        OtherActor->IsA(ADroneCharacter::StaticClass())||
+        OtherActor->IsA(ADefenseBase::StaticClass())   ||
+        OtherActor->IsA(ADefenseStructure::StaticClass()))
     {
         //HitActors.Add(OtherActor);
 
@@ -1147,9 +1163,14 @@ void AEnemyCharacterBase::OnAttackOverlap(
             this,
             nullptr
         );
-
-        UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s"), *OtherActor->GetName());
+        
+        UE_LOG(LogTemp, Warning, TEXT("%s Melee Hit: %s"), *GetName(),*CurrentTarget->GetName());
+        return;
     }
+    /*GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
+        &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);*/
+    //bCanAttack = false;
+   
 }
 
 
@@ -1211,13 +1232,7 @@ void AEnemyCharacterBase::Die()
 
     UE_LOG(LogTemp, Warning, TEXT("Enemy %s died!"), *GetName());
 
-    if (DeadAnim)
-    {
-      /*  Mesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);*/
-       PlayAnimation(EEnemyAnimType::Dead,false); // Dead
-    }
-
-    MoveEnemySpeed = 0.0f;
+    
 
    /* TArray<AActor*> FoundPlayer;
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMyHeroPlayer::StaticClass(), FoundPlayer);
@@ -1238,13 +1253,31 @@ void AEnemyCharacterBase::Die()
         }
     }
 
-    GetWorldTimerManager().SetTimer(
-        LockReleaseHandle,
-        this,
-        &AEnemyCharacterBase::LockRelease,
-        2.3f,
-        false
-    );
+    MoveEnemySpeed = 0.0f;
+
+    if (DeadAnim && CurrentHealth <= 0)
+    {
+        /*  Mesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);*/
+        PlayAnimation(EEnemyAnimType::Dead, false); // Dead
+       
+        GetWorldTimerManager().SetTimer(
+            LockReleaseHandle,
+            this,
+            &AEnemyCharacterBase::LockRelease,
+            2.3f,
+            false
+        );
+
+    }
+    else
+    {
+        PlayNiagaraEffect();
+
+        Destroy();
+    }
+   
+
+    
 
    
 }

@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"   // © ‚±‚ê‘å–IAActor‚ğg‚¤‚½‚ß
 #include "Delegates/DelegateCombinations.h"
 #include "Components/WidgetComponent.h"
+#include"Components/BoxComponent.h"
 #include "DefenseBase.generated.h" // © •K‚¸ÅŒã‚É‘‚­
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBaseDestroyed);
@@ -29,6 +30,9 @@ protected:
   
 
 public:
+  /*  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+    UBoxComponent* HitCollision;*/
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base Stats")
     float MaxHealth = 500.0f;
 

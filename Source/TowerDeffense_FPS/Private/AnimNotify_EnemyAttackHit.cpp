@@ -14,6 +14,8 @@ void UAnimNotify_EnemyAttackHit::Notify(USkeletalMeshComponent* MeshComp,
             ECollisionEnabled::QueryOnly);
 
         Enemy->HitActors.Empty();
+
+       
     }
 
     //AEnemyCharacterBase* Enemy =

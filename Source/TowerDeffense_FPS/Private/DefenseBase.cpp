@@ -12,10 +12,19 @@ ADefenseBase::ADefenseBase()
     BaseMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BaseMesh"));
     RootComponent = BaseMesh;
 
+   
+
     MaxHealth = 500.0f;
     CurrentHealth = MaxHealth;
 
+    /*HitCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("HitCollision"));
+    HitCollision->SetupAttachment(GetMesh(), TEXT("BaseHitSocket"));;
    
+
+    HitCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    HitCollision->SetCollisionObjectType(ECC_WorldDynamic);
+    HitCollision->SetCollisionResponseToAllChannels(ECR_Ignore);
+    HitCollision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);*/
 }
 
 void ADefenseBase::BeginPlay()
