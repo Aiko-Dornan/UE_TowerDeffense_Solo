@@ -4,7 +4,8 @@
 #include "GameFramework/Character.h"
 #include"MyGrenadeProjectileActor.h"
 #include"Components/BoxComponent.h"
-
+#include "AIController.h"
+#include "Navigation/PathFollowingComponent.h"
 #include "EnemyCharacterBase.generated.h"
 
 class ADefenseBase;
@@ -93,6 +94,7 @@ public:
     virtual AActor* ChooseTargetBP_Implementation();
 
     AActor* ChooseTarget_Default();
+    AActor* ChooseTarget_DefenseStructure();
 
     void UpdateTarget();
 

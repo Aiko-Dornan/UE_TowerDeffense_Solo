@@ -12,6 +12,17 @@ class AEnemyCharacterBase;
 class AWeaponBase;
 class AAllyAIController;
 
+UENUM(BlueprintType)
+enum class EAllyAnimType : uint8
+{
+    Idle       /* UMETA(DisplayName = "Idle")*/,
+    Move       /* UMETA(DisplayName = "Move")*/,
+    Attack      /*UMETA(DisplayName = "Attack")*/,
+    RangeAttack /*UMETA(DisplayName = "RangeAttack")*/,
+    Dead        /*UMETA(DisplayName = "Dead")*/,
+    Damage,
+};
+
 UCLASS()
 class TOWERDEFFENSE_FPS_API AAllyCharacter : public ACharacter
 {
@@ -118,12 +129,69 @@ public:
     /** 初期位置 */
     FVector InitialPosition;
 
+    enum EAllyState :uint8
+    {
+        Idle,
+        Move,
+        Attack,
+        RangeATtack,
+        Dead,
+        Damage,
+
+    };
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UAnimationAsset* IdleAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UAnimationAsset* MoveAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UAnimationAsset* AttackAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UAnimationAsset* RangeAttackAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UAnimationAsset* DeadAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UAnimationAsset* DamageAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Animation")
+    EAllyAnimType EnemyState = EAllyAnimType::Idle;
+
+    UFUNCTION(BlueprintCallable, Category = "Enemy|Animation")
+    // void SetEnemyState(EEnemyState NewState);
+
+    void PlayAnimation(EAllyAnimType NewType, bool bLoop);
+
+    UAnimationAsset* GetAnimByType(EAllyAnimType Type) const;
+
+    // 再生中ロック
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Animation")
+    bool bIsAnimationLocked = false;
+
+    // 現在再生中のアニメ種別
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Animation")
+    EAllyAnimType CurrentAnimType;
+
+    // ロック対象のアニメか？
+    bool IsLockedAnim(EAllyAnimType Type) const;
+
+    void LockRelease();
+    FTimerHandle LockReleaseHandle;
+
+    void MoveORIdle();
+
 private:
     /** 射撃タイマー */
     FTimerHandle FireTimerHandle;
 
     /** 敵更新タイマー */
     FTimerHandle TargetUpdateTimer;
+
+    bool bIsDead = false;
 };
 
 

@@ -246,6 +246,7 @@ void AAllyCharacter::MoveBackToInitialPosition()
     if (AAIController* AICon = Cast<AAIController>(GetController()))
     {
         AICon->MoveToLocation(InitialPosition, AcceptableRadius);
+        PlayAnimation(EAllyAnimType::Move, true);
     }
     else
     {
@@ -284,6 +285,9 @@ void AAllyCharacter::MoveAwayFromEnemy(AActor* Target)
             MoveDir = (MoveDir + Left * 0.5f).GetSafeNormal();
         else
             MoveDir = FVector::ZeroVector;
+
+        PlayAnimation(EAllyAnimType::Move, true);
+
     }
 
     if (!MoveDir.IsZero())
@@ -317,6 +321,7 @@ void AAllyCharacter::StopMovement()
     if (AAIController* AICon = Cast<AAIController>(GetController()))
     {
         AICon->StopMovement();
+        PlayAnimation(EAllyAnimType::Idle, false);
     }
 }
 
@@ -343,13 +348,13 @@ void AAllyCharacter::Die()
 {
     UE_LOG(LogTemp, Warning, TEXT("Ally %s died!"), *GetName());
 
-    
+    bIsDead = true;
 
     if (MHP != nullptr && MHP->AmmoWidget != nullptr)
     {
         MHP->AmmoWidget->UpdateDroneText(3);
     }
-
+    PlayAnimation(EAllyAnimType::Dead, true);
     DropCurrentWeapon();
     Destroy();
 }
@@ -402,6 +407,129 @@ void AAllyCharacter::DropCurrentWeapon()
     EquippedWeapon->Destroy();
     EquippedWeapon = nullptr;
 }
+
+void AAllyCharacter::MoveORIdle()
+{
+    UE_LOG(LogTemp, Warning, TEXT("%s is %f! !"),
+        *GetName(), GetVelocity().Size());
+
+    if (GetVelocity().Size() > 0.0f /*|| GetCharacterMovement()->IsMovingOnGround()*/ /*&&
+        !GetController()->IsFollowingAPath()*/)
+    {
+        if (MoveAnim)
+        {
+            if (CurrentAnimType == EAllyAnimType::Move)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("%s is Dash! !"),
+                    *GetName());
+                return;
+            }
+            else
+            {
+                PlayAnimation(EAllyAnimType::Move, true);
+
+                //UE_LOG(LogTemp, Warning, TEXT("RUNNING!"));
+            }
+        }
+    }
+    else
+    {
+        if (IdleAnim)
+        {
+            if (CurrentAnimType == EAllyAnimType::Idle)
+            {
+
+                return;
+            }
+            else
+            {
+                PlayAnimation(EAllyAnimType::Idle, true);
+
+                //UE_LOG(LogTemp, Warning, TEXT("IDLING!"));
+            }
+        }
+
+    }
+}
+
+UAnimationAsset* AAllyCharacter::GetAnimByType(EAllyAnimType Type) const
+{
+    switch (Type)
+    {
+    case EAllyAnimType::Idle:   return IdleAnim;
+    case EAllyAnimType::Move:   return MoveAnim;
+    case EAllyAnimType::Attack: return AttackAnim;
+    case EAllyAnimType::RangeAttack: return RangeAttackAnim;
+    case EAllyAnimType::Dead:   return DeadAnim;
+    case EAllyAnimType::Damage:   return DamageAnim;
+    default:                     return nullptr;
+
+
+    }
+}
+
+void AAllyCharacter::PlayAnimation(EAllyAnimType NewType, bool bLoop)
+{
+
+
+
+    // ロック中は無視
+    if (bIsAnimationLocked)
+    {
+        return;
+    }
+
+    UAnimationAsset* Anim = GetAnimByType(NewType);
+    if (!Anim) {
+        UE_LOG(LogTemp, Warning, TEXT("No Anime"));
+        return;
+    }
+
+    USkeletalMeshComponent* USMesh = GetMesh();
+    if (!USMesh) return;
+
+    USMesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+    USMesh->PlayAnimation(Anim, bLoop);
+
+    CurrentAnimType = NewType;
+
+    // ロック対象ならロック
+    if (IsLockedAnim(NewType))
+    {
+        bIsAnimationLocked = true;
+    }
+
+}
+
+bool AAllyCharacter::IsLockedAnim(EAllyAnimType Type) const
+{
+    return Type == EAllyAnimType::Attack
+        || Type == EAllyAnimType::Dead
+        || Type == EAllyAnimType::Damage;
+}
+
+void AAllyCharacter::LockRelease()
+{
+
+    bIsAnimationLocked = false;
+
+    if (bIsDead)
+    {
+       // PlayNiagaraEffect();
+
+        Destroy();
+    }
+    else
+    {
+       
+       // GetCharacterMovement()->MaxWalkSpeed = MoveEnemySpeed;
+        
+
+        UE_LOG(LogTemp, Warning, TEXT("Damage Anime end"));
+    }
+
+}
+
 
 //#include "AllyCharacter.h"
 //#include "AIController.h"

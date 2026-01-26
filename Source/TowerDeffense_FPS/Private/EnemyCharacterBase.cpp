@@ -258,7 +258,24 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
     // ==========================
 
    
+    if (LockTarget)
+    {
+        float Radius = FMath::Max(
+            50.0f,
+            RangeAttack ? GetEffectiveAttackRange(CurrentTarget) - 20.0f : GetEffectiveAttackRange(CurrentTarget) - 200.0f
+        );
+        FVector TargetLocation = CurrentTarget->GetActorLocation();
+        FVector Direction2 = TargetLocation - GetActorLocation();
+        Direction2.Z = 0;
 
+        if (Direction2.Size() > Radius)
+        {
+            Direction2.Normalize();
+            AddMovementInput(Direction2, MoveEnemySpeed);
+        }
+    }
+   
+    
 
         // それ以外はAIに任せる
         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
@@ -363,18 +380,23 @@ bool AEnemyCharacterBase::ShouldAttackBlockingStructure(
     if (NavDist == FLT_MAX)
     {
         OutBlocking = Blocking;
+        UE_LOG(LogTemp, Warning,
+            TEXT("%s will attack;"), *GetName());
         return true;
     }
 
     // ★ 迂回が許容範囲なら「壊さない」
     if (NavDist <= StraightDist * AllowDetourRatio)
     {
-        
+        UE_LOG(LogTemp, Warning,
+            TEXT("%s will ukai;"), *GetName());
         return false; // 迂回する
     }
 
     // ★ それ以上なら「邪魔だから壊す」
     OutBlocking = Blocking;
+    UE_LOG(LogTemp, Warning,
+        TEXT("%s will kowasu;"), *GetName());
     return true;
 }
 
@@ -540,129 +562,181 @@ void AEnemyCharacterBase::UpdateTarget()
         LockTarget = false;
     }
 
-   
+    if (!LockTarget)
+    {
+        //UE_LOG(LogTemp, Warning, TEXT("%s Locked Target!"),
+        //    *GetName());
+        CurrentTarget = ChooseTargetBP_Implementation();
+        BlockTarget = nullptr;
 
-    //if (IsValid(CurrentTarget))
+        if (!IsValid(CurrentTarget))
+        {
+            CurrentTarget = BaseStructure;
+            if (!IsValid(CurrentTarget)) return;
+        }
+
+        AActor* Blocking = nullptr;
+        if (ShouldAttackBlockingStructure(CurrentTarget, Blocking))
+        {
+            PreviousTarget = CurrentTarget;
+            CurrentTarget = Blocking;
+            LockTarget = true;
+            BlockTarget = Blocking;
+            if (ADefenseStructure* Struct = Cast<ADefenseStructure>(Blocking))
+            {
+                Struct->OnDestroyed.AddDynamic(
+                    this,
+                    &AEnemyCharacterBase::OnTargetDestroyed
+                );
+            }
+            //return;
+        }
+        else
+        {
+            LockTarget = false;
+        }
+
+      
+
+        //if (NewTarget == CurrentTarget) 
+        { 
+            if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+            {
+                //GetCharacterMovement()->DisableMovement();
+                AI->ClearFocus(EAIFocusPriority::Gameplay);
+                AI->SetFocus(CurrentTarget);
+
+                float Radius = FMath::Max(
+                    50.0f,
+                    RangeAttack ? GetEffectiveAttackRange(CurrentTarget) - 20.0f : GetEffectiveAttackRange(CurrentTarget) - 200.0f
+                );
+                UE_LOG(LogTemp, Warning, TEXT("%s is watching %s?"), *GetName(), *CurrentTarget->GetName());
+                AI->MoveToActor(CurrentTarget, Radius);
+                MoveORIdle();
+
+            }
+        }
+       /* else
+        {
+            CurrentTarget = NewTarget;
+
+            if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+            {
+                AI->StopMovement();
+                AI->ClearFocus(EAIFocusPriority::Gameplay);
+                AI->SetFocus(CurrentTarget);
+
+                float Radius = FMath::Max(
+                    50.0f,
+                    RangeAttack ? GetEffectiveAttackRange(CurrentTarget) - 20.0f : GetEffectiveAttackRange(CurrentTarget) - 200.0f
+                );
+                UE_LOG(LogTemp, Warning, TEXT("%s is funking %s?"), *GetName(), *CurrentTarget->GetName());
+                AI->MoveToActor(CurrentTarget, Radius);
+                MoveORIdle();
+
+            }
+        }*/
+
+        
+       
+    }
+    else /*if (LockTarget)*/
+    {
+        
+        /*CurrentTarget = ChooseTargetBP_Implementation();
+        LockTarget = false;
+        BlockTarget = nullptr;
+        PreviousTarget = nullptr;
+        UE_LOG(LogTemp, Warning, TEXT("%s is watching %s?"), *GetName(), *CurrentTarget->GetName());
+
+        
+
+        AActor* Blocking = nullptr;
+        if (ShouldAttackBlockingStructure(CurrentTarget, Blocking))
+        {
+            PreviousTarget = CurrentTarget;
+            CurrentTarget = Blocking;
+            LockTarget = true;
+            BlockTarget = Blocking;
+            if (ADefenseStructure* Struct = Cast<ADefenseStructure>(Blocking))
+            {
+                Struct->OnDestroyed.AddDynamic(
+                    this,
+                    &AEnemyCharacterBase::OnTargetDestroyed
+                );
+            }
+        }
+        else
+        {
+            LockTarget = false;
+            UpdateTarget();
+            return;
+        }
+
+        CurrentTarget = ChooseTarget_DefenseStructure();*/
+
+        UE_LOG(LogTemp, Warning, TEXT("%s is targeting %s !"),
+            *GetName(), *CurrentTarget->GetName());
+
+        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+        {
+            //LockTarget = false;
+            //BlockStructure = nullptr;
+            //AI->StopMovement();
+            AI->ClearFocus(EAIFocusPriority::Gameplay);
+            AI->SetFocus(CurrentTarget);
+
+           /* float Radius = FMath::Max(
+                50.0f,
+                RangeAttack ? GetEffectiveAttackRange(CurrentTarget) - 20.0f : GetEffectiveAttackRange(CurrentTarget) - 200.0f
+            );
+
+            AI->MoveToActor(CurrentTarget, Radius);*/
+
+           
+
+            MoveORIdle();
+            
+        }
+
+        //return;
+
+       
+    }
+
+    //if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
     //{
-    //    FVector ToTarget = CurrentTarget->GetActorLocation() - GetActorLocation();
-    //    float Distance = ToTarget.Size();
-    //    const float EneBarriDistance = FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
-    //    float EffectiveAttackRange = GetEffectiveAttackRange(CurrentTarget);
+    //    //GetCharacterMovement()->DisableMovement();
+    //    AI->ClearFocus(EAIFocusPriority::Gameplay);
+    //    AI->SetFocus(CurrentTarget);
 
-    //    if (LockTarget/*&&GetVelocity().Size() <= 0.1f*/ && EneBarriDistance > EffectiveAttackRange)
-    //    {
-    //        CurrentTarget = ChooseTargetBP();
+    //    float Radius = FMath::Max(
+    //        50.0f,
+    //        RangeAttack ? GetEffectiveAttackRange(CurrentTarget) - 20.0f : GetEffectiveAttackRange(CurrentTarget) - 200.0f
+    //    );
+    //    UE_LOG(LogTemp, Warning, TEXT("%s is watching %s(%s)?"), *GetName(), *CurrentTarget->GetName(),*CurrentTarget->GetActorLocation().ToString());
 
-    //        UE_LOG(LogTemp, Warning, TEXT("%s is targeting %s !"),
-    //            *GetName(), *CurrentTarget->GetName());
-
-    //        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
-    //        {
-    //            LockTarget = false;
-    //            //BlockStructure = nullptr;
-    //            AI->StopMovement();
-    //            AI->ClearFocus(EAIFocusPriority::Gameplay);
-    //            AI->SetFocus(CurrentTarget);
-
-    //            float Radius = FMath::Max(
-    //                50.0f,
-    //                RangeAttack ? GetEffectiveAttackRange(CurrentTarget) - 20.0f : GetEffectiveAttackRange(CurrentTarget) - 200.0f
-    //            );
-
-    //            AI->MoveToActor(CurrentTarget, Radius);
-    //            MoveORIdle();
-    //            return;
-    //        }
-    //    }
-    //}
-
-   
-
-    //if (!LockTarget)
-    //{
-    //    //UE_LOG(LogTemp, Warning, TEXT("%s Locked Target!"),
-    //    //    *GetName());
+    //  /*  FVector TargetLocation = CurrentTarget->GetActorLocation();
+    //    FAIMoveRequest MoveRequest;
+    //    MoveRequest.SetGoalLocation(TargetLocation);
+    //    MoveRequest.SetAcceptanceRadius(Radius);
     //    
-    //    BlockTarget = nullptr;
 
+    //    FVector Direction = TargetLocation - GetActorLocation();
+    //    Direction.Z = 0;
 
-    //    AActor* NewTarget = ChooseTargetBP();
-    //    if (!IsValid(NewTarget))
+    //    if (Direction.Size() > Radius)
     //    {
-    //        NewTarget = BaseStructure;
-    //        if (!IsValid(NewTarget)) return;
-    //    }
-
-    //    AActor* Blocking = nullptr;
-    //    if (ShouldAttackBlockingStructure(NewTarget, Blocking))
-    //    {
-    //        PreviousTarget = NewTarget;
-    //        NewTarget = Blocking;
-    //        LockTarget = true;
-    //        BlockTarget = Blocking;
-    //        if (ADefenseStructure* Struct = Cast<ADefenseStructure>(Blocking))
-    //        {
-    //            Struct->OnDestroyed.AddDynamic(
-    //                this,
-    //                &AEnemyCharacterBase::OnTargetDestroyed
-    //            );
-    //        }
-    //    }
-    //    else
-    //    {
-    //        LockTarget = false;
-    //    }
-
-    //  
-
-    //    if (NewTarget == CurrentTarget) { 
-    //        if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
-    //        {
-    //            AI->StopMovement();
-    //            AI->ClearFocus(EAIFocusPriority::Gameplay);
-    //            AI->SetFocus(NewTarget);
-
-    //            float Radius = FMath::Max(
-    //                50.0f,
-    //                RangeAttack ? GetEffectiveAttackRange(NewTarget) - 20.0f : GetEffectiveAttackRange(NewTarget) - 200.0f
-    //            );
-    //            UE_LOG(LogTemp, Warning, TEXT("%s is watching %s?"), *GetName(), *NewTarget->GetName());
-    //            AI->MoveToActor(NewTarget, Radius);
-    //            MoveORIdle();
-    //            return;
-    //        }
-    //       
-    //     }
-    //    else
-    //    {
-    //        CurrentTarget = NewTarget;
-    //    }
-    //    
-    //}
-   
-  
-    //{
-    //    if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
-    //    {
-    //        //AActor* NewTarget= CurrentTarget;
-
-    //        AI->StopMovement();
-    //        AI->ClearFocus(EAIFocusPriority::Gameplay);
-    //        AI->SetFocus(CurrentTarget);
-
-    //        UE_LOG(LogTemp, Warning, TEXT("%s is Dash or Idle?"),
-    //            *GetName());
-
-    //        float Radius = FMath::Max(
-    //            50.0f,
-    //            RangeAttack ? GetEffectiveAttackRange(CurrentTarget) - 20.0f : GetEffectiveAttackRange(CurrentTarget) - 150.0f
-    //        );
-
-    //        AI->MoveToActor(CurrentTarget, Radius);
-    //    }
-
+    //        Direction.Normalize();
+    //        AddMovementInput(Direction, MoveEnemySpeed);
+    //    }*/
+    //    //AI->MoveTo(MoveRequest);
+    //   // AI->MoveToLocation(TargetLocation, Radius);
+    //    //AI->MoveToActor(CurrentTarget, Radius);
     //    MoveORIdle();
+
     //}
+
    /* if (!IsValid(CurrentTarget)||NewTarget!=Blocking)
     {
         LockTarget = false;
@@ -675,115 +749,6 @@ void AEnemyCharacterBase::UpdateTarget()
 
    
 
-if (bIsDead) return;
-
-AEnemyAIController* AI = Cast<AEnemyAIController>(GetController());
-if (!AI) return;
-
-// ============================
-// ① CurrentTarget が無効なら解除
-// ============================
-if (!IsValid(CurrentTarget))
-{
-    LockTarget = false;
-}
-
-// ============================
-// ② 被弾後・ロック解除後でも
-//    「到達不能なら障害物を再評価」
-// ============================
-if (IsValid(CurrentTarget))
-{
-    AActor* Blocking = nullptr;
-    if (ShouldSwitchToBlocking(CurrentTarget, Blocking))
-    {
-        UE_LOG(LogTemp, Warning,
-            TEXT("%s Re-lock blocking target: %s"),
-            *GetName(),
-            *Blocking->GetName());
-
-        PreviousTarget = CurrentTarget;
-        CurrentTarget = Blocking;
-        LockTarget = true;
-
-        if (ADefenseStructure* Struct = Cast<ADefenseStructure>(Blocking))
-        {
-            Struct->OnDestroyed.AddDynamic(
-                this,
-                &AEnemyCharacterBase::OnTargetDestroyed
-            );
-        }
-    }
-}
-
-// ============================
-// ③ ロックしていないなら新ターゲット選定
-// ============================
-if (!LockTarget)
-{
-    AActor* NewTarget = ChooseTargetBP();
-    if (!IsValid(NewTarget))
-    {
-        NewTarget = BaseStructure;
-        if (!IsValid(NewTarget)) return;
-    }
-
-    AActor* Blocking = nullptr;
-    if (ShouldAttackBlockingStructure(NewTarget, Blocking))
-    {
-        PreviousTarget = NewTarget;
-        NewTarget = Blocking;
-        LockTarget = true;
-
-        if (ADefenseStructure* Struct = Cast<ADefenseStructure>(Blocking))
-        {
-            Struct->OnDestroyed.AddDynamic(
-                this,
-                &AEnemyCharacterBase::OnTargetDestroyed
-            );
-        }
-    }
-
-    CurrentTarget = NewTarget;
-}
-
-// ============================
-// ④ 到達不能なら MoveTo しない
-//    → 次回 Update に任せる
-// ============================
-if (!CanReachTarget(CurrentTarget))
-{
-    UE_LOG(LogTemp, Warning,
-        TEXT("%s Target unreachable: %s"),
-        *GetName(),
-        *CurrentTarget->GetName());
-    return;
-}
-
-// ============================
-// ⑤ MoveTo を必ず再発行
-// ============================
-AI->StopMovement();
-AI->ClearFocus(EAIFocusPriority::Gameplay);
-AI->SetFocus(CurrentTarget);
-
-float Radius = FMath::Max(
-    50.0f,
-    RangeAttack
-    ? GetEffectiveAttackRange(CurrentTarget) - 20.0f
-    : GetEffectiveAttackRange(CurrentTarget) - 150.0f
-);
-
-FAIRequestID ReqID = AI->MoveToActor(CurrentTarget, Radius);
-if (!ReqID.IsValid())
-{
-    UE_LOG(LogTemp, Error,
-        TEXT("%s MoveTo FAILED for %s"),
-        *GetName(),
-        *CurrentTarget->GetName());
-}
-
-MoveORIdle();
 
 }
 
@@ -792,7 +757,8 @@ void AEnemyCharacterBase::MoveORIdle()
     UE_LOG(LogTemp, Warning, TEXT("%s is %f! !"),
         *GetName(), GetVelocity().Size());
 
-    if (GetVelocity().Size() < 1.0f)
+    if (GetVelocity().Size() < 1.0f ||GetCharacterMovement()->IsMovingOnGround() /*&&
+        !GetController()->IsFollowingAPath()*/)
     {
         if (MoveAnim)
         {
@@ -800,7 +766,7 @@ void AEnemyCharacterBase::MoveORIdle()
             {
                 UE_LOG(LogTemp, Warning, TEXT("%s is Dash! !"),
                     *GetName());
-                return;
+               return;
             }
             else
             {
@@ -1054,7 +1020,61 @@ AActor* AEnemyCharacterBase::ChooseTarget_Default()
     //return Candidates[0].Actor;
 }
 
+//
+AActor* AEnemyCharacterBase::ChooseTarget_DefenseStructure()
+{
+    // 停止中なら認識範囲を2倍に
+    const float MaxConsiderRangeBase = bIsRecognitionExtended ? ExtendedConsiderRange : DefaultConsiderRange;
+    const float MaxConsiderRange = 18000.0f;
 
+    const float BlockCheckAngle = 345.f;
+
+    TArray<FTargetCandidate> Candidates;
+
+     // --- バリケード ---
+    TArray<AActor*> FoundStructures;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseStructure::StaticClass(), FoundStructures);
+    for (AActor* Structure : FoundStructures)
+    {
+        if (!IsValid(Structure)) continue;
+        const float Dist = FVector::Dist(GetActorLocation(), Structure->GetActorLocation());
+        if (Dist < MaxConsiderRange)
+        {
+            FTargetCandidate Candidate;
+            Candidate.Actor = Structure;
+            Candidate.Score = StructurePriority * FMath::Clamp(1.f - (Dist / MaxConsiderRange), 0.f, 1.f);
+            Candidates.Add(Candidate);
+        }
+    }
+
+    // --- ソート ---
+    Candidates.Sort([](const FTargetCandidate& A, const FTargetCandidate& B)
+        {
+            return A.Score > B.Score;
+        });
+
+    // --- フォールバック処理 ---
+    if (Candidates.Num() > 0)
+    {
+        return Candidates[0].Actor;
+    }
+
+    //// ターゲットが一切見つからない場合は必ず基地をターゲットにする
+    if (!IsValid(BaseStructure))
+    {
+        TArray<AActor*> FoundBases;
+        UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADefenseBase::StaticClass(), FoundBases);
+        if (FoundBases.Num() > 0)
+        {
+            BaseStructure = Cast<ADefenseBase>(FoundBases[0]);
+            bUseDirectMove = true;
+        }
+    }
+
+    return IsValid(BaseStructure) ? BaseStructure : nullptr;
+
+    //return Candidates[0].Actor;
+}
 
 // ==================== 攻撃処理 ====================
 
@@ -1071,7 +1091,7 @@ void AEnemyCharacterBase::PerformAttack()//近距離
 
     if (AttackAnim)
     {
-        GetCharacterMovement()->MaxWalkSpeed = 0.0f;
+        GetCharacterMovement()->MaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed / 10;
         PlayAnimation(EEnemyAnimType::Attack, false);
         /*GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
             &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);*/
@@ -1337,9 +1357,9 @@ float AEnemyCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& Da
         PlayAnimation(EEnemyAnimType::Damage, false);
     }
 
-    GetCharacterMovement()->MaxWalkSpeed = 0.0f;
+    GetCharacterMovement()->MaxWalkSpeed= GetCharacterMovement()->MaxWalkSpeed/10;
 
-    LockTarget = false;
+    //LockTarget = false;
     
    
 
@@ -1560,6 +1580,8 @@ void AEnemyCharacterBase::LockRelease()
         LockTarget = false;
         GetCharacterMovement()->MaxWalkSpeed = MoveEnemySpeed;
         UpdateTarget();
+        
+        UE_LOG(LogTemp, Warning, TEXT("Damage Anime end"));
     }
 
 }

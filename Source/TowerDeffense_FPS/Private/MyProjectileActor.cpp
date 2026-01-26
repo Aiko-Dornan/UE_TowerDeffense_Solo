@@ -184,6 +184,8 @@ void AMyProjectileActor::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor,
 		{
 			UGameplayStatics::ApplyPointDamage(OtherActor, Damage, GetVelocity().GetSafeNormal(), Hit, nullptr, this, nullptr);
 			PlayNiagaraEffect();
+			Destroy(); // ’e‚ğÁ‚·
+			return;
 		}
 		
 		Destroy(); // ’e‚ğÁ‚·
