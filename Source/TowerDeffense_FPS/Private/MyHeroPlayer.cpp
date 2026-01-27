@@ -691,6 +691,9 @@ void AMyHeroPlayer::DropCurrentWeapon()
 		DroppedItem->SavedAmmo = CurrentWeapon->Ammo;
 		DroppedItem->SavedStockAmmo = CurrentWeapon->StockAmmo;
 		DroppedItem->ItemType = EItemType::IT_Weapon;
+
+
+
 		// ▼ メッシュの見た目を WeaponBase と合わせる（必要なら）
 		if (CurrentWeapon->GetMesh())
 		{

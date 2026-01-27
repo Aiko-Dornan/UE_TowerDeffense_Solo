@@ -44,10 +44,17 @@ public:
 	FOnReloadStateChanged OnReloadStateChanged;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
-	class UStaticMeshComponent* Mesh;
+	 UStaticMeshComponent* Mesh;
 
+	
+
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	//class USkeletalMeshComponent* WMesh;
 	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	//USphereComponent* CollisionComp;
+
+	//UStaticMeshComponent* StaticMeshComp;
+	//USkeletalMeshComponent* StaticMeshComp;
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Gameplay")
 	USoundBase* FireSound;

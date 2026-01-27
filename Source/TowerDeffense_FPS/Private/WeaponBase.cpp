@@ -34,8 +34,13 @@ AWeaponBase::AWeaponBase()
 	RootComponent = CollisionComp;*/
 	
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+	
+	//Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	//Mesh->SetupAttachment(RootComponent);
 	RootComponent = Mesh;
+	//RootComponent = Ub;
+	//Mesh = GetMesh();
+	
 
 	bCanFire = true;
 	bIsFiring = false;
@@ -130,9 +135,19 @@ void AWeaponBase::FireAtackAction()
 
 	AActor* OwnerActor = GetOwner();
 	if (!OwnerActor) return;
-
+	/*if (Mesh!=nullptr)
+	{
+		UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(GetRootComponent());
+		if (!StaticMeshComp) return;
+	}
+	else
+	{
+		USkeletalMeshComponent* StaticMeshComp = Cast<USkeletalMeshComponent>(GetRootComponent());
+		if (!StaticMeshComp) return;
+	}*/
+	
 	UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(GetRootComponent());
-	if (!StaticMeshComp) return;
+	if (!Mesh) return;
 
 	FName MuzzleSocketName = "FireSocket";
 	const FVector MuzzleLocation = StaticMeshComp->GetSocketLocation(MuzzleSocketName);

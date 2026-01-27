@@ -246,7 +246,7 @@ void AAllyCharacter::MoveBackToInitialPosition()
     if (AAIController* AICon = Cast<AAIController>(GetController()))
     {
         AICon->MoveToLocation(InitialPosition, AcceptableRadius);
-        PlayAnimation(EAllyAnimType::Move, true);
+       // PlayAnimation(EAllyAnimType::Move, true);
     }
     else
     {
@@ -286,7 +286,7 @@ void AAllyCharacter::MoveAwayFromEnemy(AActor* Target)
         else
             MoveDir = FVector::ZeroVector;
 
-        PlayAnimation(EAllyAnimType::Move, true);
+        //PlayAnimation(EAllyAnimType::Move, true);
 
     }
 
@@ -307,12 +307,16 @@ void AAllyCharacter::HandleFire()
     {
         // フルオート開始
         EquippedWeapon->StartFire();
+        PlayAnimation(EAllyAnimType::RangeAttack, false);
     }
     else
     {
         // セミオートは一発だけ
         EquippedWeapon->Fire();
+        PlayAnimation(EAllyAnimType::RangeAttack, false);
     }
+   
+    UE_LOG(LogTemp, Warning, TEXT("No Anime"));
     //EquippedWeapon->StartFire();
 }
 
@@ -321,7 +325,7 @@ void AAllyCharacter::StopMovement()
     if (AAIController* AICon = Cast<AAIController>(GetController()))
     {
         AICon->StopMovement();
-        PlayAnimation(EAllyAnimType::Idle, false);
+        //PlayAnimation(EAllyAnimType::Idle, false);
     }
 }
 
@@ -354,9 +358,31 @@ void AAllyCharacter::Die()
     {
         MHP->AmmoWidget->UpdateDroneText(3);
     }
-    PlayAnimation(EAllyAnimType::Dead, true);
+
+    if (DeadAnim && CurrentHealth <= 0)
+    {
+        /*  Mesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);*/
+        PlayAnimation(EAllyAnimType::Dead, true);
+
+        GetWorldTimerManager().SetTimer(
+            LockReleaseHandle,
+            this,
+            &AAllyCharacter::LockRelease,
+            2.3f,
+            false
+        );
+
+    }
+    else
+    {
+        
+
+        Destroy();
+    }
+
+    
     DropCurrentWeapon();
-    Destroy();
+    //Destroy();
 }
 
 void AAllyCharacter::DropCurrentWeapon()
