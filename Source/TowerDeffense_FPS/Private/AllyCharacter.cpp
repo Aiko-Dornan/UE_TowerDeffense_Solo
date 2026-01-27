@@ -362,7 +362,7 @@ void AAllyCharacter::Die()
     if (DeadAnim && CurrentHealth <= 0)
     {
         /*  Mesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);*/
-        PlayAnimation(EAllyAnimType::Dead, true);
+        PlayAnimation(EAllyAnimType::Dead, false);
 
         GetWorldTimerManager().SetTimer(
             LockReleaseHandle,

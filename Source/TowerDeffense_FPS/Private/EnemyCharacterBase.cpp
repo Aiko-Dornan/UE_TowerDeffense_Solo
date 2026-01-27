@@ -642,38 +642,40 @@ void AEnemyCharacterBase::UpdateTarget()
     }
     else /*if (LockTarget)*/
     {
-        
-        /*CurrentTarget = ChooseTargetBP_Implementation();
+      /* CurrentTarget = ChooseTargetBP_Implementation();
         LockTarget = false;
         BlockTarget = nullptr;
-        PreviousTarget = nullptr;
-        UE_LOG(LogTemp, Warning, TEXT("%s is watching %s?"), *GetName(), *CurrentTarget->GetName());
-
+        PreviousTarget = nullptr;*/
+       // UE_LOG(LogTemp, Warning, TEXT("%s is watching %s?"), *GetName(), *CurrentTarget->GetName());
+ 
         
+        AActor* ThirdTarget = ChooseTargetBP_Implementation();
 
         AActor* Blocking = nullptr;
-        if (ShouldAttackBlockingStructure(CurrentTarget, Blocking))
+        if (ShouldAttackBlockingStructure(ThirdTarget, Blocking)&& ShouldAttackBlockingStructure(PreviousTarget, Blocking))
         {
-            PreviousTarget = CurrentTarget;
-            CurrentTarget = Blocking;
+           // PreviousTarget = CurrentTarget;
+            //CurrentTarget = Blocking;
             LockTarget = true;
-            BlockTarget = Blocking;
-            if (ADefenseStructure* Struct = Cast<ADefenseStructure>(Blocking))
+            //BlockTarget = Blocking;
+           /* if (ADefenseStructure* Struct = Cast<ADefenseStructure>(Blocking))
             {
                 Struct->OnDestroyed.AddDynamic(
                     this,
                     &AEnemyCharacterBase::OnTargetDestroyed
                 );
-            }
+            }*/
         }
         else
         {
             LockTarget = false;
             UpdateTarget();
-            return;
+           // return;
         }
 
-        CurrentTarget = ChooseTarget_DefenseStructure();*/
+        
+
+        //CurrentTarget = ChooseTarget_DefenseStructure();
 
         UE_LOG(LogTemp, Warning, TEXT("%s is targeting %s !"),
             *GetName(), *CurrentTarget->GetName());
@@ -1319,7 +1321,7 @@ void AEnemyCharacterBase::OnAttackOverlap(
         //HitActors.Add(OtherActor);
 
         UGameplayStatics::ApplyDamage(
-            CurrentTarget,
+            OtherActor,
             AttackDamage,
             GetController(),
             this,
