@@ -517,9 +517,9 @@ AActor* AEnemyCharacterBase::CheckBlockingStructure(AActor* MainTarget)const
         Params
     );
 
-    DrawDebugLine(GetWorld(), Start, End,
+   /* DrawDebugLine(GetWorld(), Start, End,
         bHit ? FColor::Red : FColor::Green,
-        false, 0.1f, 0, 1.5f);
+        false, 0.1f, 0, 1.5f);*/
 
     if (bHit)
     {
@@ -1295,9 +1295,7 @@ void AEnemyCharacterBase::OnAttackOverlap(
     bool bFromSweep,
     const FHitResult& SweepResult)
 {
-    UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s:1"), *OtherActor->GetName());
-    if (!bCanAttack) return;
-    UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s:2"), *OtherActor->GetName());
+  
 
     if (!OtherActor)
     {
@@ -1376,7 +1374,7 @@ float AEnemyCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& Da
             LockReleaseHandle,
             this,
             &AEnemyCharacterBase::LockRelease,
-            0.3f,
+           MahiTime,
             false
         );
     }
@@ -1434,7 +1432,7 @@ void AEnemyCharacterBase::Die()
             LockReleaseHandle,
             this,
             &AEnemyCharacterBase::LockRelease,
-            2.3f,
+           VanishTime,
             false
         );
 

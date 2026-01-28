@@ -162,6 +162,11 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Animation")
     EEnemyAnimType EnemyState = EEnemyAnimType::Idle;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    float VanishTime = 2.3f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    float MahiTime = 0.3f;
+
     UFUNCTION(BlueprintCallable, Category = "Enemy|Animation")
    // void SetEnemyState(EEnemyState NewState);
 

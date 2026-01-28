@@ -175,6 +175,9 @@ public:
 
     EAllyAnimType GetMoveAnimByDirection() const;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+    float GetawayTime = 4.0f;//逃走する時間
+
    // UFUNCTION(BlueprintCallable, Category = "Enemy|Animation")
     // void SetEnemyState(EEnemyState NewState);
 
@@ -183,11 +186,11 @@ public:
     UAnimationAsset* GetAnimByType(EAllyAnimType Type) const;
 
     // 再生中ロック
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Animation")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
     bool bIsAnimationLocked = false;
 
     // 現在再生中のアニメ種別
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Animation")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
     EAllyAnimType CurrentAnimType;
 
     // ロック対象のアニメか？
@@ -209,7 +212,13 @@ private:
 
     float AnimChangeCooldown = 0.15f;
     float AnimChangeElapsed = 0.f;
+    float ReGetawayTime = 4.0f;
+    bool bIsGetaway = false;
+    FTimerHandle GetawayTimerHandle;
 
+    void StartGetaway(float Duration);
+    void EndGetaway();
+    bool bIsGetawayMoving = false;
 };
 
 
