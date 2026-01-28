@@ -24,6 +24,7 @@ void ATD_GameModeBase::BeginPlay()
     {
         PC->bShowMouseCursor = false;
         PC->SetInputMode(FInputModeGameOnly());
+        Clear = false;
     }
 
     if (DefenseBaseClass)
@@ -198,7 +199,20 @@ void ATD_GameModeBase::GameClear()
     }
 
     //GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("GAME CLEAR!"));
-
+    if (UTD_GameInstance* GI = GetGameInstance<UTD_GameInstance>())
+    {
+        if (!Clear&&!GI->ClearFlag[GI->MaxClearedStage])
+        {
+            GI->MaxClearedStage++;
+            GI->SetStageCleared(GI->MaxClearedStage);
+            UE_LOG(LogTemp, Warning, TEXT("=== GAME CLEAR! ===+%d"), GI->MaxClearedStage);
+            Clear = true;
+            GI->ClearFlag[GI->MaxClearedStage] = true;
+        }
+        
+        
+        
+    }
     // BlueprintÇ≈UIÇèoÇµÇΩÇ¢Ç»ÇÁÇ±Ç±Ç…í«â¡
     
     if (GameClearWidgetClass)

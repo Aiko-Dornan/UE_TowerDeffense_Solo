@@ -1,6 +1,7 @@
 // TD_StageSelectWidget.h
 #pragma once
 #include "Blueprint/UserWidget.h"
+#include "Components/Button.h"
 #include "TD_StageSelectWidget.generated.h"
 
 class USoundBase;
@@ -16,9 +17,20 @@ protected:
     UFUNCTION()
     void OnStage1Clicked();
 
+    UPROPERTY(meta = (BindWidget))
+    UButton* Stage1Button;
+    UPROPERTY(meta = (BindWidget))
+    UButton* Stage2Button;
+    UPROPERTY(meta = (BindWidget))
+    UButton* Stage3Button;
+    UPROPERTY(meta = (BindWidget))
+    UButton* Stage4Button;
+
     // çƒê∂ÇµÇΩÇ¢SE
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
     USoundBase* ClickSE;
 
     void SEPlay();
+
+    void UpdateStageButtons();
 };

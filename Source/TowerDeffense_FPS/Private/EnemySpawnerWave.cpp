@@ -41,11 +41,11 @@ void AEnemySpawnerWave::Tick(float DeltaTime)
     {
         bWaveInProgress = false;
 
-        UE_LOG(LogTemp, Warning, TEXT("Wave %d cleared!"), CurrentWave);
+       
 
         if (CurrentWave >= LimitWave)
         {
-            UE_LOG(LogTemp, Warning, TEXT("Final wave cleared! Triggering GameClear()..."));
+            
 
             if (ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
             {
@@ -56,7 +56,7 @@ void AEnemySpawnerWave::Tick(float DeltaTime)
         }
 
         // 残りウェーブがある場合
-        UE_LOG(LogTemp, Warning, TEXT("Next wave in %.1f seconds."), TimeAfterClear);
+       
         GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeAfterClear, false);
     }
 

@@ -14,6 +14,8 @@ enum class EBGMType : uint8
     Title,
     Field,
     Battle,
+    Clear,
+    Failed,
 };
 
 UCLASS()
@@ -58,6 +60,15 @@ public:
 
     void PlayBGMByType(EBGMType Type, float FadeInTime, bool bForceRestart=false);
 
+    //ステージクリア判定
+     // クリア済みの最大ステージ番号
+    UPROPERTY(BlueprintReadWrite)
+    int32 MaxClearedStage = 0;
+    int NowClearStage = 0;
+    bool ClearFlag[4]{ false };
+    // ステージクリア時に呼ぶ
+    void SetStageCleared(int32 StageNum);
+
 protected:
     // C++専用（BP不要）
     UPROPERTY(EditDefaultsOnly, Category = "Weapon")
@@ -78,6 +89,8 @@ protected:
 
     UPROPERTY()
     USoundBase* CurrentBGM;
+
+    
 
 private:
     void HandleWorldCleanup(UWorld* World, bool bSessionEnded, bool bCleanupResources);

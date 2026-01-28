@@ -234,3 +234,11 @@ TSubclassOf<AWeaponBase> UTD_GameInstance::ResolveWeapon(EWeaponID WeaponID) con
         return nullptr;
     }
 }
+
+void UTD_GameInstance::SetStageCleared(int32 StageNum)
+{
+    if (StageNum > MaxClearedStage)
+    {
+        MaxClearedStage = StageNum;
+    }
+}

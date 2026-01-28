@@ -48,6 +48,7 @@ public:
 
     UFUNCTION(BlueprintCallable)
     void GameClear();
+    bool Clear = false;
 
     // スポーナーへの参照
     AEnemySpawnerWave* EnemySpawnerRef;
