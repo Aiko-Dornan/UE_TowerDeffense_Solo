@@ -5,7 +5,7 @@
 #include "TimerManager.h"
 #include"AmmoDisplayWidget.h"
 #include"MyHeroPlayer.h"
-
+#include "GameFramework/CharacterMovementComponent.h"
 #include "AllyCharacter.generated.h"
 
 class AEnemyCharacterBase;
@@ -16,7 +16,10 @@ UENUM(BlueprintType)
 enum class EAllyAnimType : uint8
 {
     Idle       /* UMETA(DisplayName = "Idle")*/,
-    Move       /* UMETA(DisplayName = "Move")*/,
+    Move_Front,
+    Move_Back,
+    Move_Left,
+    Move_Right,
     Attack      /*UMETA(DisplayName = "Attack")*/,
     RangeAttack /*UMETA(DisplayName = "RangeAttack")*/,
     Dead        /*UMETA(DisplayName = "Dead")*/,
@@ -140,28 +143,39 @@ public:
 
     };
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
     UAnimationAsset* IdleAnim;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
-    UAnimationAsset* MoveAnim;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+    UAnimationAsset* MoveFrontAnim;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+    UAnimationAsset* MoveBackAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+    UAnimationAsset* MoveLeftAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+    UAnimationAsset* MoveRightAnim;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
     UAnimationAsset* AttackAnim;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
     UAnimationAsset* RangeAttackAnim;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
     UAnimationAsset* DeadAnim;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Animation")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
     UAnimationAsset* DamageAnim;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Animation")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
     EAllyAnimType EnemyState = EAllyAnimType::Idle;
 
-    UFUNCTION(BlueprintCallable, Category = "Enemy|Animation")
+    EAllyAnimType GetMoveAnimByDirection() const;
+
+   // UFUNCTION(BlueprintCallable, Category = "Enemy|Animation")
     // void SetEnemyState(EEnemyState NewState);
 
     void PlayAnimation(EAllyAnimType NewType, bool bLoop);
@@ -192,6 +206,10 @@ private:
     FTimerHandle TargetUpdateTimer;
 
     bool bIsDead = false;
+
+    float AnimChangeCooldown = 0.15f;
+    float AnimChangeElapsed = 0.f;
+
 };
 
 

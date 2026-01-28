@@ -11,7 +11,7 @@
 #include "DrawDebugHelpers.h"
 #include"ItemBase.h"
 #include"AmmoDisplayWidget.h"
-#include"MyHeroPlayer.h"
+
 
 AAllyCharacter::AAllyCharacter()
 {
@@ -126,76 +126,62 @@ void AAllyCharacter::Tick(float DeltaTime)
     {
         GetWorldTimerManager().ClearTimer(FireTimerHandle);
     }
+
+   /* if (!bIsAnimationLocked)
+    {
+        EAllyAnimType NewType = GetMoveAnimByDirection();
+
+        if (NewType != CurrentAnimType)
+        {
+            PlayAnimation(NewType, true);
+        }
+    }*/
+
+    AnimChangeElapsed += DeltaTime;
+
+    if (AnimChangeElapsed >= AnimChangeCooldown && !bIsAnimationLocked)
+    {
+        EAllyAnimType NewType = GetMoveAnimByDirection();
+
+        if (NewType != CurrentAnimType)
+        {
+            PlayAnimation(NewType, true);
+            AnimChangeElapsed = 0.f;
+        }
+    }
+
 }
 
 
-//void AAllyCharacter::Tick(float DeltaTime)
-//{
-//    Super::Tick(DeltaTime);
-//
-//    // 敵がいない → 初期位置へ戻る
-//    if (!TargetEnemy || !IsValid(TargetEnemy))
-//    {
-//        GetWorldTimerManager().ClearTimer(FireTimerHandle);
-//        MoveBackToInitialPosition();
-//        return;
-//    }
-//    else
-//    {
-//        FaceTarget(TargetEnemy);
-//    }
-//
-//    if (TargetEnemy && IsValid(TargetEnemy))
-//    {
-//        // 経過時間加算
-//        TargetLockedElapsed += DeltaTime;
-//
-//        float DistToTarget = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
-//
-//        // 一定距離離れた or 時間経過 → ターゲット解除
-//        if (DistToTarget > TargetLoseDistance || TargetLockedElapsed > TargetLockTime)
-//        {
-//            TargetEnemy = nullptr;
-//        }
-//    }
-//
-//    FindNearestEnemy();
-//
-//    const float DistanceToEnemy = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
-//
-//    // 敵が遠すぎる → 初期位置へ戻る
-//    if (DistanceToEnemy > EnemyDetectRange)
-//    {
-//        GetWorldTimerManager().ClearTimer(FireTimerHandle);
-//        MoveBackToInitialPosition();
-//        return;
-//    }
-//
-//    FaceTarget(TargetEnemy);
-//
-//    // 敵が近づきすぎたら後退
-//    if (DistanceToEnemy < MaintainDistance)
-//    {
-//        MoveAwayFromEnemy(TargetEnemy);
-//    }
-//    else
-//    {
-//        StopMovement();
-//    }
-//
-//    // 射撃範囲内なら射撃開始
-//    if (DistanceToEnemy <= FireRange)
-//    {
-//        if (!GetWorldTimerManager().IsTimerActive(FireTimerHandle))
-//        {
-//            GetWorldTimerManager().SetTimer(FireTimerHandle, this, &AAllyCharacter::HandleFire, FireInterval, true);
-//        }
-//    }
-//    else
-//    {
-//        GetWorldTimerManager().ClearTimer(FireTimerHandle);
-//    }
-//}
+EAllyAnimType AAllyCharacter::GetMoveAnimByDirection() const
+{
+    FVector Velocity = GetVelocity();
+    Velocity.Z = 0.f;
+
+    if (Velocity.IsNearlyZero())
+    {
+        return EAllyAnimType::Idle;
+    }
+
+    FVector MoveDir = Velocity.GetSafeNormal();
+
+    float ForwardDot = FVector::DotProduct(GetActorForwardVector(), MoveDir);
+    float RightDot = FVector::DotProduct(GetActorRightVector(), MoveDir);
+
+    if (ForwardDot > 0.5f)
+        return EAllyAnimType::Move_Front;
+
+    if (ForwardDot < -0.5f)
+        return EAllyAnimType::Move_Back;
+
+    if (RightDot > 0.5f)
+        return EAllyAnimType::Move_Right;
+
+    if (RightDot < -0.5f)
+        return EAllyAnimType::Move_Left;
+
+    return EAllyAnimType::Move_Front;
+}
 
 void AAllyCharacter::FindNearestEnemy()
 {
@@ -298,6 +284,11 @@ void AAllyCharacter::HandleFire()
 {
     if (!EquippedWeapon) return;
 
+    // ★ 移動停止
+    StopMovement();
+    GetCharacterMovement()->StopMovementImmediately();
+    GetCharacterMovement()->DisableMovement(); // ← これが重要
+
     if (EquippedWeapon->GetAmmo() <= 0)
     {
         EquippedWeapon->StartReload();
@@ -316,6 +307,14 @@ void AAllyCharacter::HandleFire()
         PlayAnimation(EAllyAnimType::RangeAttack, false);
     }
    
+    GetWorldTimerManager().SetTimer(
+        LockReleaseHandle,
+        this,
+        &AAllyCharacter::LockRelease,
+        EquippedWeapon->FireRate,
+        false
+    );
+
     UE_LOG(LogTemp, Warning, TEXT("No Anime"));
     //EquippedWeapon->StartFire();
 }
@@ -368,10 +367,10 @@ void AAllyCharacter::Die()
             LockReleaseHandle,
             this,
             &AAllyCharacter::LockRelease,
-            2.3f,
+            1.8f,
             false
         );
-
+        bIsDead = true;
     }
     else
     {
@@ -434,56 +433,59 @@ void AAllyCharacter::DropCurrentWeapon()
     EquippedWeapon = nullptr;
 }
 
-void AAllyCharacter::MoveORIdle()
-{
-    UE_LOG(LogTemp, Warning, TEXT("%s is %f! !"),
-        *GetName(), GetVelocity().Size());
-
-    if (GetVelocity().Size() > 0.0f /*|| GetCharacterMovement()->IsMovingOnGround()*/ /*&&
-        !GetController()->IsFollowingAPath()*/)
-    {
-        if (MoveAnim)
-        {
-            if (CurrentAnimType == EAllyAnimType::Move)
-            {
-                UE_LOG(LogTemp, Warning, TEXT("%s is Dash! !"),
-                    *GetName());
-                return;
-            }
-            else
-            {
-                PlayAnimation(EAllyAnimType::Move, true);
-
-                //UE_LOG(LogTemp, Warning, TEXT("RUNNING!"));
-            }
-        }
-    }
-    else
-    {
-        if (IdleAnim)
-        {
-            if (CurrentAnimType == EAllyAnimType::Idle)
-            {
-
-                return;
-            }
-            else
-            {
-                PlayAnimation(EAllyAnimType::Idle, true);
-
-                //UE_LOG(LogTemp, Warning, TEXT("IDLING!"));
-            }
-        }
-
-    }
-}
+//void AAllyCharacter::MoveORIdle()
+//{
+//    UE_LOG(LogTemp, Warning, TEXT("%s is %f! !"),
+//        *GetName(), GetVelocity().Size());
+//
+//    if (GetVelocity().Size() > 0.0f /*|| GetCharacterMovement()->IsMovingOnGround()*/ /*&&
+//        !GetController()->IsFollowingAPath()*/)
+//    {
+//        if (MoveAnim)
+//        {
+//            if (CurrentAnimType == EAllyAnimType::Move)
+//            {
+//                UE_LOG(LogTemp, Warning, TEXT("%s is Dash! !"),
+//                    *GetName());
+//                return;
+//            }
+//            else
+//            {
+//                PlayAnimation(EAllyAnimType::Move, true);
+//
+//                //UE_LOG(LogTemp, Warning, TEXT("RUNNING!"));
+//            }
+//        }
+//    }
+//    else
+//    {
+//        if (IdleAnim)
+//        {
+//            if (CurrentAnimType == EAllyAnimType::Idle)
+//            {
+//
+//                return;
+//            }
+//            else
+//            {
+//                PlayAnimation(EAllyAnimType::Idle, true);
+//
+//                //UE_LOG(LogTemp, Warning, TEXT("IDLING!"));
+//            }
+//        }
+//
+//    }
+//}
 
 UAnimationAsset* AAllyCharacter::GetAnimByType(EAllyAnimType Type) const
 {
     switch (Type)
     {
     case EAllyAnimType::Idle:   return IdleAnim;
-    case EAllyAnimType::Move:   return MoveAnim;
+    case EAllyAnimType::Move_Front:  return MoveFrontAnim;
+    case EAllyAnimType::Move_Back:   return MoveBackAnim;
+    case EAllyAnimType::Move_Left:   return MoveLeftAnim;
+    case EAllyAnimType::Move_Right:  return MoveRightAnim;
     case EAllyAnimType::Attack: return AttackAnim;
     case EAllyAnimType::RangeAttack: return RangeAttackAnim;
     case EAllyAnimType::Dead:   return DeadAnim;
@@ -497,7 +499,7 @@ UAnimationAsset* AAllyCharacter::GetAnimByType(EAllyAnimType Type) const
 void AAllyCharacter::PlayAnimation(EAllyAnimType NewType, bool bLoop)
 {
 
-
+    if (CurrentAnimType == NewType) return;
 
     // ロック中は無視
     if (bIsAnimationLocked)
@@ -532,13 +534,14 @@ bool AAllyCharacter::IsLockedAnim(EAllyAnimType Type) const
     return Type == EAllyAnimType::Attack
         || Type == EAllyAnimType::Dead
         || Type == EAllyAnimType::Damage;
+        //|| Type == EAllyAnimType::RangeAttack;
 }
 
 void AAllyCharacter::LockRelease()
 {
 
     bIsAnimationLocked = false;
-
+    GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     if (bIsDead)
     {
        // PlayNiagaraEffect();
