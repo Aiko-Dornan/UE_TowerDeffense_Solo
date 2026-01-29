@@ -81,6 +81,7 @@ void AAllyCharacter::Tick(float DeltaTime)
         if (!TargetEnemy)
         {
             MoveBackToInitialPosition();
+           
             return;
         }
         else
@@ -107,6 +108,7 @@ void AAllyCharacter::Tick(float DeltaTime)
         TargetEnemy = nullptr;
         GetWorldTimerManager().ClearTimer(FireTimerHandle);
         MoveBackToInitialPosition();
+       
         return;
     }
 
@@ -129,6 +131,7 @@ void AAllyCharacter::Tick(float DeltaTime)
         {
             MoveAwayFromEnemy(TargetEnemy);
             bIsGetawayMoving = true;
+           
         }
         return;
     }
@@ -139,6 +142,7 @@ void AAllyCharacter::Tick(float DeltaTime)
     if (DistanceToEnemy < MaintainDistance)
     {
         MoveAwayFromEnemy(TargetEnemy);
+       
     }
     else
     {
@@ -192,9 +196,12 @@ EAllyAnimType AAllyCharacter::GetMoveAnimByDirection() const
     FVector Velocity = GetVelocity();
     Velocity.Z = 0.f;
 
-    if (Velocity.SizeSquared() < 1.f)
+    if (Velocity.SizeSquared() <= 0.0f)
     {
+       /* UE_LOG(LogTemp, Warning, TEXT("%s Idle "),
+            *GetName());*/
         return EAllyAnimType::Idle;
+       
     }
 
     FVector MoveDir = Velocity.GetSafeNormal();
@@ -260,63 +267,19 @@ void AAllyCharacter::MoveBackToInitialPosition()
     if (AAIController* AICon = Cast<AAIController>(GetController()))
     {
         AICon->MoveToLocation(InitialPosition, AcceptableRadius);
+       
        // PlayAnimation(EAllyAnimType::Move, true);
     }
-    else
+    GetMoveAnimByDirection();
+    /*else
     {
         AddMovementInput(ToInitial.GetSafeNormal(), 1.f);
-    }
+        GetMoveAnimByDirection();
+    }*/
+
+    
 }
 
-//void AAllyCharacter::MoveAwayFromEnemy(AActor* Target)
-//{
-//    if (!Target) return;
-//
-//    FVector MoveDir = (GetActorLocation() - Target->GetActorLocation()).GetSafeNormal();
-//    FVector Start = GetActorLocation();
-//    FVector End = Start + MoveDir * 150.f;
-//
-//    // 壁回避
-//    FHitResult Hit;
-//    FCollisionQueryParams Params;
-//    Params.AddIgnoredActor(this);
-//
-//    bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params);
-//    if (bHit)
-//    {
-//        FVector Right = FVector::CrossProduct(FVector::UpVector, MoveDir).GetSafeNormal();
-//        FVector Left = -Right;
-//
-//        FVector CheckRightEnd = Start + Right * 100.f;
-//        FVector CheckLeftEnd = Start + Left * 100.f;
-//
-//        bool bRightClear = !GetWorld()->LineTraceTestByChannel(Start, CheckRightEnd, ECC_WorldStatic, Params);
-//        bool bLeftClear = !GetWorld()->LineTraceTestByChannel(Start, CheckLeftEnd, ECC_WorldStatic, Params);
-//
-//        if (bRightClear)
-//            MoveDir = (MoveDir + Right * 0.5f).GetSafeNormal();
-//        else if (bLeftClear)
-//            MoveDir = (MoveDir + Left * 0.5f).GetSafeNormal();
-//        else
-//            MoveDir = FVector::ZeroVector;
-//
-//        //PlayAnimation(EAllyAnimType::Move, true);
-//
-//    }
-//
-//   /* if (!MoveDir.IsZero())
-//        AddMovementInput(MoveDir, 1.f);*/
-//
-//    if (!Target) return;
-//
-//    FVector AwayDir = (GetActorLocation() - Target->GetActorLocation()).GetSafeNormal();
-//    FVector Dest = GetActorLocation() + AwayDir * 600.f;
-//
-//    if (AAIController* AICon = Cast<AAIController>(GetController()))
-//    {
-//        AICon->MoveToLocation(Dest, AcceptableRadius);
-//    }
-//}
 
 void AAllyCharacter::MoveAwayFromEnemy(AActor* Target)
 {
@@ -328,7 +291,9 @@ void AAllyCharacter::MoveAwayFromEnemy(AActor* Target)
     if (AAIController* AICon = Cast<AAIController>(GetController()))
     {
         AICon->MoveToLocation(Dest, AcceptableRadius);
+       
     }
+    GetMoveAnimByDirection();
 }
 
 
@@ -336,8 +301,8 @@ void AAllyCharacter::HandleFire()
 {
     if (!EquippedWeapon) return;
 
-    // ★ 移動停止
-    StopMovement();
+    
+    //return;
     //GetCharacterMovement()->StopMovementImmediately();
     //GetCharacterMovement()->DisableMovement(); // ← これが重要
 
@@ -347,6 +312,11 @@ void AAllyCharacter::HandleFire()
         // ★ リロード中は逃走
         StartGetaway(GetawayTime);
         return;
+    }
+    else
+    {
+        // ★ 移動停止
+        StopMovement();
     }
     if (EquippedWeapon->bIsFullAuto)
     {
@@ -368,8 +338,7 @@ void AAllyCharacter::HandleFire()
         EquippedWeapon->FireRate,
         false
     );
-
-    UE_LOG(LogTemp, Warning, TEXT("No Anime"));
+   
     //EquippedWeapon->StartFire();
 }
 
@@ -392,7 +361,7 @@ float AAllyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 
     UE_LOG(LogTemp, Warning, TEXT("%s took %f damage! HP: %f/%f"),
         *GetName(), ActualDamage, CurrentHealth, MaxHealth);
-
+    PlayAnimation(EAllyAnimType::Damage, false);
     // ★ ダメージを受けたら逃走開始
     StartGetaway(GetawayTime);
 

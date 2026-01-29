@@ -7,6 +7,7 @@
 #include"AmmoDisplayWidget.h"
 #include"MyHeroPlayer.h"
 
+
 AEnemySpawnerWave::AEnemySpawnerWave()
 {
     PrimaryActorTick.bCanEverTick = true;
@@ -37,230 +38,43 @@ void AEnemySpawnerWave::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    if (bWaveInProgress && AreAllEnemiesDead())
-    {
-        bWaveInProgress = false;
-
-       
-
-        if (CurrentWave >= LimitWave)
-        {
-            
-
-            if (ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
-            {
-                GM->GameClear();
-            }
-
-            return;
-        }
-
-        // 残りウェーブがある場合
-       
-        GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeAfterClear, false);
-    }
-
     //if (bWaveInProgress && AreAllEnemiesDead())
     //{
     //    bWaveInProgress = false;
 
-    //    // 最終ウェーブならゲームクリア
+    //   
+
     //    if (CurrentWave >= LimitWave)
     //    {
-    //        UE_LOG(LogTemp, Warning, TEXT("Final wave cleared! Game clear!"));
+    //        
 
-    //        ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
-    //        if (GM)
+    //        if (ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
     //        {
-    //            GM->GameClear(); // GameClear() を呼び出す
+    //            GM->GameClear();
     //        }
 
-    //        return; // もう次のウェーブに進まない
+    //        return;
     //    }
 
-    //    // まだ残りウェーブがある場合は次のウェーブへ
-    //    UE_LOG(LogTemp, Warning, TEXT("All enemies defeated! Next wave in %.1f seconds."), TimeAfterClear);
-    //    GetWorldTimerManager().ClearTimer(WaveTimerHandle);
+    //    // 残りウェーブがある場合
+    //   
     //    GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeAfterClear, false);
     //}
 
+    
+
 }
-
-//void AEnemySpawnerWave::SpawnWave()
-//{
-//    if (!EnemyClass || SpawnPoints.Num() == 0) return;
-//    if (CurrentWave > LimitWave) return;
-//
-//    UWorld* World = GetWorld();
-//    if (!World) return;
-//
-//    SpawnedEnemies.Empty();
-//
-//    int32 EnemyCountThisWave = SpawnPoints.Num();
-//
-//    UE_LOG(LogTemp, Warning, TEXT("Wave %d started! Spawning %d enemies gradually."), CurrentWave, EnemyCountThisWave);
-//
-//    for (int32 i = 0; i < EnemyCountThisWave; i++)
-//    {
-//        // 各敵のスポーンを少しずつずらす（0.2秒ごと）
-//        const float Delay = i * 0.1f;
-//
-//        FTimerHandle TimerHandle;
-//        World->GetTimerManager().SetTimer(
-//            TimerHandle,
-//            [this, i, EnemyCountThisWave]()
-//            {
-//                if (!EnemyClass || SpawnPoints.Num() == 0) return;
-//                UWorld* InnerWorld = GetWorld();
-//                if (!InnerWorld) return;
-//
-//                FVector SpawnLocation = SpawnPoints[FMath::RandRange(0, SpawnPoints.Num() - 1)];
-//                SpawnLocation += FVector(FMath::RandRange(-100, 100), FMath::RandRange(-100, 100), 0);
-//                FRotator SpawnRotation = FRotator::ZeroRotator;
-//
-//                FActorSpawnParameters SpawnParams;
-//                SpawnParams.SpawnCollisionHandlingOverride =
-//                    ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-//
-//                AEnemyCharacterBase* SpawnedEnemy =
-//                    InnerWorld->SpawnActor<AEnemyCharacterBase>(EnemyClass, SpawnLocation, SpawnRotation, SpawnParams);
-//
-//                if (SpawnedEnemy)
-//                {
-//                    SpawnedEnemy->SpawnDefaultController();
-//
-//                    // AIの初期化を少し遅らせて安全に開始
-//                    FTimerHandle TempHandle;
-//                    InnerWorld->GetTimerManager().SetTimer(
-//                        TempHandle,
-//                        [SpawnedEnemy]()
-//                        {
-//                            if (!IsValid(SpawnedEnemy)) return;
-//                            SpawnedEnemy->UpdateTarget();
-//                            SpawnedEnemy->StartMovingToTarget();
-//                        },
-//                        0.25f,
-//                        false
-//                    );
-//
-//                    SpawnedEnemies.Add(SpawnedEnemy);
-//
-//                    UE_LOG(LogTemp, Warning, TEXT("Spawned Enemy %d / %d : %s"),
-//                        i + 1, EnemyCountThisWave, *SpawnedEnemy->GetName());
-//                }
-//            },
-//            Delay,
-//            false
-//        );
-//    }
-//
-//    bWaveInProgress = true;
-//
-//    // 次ウェーブタイマー
-//    GetWorldTimerManager().ClearTimer(WaveTimerHandle);
-//    GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeBetweenWaves, false);
-//
-//    // ウィジェットへ通知
-//   OnWaveChanged.Broadcast(CurrentWave); // 1引数の場合
-//}
-
-
-//void AEnemySpawnerWave::SpawnWave()
-//{
-//    if (CurrentWave > LimitWave) return;
-//    if (!EnemyClass || SpawnPoints.Num() == 0) return;
-//
-//    UWorld* World = GetWorld();
-//    if (!World) return;
-//
-//    SpawnedEnemies.Empty();
-//
-//    int32 EnemyCountThisWave = SpawnPoints.Num();
-//
-//    for (int32 i = 0; i < EnemyCountThisWave; i++)
-//    {
-//        FVector SpawnLocation = SpawnPoints[FMath::RandRange(0, SpawnPoints.Num() - 1)];
-//        SpawnLocation += FVector(FMath::RandRange(-100, 100), FMath::RandRange(-100, 100), 0);
-//        FRotator SpawnRotation = FRotator::ZeroRotator;
-//
-//        FActorSpawnParameters SpawnParams;
-//        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-//
-//        AEnemyCharacterBase* SpawnedEnemy = World->SpawnActor<AEnemyCharacterBase>(
-//            EnemyClass,
-//            SpawnLocation,
-//            SpawnRotation,
-//            SpawnParams
-//        );
-//
-//        if (SpawnedEnemy)
-//        {
-//            // Possess を確実に
-//            SpawnedEnemy->SpawnDefaultController();
-//
-//            // 遅延処理でターゲットを確実に設定
-//            FTimerHandle TempHandle;
-//            World->GetTimerManager().SetTimer(
-//                TempHandle,
-//                [this, SpawnedEnemy]()
-//                {
-//                    if (!IsValid(SpawnedEnemy)) return;
-//
-//                    // ターゲット更新
-//                    SpawnedEnemy->UpdateTarget();
-//
-//                    // ターゲットがまだ nullptr なら基地をターゲットに強制設定
-//                    if (!IsValid(SpawnedEnemy->CurrentTarget))
-//                    {
-//                        ADefenseBase* Base = Cast<ADefenseBase>(
-//                            UGameplayStatics::GetActorOfClass(GetWorld(), ADefenseBase::StaticClass())
-//                        );
-//                        if (Base)
-//                        {
-//                            SpawnedEnemy->CurrentTarget = Base;
-//                            UE_LOG(LogTemp, Warning, TEXT("%s had no target. Assigned Base as fallback."), *SpawnedEnemy->GetName());
-//                        }
-//                        else
-//                        {
-//                            UE_LOG(LogTemp, Error, TEXT("%s has no target and no Base found!"), *SpawnedEnemy->GetName());
-//                        }
-//                    }
-//
-//                    // AI を動かす
-//                    SpawnedEnemy->StartMovingToTarget();
-//
-//                    // デバッグログ
-//                    if (SpawnedEnemy->GetController())
-//                    {
-//                        UE_LOG(LogTemp, Warning, TEXT("[AI INIT] %s now has Target: %s | Controller: %s (%s)"),
-//                            *SpawnedEnemy->GetName(),
-//                            *SpawnedEnemy->CurrentTarget->GetName(),
-//                            *SpawnedEnemy->GetController()->GetName(),
-//                            *SpawnedEnemy->GetController()->GetClass()->GetName()
-//                        );
-//                    }
-//                },
-//                0.25f + 0.05f * i, // 少しずつスポーンタイミングをずらす
-//                false
-//            );
-//
-//            SpawnedEnemies.Add(SpawnedEnemy);
-//        }
-//    }
-//
-//    bWaveInProgress = true;
-//
-//    // 次ウェーブタイマー
-//    GetWorldTimerManager().ClearTimer(WaveTimerHandle);
-//    GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeBetweenWaves, false);
-//
-//    OnWaveChanged.Broadcast(CurrentWave);
-//}
-
 
 void AEnemySpawnerWave::SpawnWave()
 {
     all_spawn = false;
+
+    //  最終ウェーブか？
+    const bool bIsFinalWave = (CurrentWave >= LimitWave);
+
+   
+
+   
 
     // 上限チェック
     if (CurrentWave > LimitWave)
@@ -294,7 +108,62 @@ void AEnemySpawnerWave::SpawnWave()
 
     SpawnedEnemies.Empty();
 
-   
+    //  このステージはボスありか？
+    bool bSpawnBoss = false;
+    if (UTD_GameInstance* GI = GetGameInstance<UTD_GameInstance>())
+    {
+        if (GI->BossSummon.IsValidIndex(GI->MaxClearedStage))
+        {
+            bSpawnBoss = GI->BossSummon[GI->MaxClearedStage];
+        }
+
+        // =========================
+   //  ボス召喚
+   // =========================
+        if (bIsFinalWave && bSpawnBoss && BossEnemyClass[GI->MaxClearedStage])
+        {
+            // ランダムなスポーンポイントを選択
+            FVector BossSpawnLocation = SpawnPoints[FMath::RandRange(1, SpawnPoints.Num() - 1)];
+
+            // 少し位置をずらす
+            BossSpawnLocation += FVector(FMath::RandRange(-100, 100), FMath::RandRange(-100, 100), 0);
+
+            FRotator BossRotation = FRotator::ZeroRotator;
+
+            FActorSpawnParameters Params;
+            Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+            AEnemyCharacterBase* Boss =
+                GetWorld()->SpawnActor<AEnemyCharacterBase>(
+                    BossEnemyClass[GI->MaxClearedStage],
+                    BossSpawnLocation,
+                    BossRotation,
+                    Params
+                );
+
+
+
+            if (Boss)
+            {
+
+                if (Boss->bIsBoss)
+                {
+                    // ボス用BGM
+                    // HPバーUI表示
+                    // カメラ演出
+                }
+
+                Boss->SpawnDefaultController();
+                Boss->UpdateTarget();
+                Boss->StartMovingToTarget();
+
+                //  重要：通常敵と同じ管理に入れる
+                SpawnedEnemies.Add(Boss);
+
+                UE_LOG(LogTemp, Warning, TEXT("Boss Spawned!"));
+            }
+        }
+    }
 
     //int32 EnemyCountThisWave = InitialEnemyCount + (CurrentWave - 1) * EnemyIncreasePerWave;
    
@@ -302,152 +171,84 @@ void AEnemySpawnerWave::SpawnWave()
 
     UE_LOG(LogTemp, Warning, TEXT("Wave %d started! Spawning %d enemies."), CurrentWave, EnemyCountThisWave);
 
-    //for (int32 i = 0; i < EnemyCountThisWave; i++)
-    //{
-
-    //    all_spawn = false;
-    //    // 各敵のスポーンを少しずつずらす（0.2秒ごと）
-    //    const float Delay = i * 0.2f;
-
-    //    FTimerHandle TimerHandle;
-    //    World->GetTimerManager().SetTimer(
-    //        TimerHandle,
-    //        [this, i, EnemyCountThisWave]()
-    //        {
-    //            if (!EnemyClass || SpawnPoints.Num() == 0) return;
-    //            UWorld* InnerWorld = GetWorld();
-    //            if (!InnerWorld) return;
-
-    //            FVector SpawnLocation = SpawnPoints[FMath::RandRange(0, SpawnPoints.Num() - 1)];
-    //            SpawnLocation += FVector(FMath::RandRange(-100, 100), FMath::RandRange(-100, 100), 0);
-    //            FRotator SpawnRotation = FRotator::ZeroRotator;
-
-    //            FActorSpawnParameters SpawnParams;
-    //            SpawnParams.SpawnCollisionHandlingOverride =
-    //                ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-    //            AEnemyCharacterBase* SpawnedEnemy =
-    //                InnerWorld->SpawnActor<AEnemyCharacterBase>(EnemyClass, SpawnLocation, SpawnRotation, SpawnParams);
-
-    //            if (SpawnedEnemy)
-    //            {
-    //                SpawnedEnemy->SpawnDefaultController();
-
-    //                // AIの初期化を少し遅らせて安全に開始
-    //                FTimerHandle TempHandle;
-    //                InnerWorld->GetTimerManager().SetTimer(
-    //                    TempHandle,
-    //                    [SpawnedEnemy]()
-    //                    {
-    //                        if (!IsValid(SpawnedEnemy)) return;
-    //                        SpawnedEnemy->UpdateTarget();
-    //                        SpawnedEnemy->StartMovingToTarget();
-    //                    },
-    //                    0.25f,
-    //                    false
-    //                );
-
-    //                SpawnedEnemies.Add(SpawnedEnemy);
-
-    //                UE_LOG(LogTemp, Warning, TEXT("Spawned Enemy %d / %d : %s"),
-    //                    i + 1, EnemyCountThisWave, *SpawnedEnemy->GetName());
-    //            }
-    //        },
-    //        Delay,
-    //        false
-    //    );
-    //}
-
-    for (int32 i = 0; i < EnemyCountThisWave; i++)
+    if (UTD_GameInstance* GI = GetGameInstance<UTD_GameInstance>())
     {
-        // 各敵のスポーンを少しずつずらす（0.2秒ごと）
-        const float Delay = i * 0.2f;
-
-        // ランダムなスポーンポイントを選択
-        FVector SpawnLocation = SpawnPoints[FMath::RandRange(0, SpawnPoints.Num() - 1)];
-
-        // 少し位置をずらす
-        SpawnLocation += FVector(FMath::RandRange(-100, 100), FMath::RandRange(-100, 100), 0);
-
-        FRotator SpawnRotation = FRotator::ZeroRotator;
-
-        FActorSpawnParameters SpawnParams;
-        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-        RandomInt = FMath::RandRange(0, 7);
-
-        switch (RandomInt)
+        for (int32 i = 0; i < EnemyCountThisWave; i++)
         {
-        case 0:
-            EnemyClass = EnemyClassTypeB;
-            break;
-        case 1:
-            EnemyClass = EnemyClassTypeG;
-            break;
-        case 2 :
-            EnemyClass = EnemyClassTypeT;
-            break;
-        case 3:
-            EnemyClass = EnemyClassTypeK;
-            break;
+            // 各敵のスポーンを少しずつずらす（0.2秒ごと）
+            const float Delay = i * 0.2f;
 
-        default:
-            EnemyClass = EnemyClassTypeB;
-            break;
-        }
+            // ランダムなスポーンポイントを選択
+            FVector SpawnLocation = SpawnPoints[FMath::RandRange(0, SpawnPoints.Num() - 1)];
 
-        AEnemyCharacterBase* SpawnedEnemy = World->SpawnActor<AEnemyCharacterBase>(
-            EnemyClass,
-            SpawnLocation,
-            SpawnRotation,
-            SpawnParams
-        );
+            // 少し位置をずらす
+            SpawnLocation += FVector(FMath::RandRange(-100, 100), FMath::RandRange(-100, 100), 0);
 
-        if (SpawnedEnemy)
-        {
+            FRotator SpawnRotation = FRotator::ZeroRotator;
 
+            FActorSpawnParameters SpawnParams;
+            SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-            // まずAIを生成（この時点ではPossessされていない可能性あり）
-            SpawnedEnemy->SpawnDefaultController();
+            RandomInt = FMath::RandRange(0, 7);
 
-            // 少し遅らせてターゲット更新と移動を開始
-            FTimerHandle TempHandle;
-            World->GetTimerManager().SetTimer(
-                TempHandle,
-                [SpawnedEnemy]()
-                {
-                    if (!IsValid(SpawnedEnemy)) return;
+            switch (RandomInt)
+            {
+            case 0:
+                EnemyClass = EnemyClassTypeB[GI->MaxClearedStage];
+                break;
+            case 1:
+                EnemyClass = EnemyClassTypeG[GI->MaxClearedStage];
+                break;
+            case 2:
+                EnemyClass = EnemyClassTypeT[GI->MaxClearedStage];
+                break;
+            case 3:
+                EnemyClass = EnemyClassTypeK[GI->MaxClearedStage];
+                break;
 
-                    // 念のためBaseStructureがnullでないか確認
-                    SpawnedEnemy->UpdateTarget();
-                    SpawnedEnemy->StartMovingToTarget();
+            default:
+                EnemyClass = EnemyClassTypeB[GI->MaxClearedStage];
+                break;
+            }
 
-                    UE_LOG(LogTemp, Warning, TEXT("%s AI started moving after delayed init."), *SpawnedEnemy->GetName());
-                },
-                0.25f,   // 0.25秒後に実行（AI Possess完了を待つ）
-                false
+            AEnemyCharacterBase* SpawnedEnemy = World->SpawnActor<AEnemyCharacterBase>(
+                EnemyClass,
+                SpawnLocation,
+                SpawnRotation,
+                SpawnParams
             );
 
-           /*  SpawnedEnemy->SpawnDefaultController();
+            if (SpawnedEnemy)
+            {
 
-            if (SpawnedEnemy->GetController())
-            {
-                UE_LOG(LogTemp, Warning, TEXT("Enemy now has controller: %s"), *SpawnedEnemy->GetController()->GetName());
-            }
-            else
-            {
-                UE_LOG(LogTemp, Error, TEXT("Enemy has NO controller!"));
+
+                // まずAIを生成（この時点ではPossessされていない可能性あり）
                 SpawnedEnemy->SpawnDefaultController();
-            }*/
 
-           
+                // 少し遅らせてターゲット更新と移動を開始
+                FTimerHandle TempHandle;
+                World->GetTimerManager().SetTimer(
+                    TempHandle,
+                    [SpawnedEnemy]()
+                    {
+                        if (!IsValid(SpawnedEnemy)) return;
 
-            // AI を有効化
-           
-            SpawnedEnemies.Add(SpawnedEnemy);
+                        // 念のためBaseStructureがnullでないか確認
+                        SpawnedEnemy->UpdateTarget();
+                        SpawnedEnemy->StartMovingToTarget();
+
+                        UE_LOG(LogTemp, Warning, TEXT("%s AI started moving after delayed init."), *SpawnedEnemy->GetName());
+                    },
+                    0.25f,   // 0.25秒後に実行（AI Possess完了を待つ）
+                    false
+                );
+
+                 // AI を有効化
+
+                SpawnedEnemies.Add(SpawnedEnemy);
+            }
         }
     }
-
     bWaveInProgress = true;
 
     // ウェーブタイマーセット（時間経過で進行）
@@ -506,20 +307,33 @@ void AEnemySpawnerWave::NotifyEnemyDestroyed(AEnemyCharacterBase* DeadEnemy)
     // 全滅チェック
     if (SpawnedEnemies.Num() == 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("All enemies dead on wave %d!"), CurrentWave);
-
-        if (CurrentWave >= LimitWave)
+        if (bWaveInProgress && AreAllEnemiesDead())
         {
-            if (ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+            bWaveInProgress = false;
+            UE_LOG(LogTemp, Warning, TEXT("All enemies dead on wave %d!"), CurrentWave);
+
+            if (CurrentWave >= LimitWave)
             {
-                GM->GameClear();
+                GetWorldTimerManager().SetTimer(GameClearHandle, this, &AEnemySpawnerWave::GameClearAct, 5.0f, false);
+              /*  if (ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+                {
+                    GM->GameClear();
+                }*/
+            }
+            else
+            {
+                // 次のウェーブを開始
+                GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeAfterClear, false);
             }
         }
-        else
-        {
-            // 次のウェーブを開始
-            GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &AEnemySpawnerWave::StartNextWave, TimeAfterClear, false);
-        }
+    }
+}
+
+void AEnemySpawnerWave::GameClearAct()
+{
+    if (ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+    {
+        GM->GameClear();
     }
 }
 

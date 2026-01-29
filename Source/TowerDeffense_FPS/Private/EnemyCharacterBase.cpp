@@ -1351,7 +1351,7 @@ float AEnemyCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& Da
     UE_LOG(LogTemp, Warning, TEXT("%s took %f damage! HP: %f/%f"),
         *GetName(), ActualDamage, CurrentHealth, MaxHealth);
 
-    if (DamageAnim)
+    if (DamageAnim&&!bIsBoss)
     {
         
         PlayAnimation(EEnemyAnimType::Damage, false);
@@ -1394,7 +1394,7 @@ void AEnemyCharacterBase::Die()
 
     UE_LOG(LogTemp, Warning, TEXT("Enemy %s died!"), *GetName());
 
-    
+    bIsAnimationLocked = false;
 
    /* TArray<AActor*> FoundPlayer;
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMyHeroPlayer::StaticClass(), FoundPlayer);

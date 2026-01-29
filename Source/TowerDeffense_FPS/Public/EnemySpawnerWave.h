@@ -6,7 +6,7 @@
 #include "EnemyCharacterBase.h"
 #include"AmmoDisplayWidget.h"
 #include"MyHeroPlayer.h"
-
+#include"TD_GameInstance.h"
 #include "EnemySpawnerWave.generated.h"
 
 // ウェーブ更新通知イベント
@@ -46,19 +46,22 @@ protected:
 public:
     // 敵のクラス1Base
     UPROPERTY(EditAnywhere, Category = "Spawn")
-    TSubclassOf<AEnemyCharacterBase> EnemyClassTypeB;
+    TSubclassOf<AEnemyCharacterBase> EnemyClassTypeB[5];
 
     // 敵のクラス2Grenade
     UPROPERTY(EditAnywhere, Category = "Spawn")
-    TSubclassOf<AEnemyCharacterBase> EnemyClassTypeG;
+    TSubclassOf<AEnemyCharacterBase> EnemyClassTypeG[5];
 
     // 敵のクラス3Tank
     UPROPERTY(EditAnywhere, Category = "Spawn")
-    TSubclassOf<AEnemyCharacterBase> EnemyClassTypeT;
+    TSubclassOf<AEnemyCharacterBase> EnemyClassTypeT[5];
 
     // 敵のクラス4Kamikaze
     UPROPERTY(EditAnywhere, Category = "Spawn")
-    TSubclassOf<AEnemyCharacterBase> EnemyClassTypeK;
+    TSubclassOf<AEnemyCharacterBase> EnemyClassTypeK[5];
+
+    UPROPERTY(EditAnywhere, Category = "Boss")
+    TSubclassOf<AEnemyCharacterBase> BossEnemyClass[5];
 
     // スポーン位置
     UPROPERTY(EditAnywhere, Category = "Spawn")
@@ -139,4 +142,9 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "Spawn")
     TSubclassOf<AEnemyCharacterBase> EnemyClass;
+
+    FTimerHandle GameClearHandle;
+    void GameClearAct();
+
+
 };

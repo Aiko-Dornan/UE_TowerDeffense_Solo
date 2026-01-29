@@ -203,11 +203,12 @@ void ATD_GameModeBase::GameClear()
     {
         if (!Clear&&!GI->ClearFlag[GI->MaxClearedStage])
         {
+            GI->ClearFlag[GI->MaxClearedStage] = true;
             GI->MaxClearedStage++;
             GI->SetStageCleared(GI->MaxClearedStage);
             UE_LOG(LogTemp, Warning, TEXT("=== GAME CLEAR! ===+%d"), GI->MaxClearedStage);
             Clear = true;
-            GI->ClearFlag[GI->MaxClearedStage] = true;
+           
         }
         
         

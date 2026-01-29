@@ -275,6 +275,10 @@ public:
     AActor* BlockTarget = nullptr;
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     AActor* PreviousTarget = nullptr; // Œš•¨”j‰óŒã‚É–ß‚é—p
+
+    UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Boss")
+    bool bIsBoss = false;
+
 private:
    
    

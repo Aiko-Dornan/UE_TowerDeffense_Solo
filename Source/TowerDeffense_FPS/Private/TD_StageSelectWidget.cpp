@@ -35,12 +35,15 @@ bool UTD_StageSelectWidget::Initialize()
             this, &UTD_StageSelectWidget::OnStage1Clicked);
     }
 
+
+
     /*if (Stage2Button)
     {
         Stage2Button->OnClicked.AddDynamic(
             this, &UTD_StageSelectWidget::OnStage2Clicked);
     }*/
 
+    
     // š‚±‚±‚ªd—v
     UpdateStageButtons();
 

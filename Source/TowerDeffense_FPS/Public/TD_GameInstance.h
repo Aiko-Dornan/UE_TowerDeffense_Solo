@@ -66,6 +66,8 @@ public:
     int32 MaxClearedStage = 0;
     int NowClearStage = 0;
     bool ClearFlag[4]{ false };
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stage")
+    TArray<bool> BossSummon;
     // ステージクリア時に呼ぶ
     void SetStageCleared(int32 StageNum);
 
