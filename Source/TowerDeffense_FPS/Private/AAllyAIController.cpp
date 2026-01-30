@@ -1,6 +1,20 @@
 #include "AAllyAIController.h"
 #include "AllyCharacter.h"
 
+//AAllyAIController::AAllyAIController()
+//{
+//    PrimaryActorTick.bCanEverTick = true;
+//    bAllowStrafe = true;   // š’´d—v
+//    bAttachToPawn = true;
+//}
+//
+//void AAllyAIController::BeginPlay()
+//{
+//    Super::BeginPlay();
+//
+//    SetControlRotation(GetPawn()->GetActorRotation());
+//}
+
 void AAllyAIController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
@@ -12,6 +26,7 @@ void AAllyAIController::OnPossess(APawn* InPawn)
         Ally->FindNearestEnemy();
     }
 }
+
 
 
 //#include "AAllyAIController.h"

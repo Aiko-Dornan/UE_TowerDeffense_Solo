@@ -9,9 +9,11 @@ UCLASS()
 class TOWERDEFFENSE_FPS_API AAllyAIController : public AAIController
 {
     GENERATED_BODY()
-
+public:
+       //AAllyAIController();
 protected:
     virtual void OnPossess(APawn* InPawn) override;
+   // virtual void BeginPlay() override;
 };
 
 

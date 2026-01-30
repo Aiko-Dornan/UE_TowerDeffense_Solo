@@ -19,15 +19,20 @@ AAllyCharacter::AAllyCharacter()
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
     AIControllerClass = AAllyAIController::StaticClass();
 
-    bUseControllerRotationYaw = false;
-    GetCharacterMovement()->bOrientRotationToMovement = true;
-    GetCharacterMovement()->RotationRate = FRotator(0.f, 720.f, 0.f);
+   // bUseControllerRotationYaw = false;
+   // GetCharacterMovement()->bOrientRotationToMovement = true;
+   // GetCharacterMovement()->RotationRate = FRotator(0.f, 720.f, 0.f);
+    GetCharacterMovement()->MaxWalkSpeed = 100.f;
+    GetCharacterMovement()->MaxAcceleration = 2000.f; // デフォルト高すぎ
+    GetCharacterMovement()->BrakingDecelerationWalking = 1000.f;
+   // GetCharacterMovement()->bUseAccelerationForPaths = true;
 }
 
 void AAllyCharacter::BeginPlay()
 {
     Super::BeginPlay();
-
+    //GetCharacterMovement()->bUseAccelerationForPaths = true;
+   
     CurrentHealth = MaxHealth;
     InitialPosition = GetActorLocation();
 
@@ -48,135 +53,280 @@ void AAllyCharacter::BeginPlay()
     GetWorldTimerManager().SetTimer(TargetUpdateTimer, this, &AAllyCharacter::FindNearestEnemy, 0.5f, true);
 }
 
+//void AAllyCharacter::Tick(float DeltaTime)
+//{
+//    Super::Tick(DeltaTime);
+//
+//    if (bIsDead) return;
+//
+//    //====================================
+//    // ■ ターゲットロック維持処理
+//    //====================================
+//    if (TargetEnemy && IsValid(TargetEnemy))
+//    {
+//        TargetLockedElapsed += DeltaTime;
+//
+//        const float DistToTarget =
+//            FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
+//
+//        if (DistToTarget > TargetLoseDistance ||
+//            TargetLockedElapsed > TargetLockTime)
+//        {
+//            TargetEnemy = nullptr;
+//        }
+//    }
+//
+//    //====================================
+//    // ■ ターゲットがいない場合
+//    //====================================
+//    //if (!TargetEnemy || !IsValid(TargetEnemy))
+//    //{
+//    //    GetWorldTimerManager().ClearTimer(FireTimerHandle);
+//
+//    //    FindNearestEnemy();
+//
+//    //    // 見つからなければ初期位置へ戻る
+//    //    if (!TargetEnemy)
+//    //    {
+//    //        MoveBackToInitialPosition();
+//    //        UpdateMoveAnimation();
+//    //        return;
+//    //    }
+//
+//    //    TargetLockedElapsed = 0.f;
+//    //}
+//
+//    if (!TargetEnemy)
+//    {
+//        bReturningHome = true;
+//
+//        if (FVector::Dist(GetActorLocation(), InitialPosition) > AcceptableRadius)
+//        {
+//            MoveBackToInitialPosition();
+//        }
+//        else
+//        {
+//            bReturningHome = false;
+//            StopMovement();
+//        }
+//        return;
+//    }
+//
+//
+//
+//    //====================================
+//    // ■ 敵がいる場合
+//    //====================================
+//    const float DistanceToEnemy =
+//        FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
+//
+//    if (DistanceToEnemy > MaintainDistance)
+//    {
+//        // ★ 近づく
+//        if (AAIController* AICon = Cast<AAIController>(GetController()))
+//        {
+//            AICon->MoveToActor(TargetEnemy, MaintainDistance);
+//        }
+//    }
+//    else
+//    {
+//        StopMovement();
+//    }
+//
+//
+//    // 常に敵の方を向く（逃走中以外）
+//    if (!bIsGetaway)
+//    {
+//        FaceTarget(TargetEnemy);
+//    }
+//
+//    //====================================
+//    // ■ 逃走中（最優先）
+//    //====================================
+//    if (bIsGetaway)
+//    {
+//        if (!bIsGetawayMoving)
+//        {
+//            MoveAwayFromEnemy(TargetEnemy);
+//            bIsGetawayMoving = true;
+//        }
+//
+//        UpdateMoveAnimation();
+//        return;
+//    }
+//
+//    UE_LOG(LogTemp, Warning,
+//        TEXT("Velocity: %f  MaxWalkSpeed: %f"),
+//        GetVelocity().Size(),
+//        GetCharacterMovement()->MaxWalkSpeed
+//    );
+//
+//    //====================================
+//    // ■ 通常時の距離制御
+//    //====================================
+//    if (DistanceToEnemy < MaintainDistance)
+//    {
+//        if (!bIsGetawayMoving)
+//        {
+//            MoveAwayFromEnemy(TargetEnemy);
+//            bIsGetawayMoving = true;
+//        }
+//    }
+//    else
+//    {
+//        StopMovement();
+//        bIsGetawayMoving = false;
+//    }
+//
+//    //====================================
+//    // ■ 射撃制御
+//    //====================================
+//    if (DistanceToEnemy <= FireRange)
+//    {
+//        if (!GetWorldTimerManager().IsTimerActive(FireTimerHandle))
+//        {
+//            GetWorldTimerManager().SetTimer(
+//                FireTimerHandle,
+//                this,
+//                &AAllyCharacter::HandleFire,
+//                FireInterval,
+//                true
+//            );
+//        }
+//    }
+//    else
+//    {
+//        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+//    }
+//
+//    //====================================
+//    // ■ アニメーション更新
+//    //====================================
+//    AnimChangeElapsed += DeltaTime;
+//
+//    if (!bIsAnimationLocked &&
+//        AnimChangeElapsed >= AnimChangeCooldown)
+//    {
+//        EAllyAnimType NewType = GetMoveAnimByDirection();
+//
+//        if (NewType != CurrentAnimType)
+//        {
+//            PlayAnimation(NewType, true);
+//            AnimChangeElapsed = 0.f;
+//        }
+//    }
+//}
+
 void AAllyCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    //----------------------------------------
-    // ■ ターゲットロック維持処理
-    //----------------------------------------
-    if (TargetEnemy && IsValid(TargetEnemy))
+    AAIController* AICon = Cast<AAIController>(GetController());
+    if (!AICon) return;
+
+    /* =========================
+     * 敵が存在する場合
+     * ========================= */
+    if (IsValid(TargetEnemy))
     {
-        // 経過時間加算
-        TargetLockedElapsed += DeltaTime;
+        bReturningHome = false;
 
-        float DistToTarget = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
+        // 敵の方向を見る
+        //FaceTarget(TargetEnemy);
 
-        // 一定距離より離れた or 時間が経過したらロック解除
-        if (DistToTarget > TargetLoseDistance || TargetLockedElapsed > TargetLockTime)
+        const float DistanceToEnemy =
+            FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
+
+        // 近づきすぎた → 離れる
+        if (DistanceToEnemy < MaintainDistance - 100.f)
         {
-            TargetEnemy = nullptr;
+            MoveAwayFromEnemy(TargetEnemy);
         }
-    }
-
-    //----------------------------------------
-    // ■ ターゲットがいない場合のみ検索
-    //----------------------------------------
-    if (!TargetEnemy || !IsValid(TargetEnemy))
-    {
-        GetWorldTimerManager().ClearTimer(FireTimerHandle);
-        FindNearestEnemy();
-
-        // 見つからなければ初期位置へ戻る
-        if (!TargetEnemy)
+        // 遠すぎる → 近づく
+        else if (DistanceToEnemy > MaintainDistance)
         {
             MoveBackToInitialPosition();
-           
-            return;
+        }
+        // 適正距離 → 停止
+        else
+        {
+            AICon->StopMovement();
+        }
+        AICon->ClearFocus(EAIFocusPriority::Gameplay);
+        AICon->SetFocus(TargetEnemy);
+        //====================================
+    // ■ 射撃制御
+    //====================================
+        if (DistanceToEnemy<= FireRange)
+        {
+            if (!GetWorldTimerManager().IsTimerActive(FireTimerHandle))
+            {
+                GetWorldTimerManager().SetTimer(
+                    FireTimerHandle,
+                    this,
+                    &AAllyCharacter::HandleFire,
+                    FireInterval,
+                    true
+                );
+            }
         }
         else
         {
-            // 新しいターゲットをロック開始
-            TargetLockedElapsed = 0.f;
+            GetWorldTimerManager().ClearTimer(FireTimerHandle);
         }
-    }
 
-    //----------------------------------------
-    // ■ 敵がいる時の行動
-    //----------------------------------------
+        //====================================
+        // ■ アニメーション更新
+        //====================================
+        AnimChangeElapsed += DeltaTime;
 
-    if (!bIsGetaway)
-    {
-        FaceTarget(TargetEnemy);
-    }
-
-    const float DistanceToEnemy = FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
-
-    // 敵が検知範囲外に出たらターゲット解除 → 初期位置へ
-    if (DistanceToEnemy > EnemyDetectRange)
-    {
-        TargetEnemy = nullptr;
-        GetWorldTimerManager().ClearTimer(FireTimerHandle);
-        MoveBackToInitialPosition();
-       
-        return;
-    }
-
-    //// 接近しすぎたら後退
-    //if (DistanceToEnemy < MaintainDistance)
-    //{
-    //    MoveAwayFromEnemy(TargetEnemy);
-    //}
-    //else
-    //{
-    //    StopMovement();
-    //}
-
-    // ================================
-// ■ 逃走中は最優先で距離を取る
-// ================================
-    if (bIsGetaway)
-    {
-        if (!bIsGetawayMoving)
+        if (!bIsAnimationLocked &&
+            AnimChangeElapsed >= AnimChangeCooldown)
         {
-            MoveAwayFromEnemy(TargetEnemy);
-            bIsGetawayMoving = true;
-           
+            EAllyAnimType NewType = GetMoveAnimByDirection();
+
+            if (NewType != CurrentAnimType)
+            {
+                PlayAnimation(NewType, true);
+                AnimChangeElapsed = 0.f;
+            }
         }
-        return;
+
+        return; // ★ 敵処理をしたら Tick 終了
     }
 
-    // ================================
-    // ■ 通常時の距離制御
-    // ================================
-    if (DistanceToEnemy < MaintainDistance)
-    {
-        MoveAwayFromEnemy(TargetEnemy);
-       
-    }
-    else
-    {
-        StopMovement();
-    }
+    /* =========================
+     * 敵がいない場合 → 初期位置に戻る
+     * ========================= */
 
+    const float DistanceToHome =
+        FVector::Dist(GetActorLocation(), InitialPosition);
 
-    // 射撃範囲内なら射撃開始
-    if (DistanceToEnemy <= FireRange)
+    if (DistanceToHome > AcceptableRadius)
     {
-        if (!GetWorldTimerManager().IsTimerActive(FireTimerHandle))
+        if (!bReturningHome)
         {
-            GetWorldTimerManager().SetTimer(FireTimerHandle, this,
-                &AAllyCharacter::HandleFire, FireInterval, true);
+            bReturningHome = true;
+            AICon->MoveToLocation(InitialPosition, AcceptableRadius);
         }
     }
     else
     {
-        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+        // 帰還完了
+        bReturningHome = false;
+        AICon->StopMovement();
     }
 
-   /* if (!bIsAnimationLocked)
-    {
-        EAllyAnimType NewType = GetMoveAnimByDirection();
+    
+}
 
-        if (NewType != CurrentAnimType)
-        {
-            PlayAnimation(NewType, true);
-        }
-    }*/
 
-    AnimChangeElapsed += DeltaTime;
+void AAllyCharacter::UpdateMoveAnimation()
+{
+    AnimChangeElapsed += GetWorld()->GetDeltaSeconds();
 
-    if (AnimChangeElapsed >= AnimChangeCooldown && !bIsAnimationLocked)
+    if (!bIsAnimationLocked &&
+        AnimChangeElapsed >= AnimChangeCooldown)
     {
         EAllyAnimType NewType = GetMoveAnimByDirection();
 
@@ -185,9 +335,7 @@ void AAllyCharacter::Tick(float DeltaTime)
             PlayAnimation(NewType, true);
             AnimChangeElapsed = 0.f;
         }
-       
     }
-
 }
 
 
@@ -220,18 +368,21 @@ EAllyAnimType AAllyCharacter::GetMoveAnimByDirection() const
 
 void AAllyCharacter::FindNearestEnemy()
 {
-    // 既にターゲットがいるなら探さない
-    if (TargetEnemy && IsValid(TargetEnemy)) return;
+    if (bReturningHome) return;
 
-    float ClosestDistance = TNumericLimits<float>::Max();
+   
+
+    float ClosestDistance = EnemyDetectRange;
     AEnemyCharacterBase* ClosestEnemy = nullptr;
 
     for (TActorIterator<AEnemyCharacterBase> It(GetWorld()); It; ++It)
     {
         AEnemyCharacterBase* Enemy = *It;
-        if (!Enemy) continue;
+        if (!IsValid(Enemy)) continue;
 
         float Distance = FVector::Dist(GetActorLocation(), Enemy->GetActorLocation());
+        if (Distance > EnemyDetectRange) continue;
+
         if (Distance < ClosestDistance)
         {
             ClosestDistance = Distance;
@@ -240,6 +391,7 @@ void AAllyCharacter::FindNearestEnemy()
     }
 
     TargetEnemy = ClosestEnemy;
+
 }
 
 void AAllyCharacter::FaceTarget(AActor* Target)
@@ -249,9 +401,22 @@ void AAllyCharacter::FaceTarget(AActor* Target)
     FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
     ToTarget.Z = 0.f;
 
-    FRotator LookRotation = FRotationMatrix::MakeFromX(ToTarget).Rotator();
-    SetActorRotation(FMath::RInterpTo(GetActorRotation(), LookRotation, GetWorld()->GetDeltaSeconds(), 5.f));
+    FRotator LookRot = ToTarget.Rotation();
+    GetController()->SetControlRotation(LookRot);
 }
+
+
+
+//void AAllyCharacter::FaceTarget(AActor* Target)
+//{
+//    if (!Target) return;
+//
+//    FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
+//    ToTarget.Z = 0.f;
+//
+//    FRotator LookRotation = FRotationMatrix::MakeFromX(ToTarget).Rotator();
+//    SetActorRotation(FMath::RInterpTo(GetActorRotation(), LookRotation, GetWorld()->GetDeltaSeconds(), 5.f));
+//}
 
 void AAllyCharacter::MoveBackToInitialPosition()
 {
@@ -285,16 +450,15 @@ void AAllyCharacter::MoveAwayFromEnemy(AActor* Target)
 {
     if (!Target) return;
 
-    FVector AwayDir = (GetActorLocation() - Target->GetActorLocation()).GetSafeNormal();
-    FVector Dest = GetActorLocation() + AwayDir * 800.f;
-
     if (AAIController* AICon = Cast<AAIController>(GetController()))
     {
-        AICon->MoveToLocation(Dest, AcceptableRadius);
-       
+        FVector AwayDir = (GetActorLocation() - Target->GetActorLocation()).GetSafeNormal();
+        FVector Dest = GetActorLocation() + AwayDir * MaintainDistance;
+
+        AICon->MoveToLocation(Dest, AcceptableRadius, true);
     }
-    GetMoveAnimByDirection();
 }
+
 
 
 void AAllyCharacter::HandleFire()
@@ -356,6 +520,7 @@ float AAllyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 {
     if (CurrentHealth <= 0.f) return 0.f;
 
+    FindNearestEnemy();
     const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
     CurrentHealth -= ActualDamage;
 
@@ -367,7 +532,10 @@ float AAllyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 
     if (CurrentHealth <= 0.f)
     {
+        bIsAnimationLocked = false;
+
         Die();
+       
     }
 
     return ActualDamage;
@@ -513,8 +681,8 @@ void AAllyCharacter::PlayAnimation(EAllyAnimType NewType, bool bLoop)
 
 bool AAllyCharacter::IsLockedAnim(EAllyAnimType Type) const
 {
-    return Type == EAllyAnimType::Attack
-        || Type == EAllyAnimType::Dead
+    return /*Type == EAllyAnimType::Attack
+        ||*/ Type == EAllyAnimType::Dead
         || Type == EAllyAnimType::Damage;
         //|| Type == EAllyAnimType::RangeAttack;
 }
@@ -523,7 +691,7 @@ void AAllyCharacter::LockRelease()
 {
 
     bIsAnimationLocked = false;
-    GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+   // GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     if (bIsDead)
     {
        // PlayNiagaraEffect();

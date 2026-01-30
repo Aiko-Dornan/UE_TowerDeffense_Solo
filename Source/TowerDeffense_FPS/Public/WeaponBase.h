@@ -53,7 +53,9 @@ public:
 	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	//USphereComponent* CollisionComp;
 
-	//UStaticMeshComponent* StaticMeshComp;
+	
+	/* UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	 UStaticMeshComponent* StaticMeshComp2;*/
 	//USkeletalMeshComponent* StaticMeshComp;
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Gameplay")

@@ -201,6 +201,8 @@ public:
 
     void MoveORIdle();
 
+    void UpdateMoveAnimation();
+
 private:
     /** 射撃タイマー */
     FTimerHandle FireTimerHandle;
@@ -219,6 +221,8 @@ private:
     void StartGetaway(float Duration);
     void EndGetaway();
     bool bIsGetawayMoving = false;
+    bool bReturningHome = false;
+
 };
 
 

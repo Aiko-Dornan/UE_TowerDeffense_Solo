@@ -34,10 +34,11 @@ AWeaponBase::AWeaponBase()
 	RootComponent = CollisionComp;*/
 	
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
-	
+	//StaticMeshComp2 = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	//Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	//Mesh->SetupAttachment(RootComponent);
-	RootComponent = Mesh;
+	//RootComponent = StaticMeshComp2;
+	 RootComponent = Mesh;
 	//RootComponent = Ub;
 	//Mesh = GetMesh();
 	
