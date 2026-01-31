@@ -46,7 +46,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	 UStaticMeshComponent* Mesh;
 
-	
+	 USceneComponent* SceneRoot;
 
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	//class USkeletalMeshComponent* WMesh;

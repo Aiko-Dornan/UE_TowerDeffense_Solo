@@ -16,6 +16,21 @@
 #include "DrawDebugHelpers.h"
 #include "MyHeroPlayer.generated.h"
 
+UENUM(BlueprintType)
+enum class EPlayerAnimType : uint8
+{
+	Idle       /* UMETA(DisplayName = "Idle")*/,
+	Move_Front,
+	Move_Back,
+	Move_Left,
+	Move_Right,
+	Attack      /*UMETA(DisplayName = "Attack")*/,
+	RangeAttack /*UMETA(DisplayName = "RangeAttack")*/,
+	Dead        /*UMETA(DisplayName = "Dead")*/,
+	Damage,
+};
+
+
 UCLASS()
 class TOWERDEFFENSE_FPS_API AMyHeroPlayer : public ACharacter
 {
@@ -71,6 +86,67 @@ public:
 	// 現在装備中の武器
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	AWeaponBase* CurrentWeapon;
+
+	enum EPlayerState :uint8
+	{
+		Idle,
+		Move,
+		Attack,
+		RangeATtack,
+		Dead,
+		Damage,
+
+	};
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	UAnimationAsset* IdleAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	UAnimationAsset* MoveFrontAnim;
+
+	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	UAnimationAsset* MoveBackAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	UAnimationAsset* MoveLeftAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	UAnimationAsset* MoveRightAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	UAnimationAsset* AttackAnim;*/
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	UAnimationAsset* RangeAttackAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	UAnimationAsset* DeadAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	UAnimationAsset* DamageAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	EPlayerAnimType PlayerAnimeState = EPlayerAnimType::Idle;
+
+	EPlayerAnimType GetMoveAnimByDirection() const;
+
+	void PlayAnimation(EPlayerAnimType NewType, bool bLoop);
+
+	UAnimationAsset* GetAnimByType(EPlayerAnimType Type) const;
+
+	// 再生中ロック
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	bool bIsAnimationLocked = false;
+
+	// 現在再生中のアニメ種別
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	EPlayerAnimType CurrentAnimType;
+
+	// ロック対象のアニメか？
+	bool IsLockedAnim(EPlayerAnimType Type) const;
+
+	void LockRelease();
+	FTimerHandle LockReleaseHandle;
 
 protected:
 	// Called when the game starts or when spawned
@@ -240,5 +316,5 @@ public:
 
 		bool DashFlag=false;
 		float MoveSpeed = 1.0f;
-		
+		bool move_flag = false;
 };

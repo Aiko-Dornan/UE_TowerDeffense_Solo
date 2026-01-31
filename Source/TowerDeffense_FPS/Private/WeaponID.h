@@ -9,5 +9,7 @@ enum class EWeaponID : uint8
     AssaultRifle UMETA(DisplayName = "Assault Rifle"),
     Shotgun      UMETA(DisplayName = "Shotgun"),
     Pistol       UMETA(DisplayName = "Pistol"),
-    SMG          UMETA(DisplayName = "SMG")
+    SMG          UMETA(DisplayName = "Sub Machinegun"),
+    SR          UMETA(DisplayName = "Sniper Rifle"),
+    HSG          UMETA(DisplayName = "Hand Shotgun"),
 };

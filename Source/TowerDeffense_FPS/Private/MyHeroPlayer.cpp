@@ -168,6 +168,11 @@ void AMyHeroPlayer::Tick(float DeltaTime)
 		1.f
 	);
 
+	if (GetVelocity().Size()==0.0f)
+	{
+		//PlayAnimation(EPlayerAnimType::Idle, true);
+	}
+
 	// -------- Zoom 処理 --------
 	float TargetFOV = bIsZooming ? ZoomedFOV : DefaultFOV;
 	float NewFOV = FMath::FInterpTo(
@@ -251,6 +256,7 @@ void AMyHeroPlayer::OnFirePressed()
 		// フルオート開始
 		CurrentWeapon->StartFire();
 		VaultAmmoNum();
+		PlayAnimation(EPlayerAnimType::RangeAttack, true);
 	}
 	else
 	{
@@ -258,8 +264,9 @@ void AMyHeroPlayer::OnFirePressed()
 		// セミオートは一発だけ
 		CurrentWeapon->Fire();
 		VaultAmmoNum();
+		PlayAnimation(EPlayerAnimType::RangeAttack, false);
 	}
-
+	
 	if (AmmoWidget)
 	{
 		AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
@@ -760,7 +767,8 @@ void AMyHeroPlayer::MoveForward(float value)
 	double D3 = Direction.Size();
 	GetCharacterMovement()->MaxWalkSpeed =D3* MoveSpeed;
 	AddMovementInput(Direction, value);
-	
+	PlayAnimation(EPlayerAnimType::Move_Front, true);
+
 }
 
 void AMyHeroPlayer::MoveRight(float value)
@@ -769,6 +777,7 @@ void AMyHeroPlayer::MoveRight(float value)
 	double D3 = Direction.Size();
 	GetCharacterMovement()->MaxWalkSpeed = D3 * MoveSpeed;
 	AddMovementInput(Direction, value);
+	PlayAnimation(EPlayerAnimType::Move_Front, true);
 }
 
 void AMyHeroPlayer::StartJump()
@@ -805,6 +814,88 @@ float AMyHeroPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 	}
 
 	return ActualDamage;
+}
+
+UAnimationAsset* AMyHeroPlayer::GetAnimByType(EPlayerAnimType Type) const
+{
+	switch (Type)
+	{
+	case EPlayerAnimType::Idle:   return IdleAnim;
+	case EPlayerAnimType::Move_Front:  return MoveFrontAnim;
+	//case EPlayerAnimType::Move_Back:   return MoveBackAnim;
+	//case EPlayerAnimType::Move_Left:   return MoveLeftAnim;
+	//case EPlayerAnimType::Move_Right:  return MoveRightAnim;
+	//case EPlayerAnimType::Attack: return AttackAnim;
+	case EPlayerAnimType::RangeAttack: return RangeAttackAnim;
+	case EPlayerAnimType::Dead:   return DeadAnim;
+	case EPlayerAnimType::Damage:   return DamageAnim;
+	default:                     return nullptr;
+
+
+	}
+}
+
+void AMyHeroPlayer::PlayAnimation(EPlayerAnimType NewType, bool bLoop)
+{
+
+	if (CurrentAnimType == NewType) return;
+
+	// ロック中は無視
+	if (bIsAnimationLocked)
+	{
+		return;
+	}
+
+	UAnimationAsset* Anim = GetAnimByType(NewType);
+	if (!Anim) {
+		UE_LOG(LogTemp, Warning, TEXT("No Anime"));
+		return;
+	}
+
+	USkeletalMeshComponent* USMesh = GetMesh();
+	if (!USMesh) return;
+
+	USMesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+	USMesh->PlayAnimation(Anim, bLoop);
+
+	CurrentAnimType = NewType;
+
+	// ロック対象ならロック
+	if (IsLockedAnim(NewType))
+	{
+		bIsAnimationLocked = true;
+	}
+
+}
+
+bool AMyHeroPlayer::IsLockedAnim(EPlayerAnimType Type) const
+{
+	return /*Type == EAllyAnimType::Attack
+		||*/ Type == EPlayerAnimType::Dead
+		|| Type == EPlayerAnimType::Damage;
+	//|| Type == EAllyAnimType::RangeAttack;
+}
+
+void AMyHeroPlayer::LockRelease()
+{
+
+	bIsAnimationLocked = false;
+	// GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	if (bIsDead)
+	{
+		// PlayNiagaraEffect();
+
+		Destroy();
+	}
+	else
+	{
+
+		// GetCharacterMovement()->MaxWalkSpeed = MoveEnemySpeed;
+
+
+		UE_LOG(LogTemp, Warning, TEXT("Damage Anime end"));
+	}
+
 }
 
 void AMyHeroPlayer::EnterSpectatorMode()

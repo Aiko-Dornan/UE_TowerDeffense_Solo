@@ -230,6 +230,12 @@ TSubclassOf<AWeaponBase> UTD_GameInstance::ResolveWeapon(EWeaponID WeaponID) con
     case EWeaponID::SMG:
         return SMGClass;
 
+    case EWeaponID::HSG:
+        return HSGClass;
+
+    case EWeaponID::SR:
+        return SRClass;
+
     default:
         return nullptr;
     }

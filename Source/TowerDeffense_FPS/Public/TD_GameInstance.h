@@ -85,6 +85,12 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Weapon")
     TSubclassOf<class AWeaponBase> SMGClass;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+    TSubclassOf<class AWeaponBase> SRClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+    TSubclassOf<class AWeaponBase> HSGClass;
+
     //bgm
     UPROPERTY()
     UAudioComponent* BGMAudioComponent;

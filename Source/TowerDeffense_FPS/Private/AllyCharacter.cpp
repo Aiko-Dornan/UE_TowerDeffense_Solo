@@ -22,7 +22,7 @@ AAllyCharacter::AAllyCharacter()
    // bUseControllerRotationYaw = false;
    // GetCharacterMovement()->bOrientRotationToMovement = true;
    // GetCharacterMovement()->RotationRate = FRotator(0.f, 720.f, 0.f);
-    GetCharacterMovement()->MaxWalkSpeed = 100.f;
+    GetCharacterMovement()->MaxWalkSpeed = 400.f;
     GetCharacterMovement()->MaxAcceleration = 2000.f; // デフォルト高すぎ
     GetCharacterMovement()->BrakingDecelerationWalking = 1000.f;
    // GetCharacterMovement()->bUseAccelerationForPaths = true;
@@ -229,31 +229,38 @@ void AAllyCharacter::Tick(float DeltaTime)
      * ========================= */
     if (IsValid(TargetEnemy))
     {
-        bReturningHome = false;
+       // bReturningHome = false;
+
+       
+            if (bReturningHome)
+            {
+                bReturningHome = false;
+                AICon->StopMovement(); // 帰還中断
+            }
 
         // 敵の方向を見る
-        //FaceTarget(TargetEnemy);
+        FaceTarget(TargetEnemy);
 
         const float DistanceToEnemy =
             FVector::Dist(GetActorLocation(), TargetEnemy->GetActorLocation());
 
-        // 近づきすぎた → 離れる
         if (DistanceToEnemy < MaintainDistance - 100.f)
         {
+            // 近すぎ → 後退
             MoveAwayFromEnemy(TargetEnemy);
         }
-        // 遠すぎる → 近づく
-        else if (DistanceToEnemy > MaintainDistance)
+        else if (DistanceToEnemy > MaintainDistance + 100.f)
         {
-            MoveBackToInitialPosition();
+            // 遠すぎ → 近づく
+            AICon->MoveToActor(TargetEnemy, MaintainDistance);
         }
-        // 適正距離 → 停止
         else
         {
+            // ちょうど良い
             AICon->StopMovement();
         }
-        AICon->ClearFocus(EAIFocusPriority::Gameplay);
-        AICon->SetFocus(TargetEnemy);
+       // AICon->ClearFocus(EAIFocusPriority::Gameplay);
+       // AICon->SetFocus(TargetEnemy);
         //====================================
     // ■ 射撃制御
     //====================================
@@ -299,10 +306,11 @@ void AAllyCharacter::Tick(float DeltaTime)
      * 敵がいない場合 → 初期位置に戻る
      * ========================= */
 
-    const float DistanceToHome =
+     // 敵がいない → 帰還
+    float HomeDist =
         FVector::Dist(GetActorLocation(), InitialPosition);
 
-    if (DistanceToHome > AcceptableRadius)
+    if (HomeDist > AcceptableRadius)
     {
         if (!bReturningHome)
         {
@@ -312,12 +320,29 @@ void AAllyCharacter::Tick(float DeltaTime)
     }
     else
     {
-        // 帰還完了
+        
+        GetWorldTimerManager().ClearTimer(FireTimerHandle);
         bReturningHome = false;
         AICon->StopMovement();
     }
 
-    
+    //====================================
+      // ■ アニメーション更新
+      //====================================
+    AnimChangeElapsed += DeltaTime;
+
+    if (!bIsAnimationLocked &&
+        AnimChangeElapsed >= AnimChangeCooldown)
+    {
+        EAllyAnimType NewType = GetMoveAnimByDirection();
+
+        if (NewType != CurrentAnimType)
+        {
+            PlayAnimation(NewType, true);
+            AnimChangeElapsed = 0.f;
+        }
+    }
+
 }
 
 
@@ -365,10 +390,31 @@ EAllyAnimType AAllyCharacter::GetMoveAnimByDirection() const
     return EAllyAnimType::Move_Front;
 }
 
+//void AAllyCharacter::FindNearestEnemy()
+//{
+//    float ClosestDist = EnemyDetectRange;
+//    TargetEnemy = nullptr;
+//
+//    for (TActorIterator<AEnemyCharacterBase> It(GetWorld()); It; ++It)
+//    {
+//        if (!IsValid(*It)) continue;
+//
+//        float Dist =
+//            FVector::Dist(GetActorLocation(), It->GetActorLocation());
+//
+//        if (Dist < ClosestDist)
+//        {
+//            ClosestDist = Dist;
+//            TargetEnemy = *It;
+//        }
+//    }
+//}
+
+
 
 void AAllyCharacter::FindNearestEnemy()
 {
-    if (bReturningHome) return;
+   // if (bReturningHome) return;
 
    
 
@@ -398,11 +444,18 @@ void AAllyCharacter::FaceTarget(AActor* Target)
 {
     if (!Target) return;
 
-    FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
-    ToTarget.Z = 0.f;
+    FVector Dir = Target->GetActorLocation() - GetActorLocation();
+    Dir.Z = 0.f;
 
-    FRotator LookRot = ToTarget.Rotation();
-    GetController()->SetControlRotation(LookRot);
+    FRotator Rot = Dir.Rotation();
+    SetActorRotation(
+        FMath::RInterpTo(
+            GetActorRotation(),
+            Rot,
+            GetWorld()->GetDeltaSeconds(),
+            8.f
+        )
+    );
 }
 
 
@@ -450,20 +503,26 @@ void AAllyCharacter::MoveAwayFromEnemy(AActor* Target)
 {
     if (!Target) return;
 
-    if (AAIController* AICon = Cast<AAIController>(GetController()))
-    {
-        FVector AwayDir = (GetActorLocation() - Target->GetActorLocation()).GetSafeNormal();
-        FVector Dest = GetActorLocation() + AwayDir * MaintainDistance;
+    FVector AwayDir =
+        (GetActorLocation() - Target->GetActorLocation()).GetSafeNormal();
 
-        AICon->MoveToLocation(Dest, AcceptableRadius, true);
-    }
+    // 後退入力（向きは変えない）
+    AddMovementInput(AwayDir, 1.0f);
 }
+
 
 
 
 void AAllyCharacter::HandleFire()
 {
     if (!EquippedWeapon) return;
+
+    if (!IsValid(TargetEnemy))
+    {
+        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+        EquippedWeapon->StopFire();
+        return;
+    }
 
     
     //return;
@@ -495,13 +554,13 @@ void AAllyCharacter::HandleFire()
         PlayAnimation(EAllyAnimType::RangeAttack, false);
     }
    
-    GetWorldTimerManager().SetTimer(
+   /* GetWorldTimerManager().SetTimer(
         LockReleaseHandle,
         this,
         &AAllyCharacter::LockRelease,
         EquippedWeapon->FireRate,
         false
-    );
+    );*/
    
     //EquippedWeapon->StartFire();
 }
@@ -527,6 +586,12 @@ float AAllyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
     UE_LOG(LogTemp, Warning, TEXT("%s took %f damage! HP: %f/%f"),
         *GetName(), ActualDamage, CurrentHealth, MaxHealth);
     PlayAnimation(EAllyAnimType::Damage, false);
+    GetWorldTimerManager().SetTimer(
+        LockReleaseHandle,
+        this,
+        &AAllyCharacter::LockRelease,
+        0.2f,
+        false);
     // ★ ダメージを受けたら逃走開始
     StartGetaway(GetawayTime);
 

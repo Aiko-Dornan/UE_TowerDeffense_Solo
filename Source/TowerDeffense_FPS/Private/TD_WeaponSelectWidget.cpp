@@ -14,12 +14,18 @@ bool UTD_WeaponSelectWidget::Initialize()
 
     if (Btn_Main_SG)
         Btn_Main_SG->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnMainShotgun);
+    if (Btn_Main_SR)
+        Btn_Main_SR->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnMainSR);
+    if (Btn_Main_SMG)
+        Btn_Main_SMG->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnMainSMG);
 
     if (Btn_Sub_Pistol)
         Btn_Sub_Pistol->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnSubPistol);
 
-    if (Btn_Sub_SMG)
-        Btn_Sub_SMG->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnSubSMG);
+   
+
+    if (Btn_Sub_HSG)
+        Btn_Sub_HSG->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnSubHSG);
 
     if (Btn_Confirm)
         Btn_Confirm->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnConfirm);
@@ -39,15 +45,28 @@ void UTD_WeaponSelectWidget::OnMainShotgun()
     UpdateButtonVisuals();
 }
 
+void UTD_WeaponSelectWidget::OnMainSR()
+{
+    TempMainWeaponID = EWeaponID::SR;
+    UpdateButtonVisuals();
+}
+
+void UTD_WeaponSelectWidget::OnMainSMG()
+{
+    TempMainWeaponID = EWeaponID::SMG;
+    UpdateButtonVisuals();
+}
+
+
 void UTD_WeaponSelectWidget::OnSubPistol()
 {
     TempSubWeaponID = EWeaponID::Pistol;
     UpdateButtonVisuals();
 }
 
-void UTD_WeaponSelectWidget::OnSubSMG()
+void UTD_WeaponSelectWidget::OnSubHSG()
 {
-    TempSubWeaponID = EWeaponID::SMG;
+    TempSubWeaponID = EWeaponID::HSG;
     UpdateButtonVisuals();
 }
 
@@ -74,12 +93,18 @@ void UTD_WeaponSelectWidget::UpdateButtonVisuals()
         Btn_Main_AR->SetBackgroundColor(TempMainWeaponID == EWeaponID::AssaultRifle ? SelectedColor : DefaultColor);
     if (Btn_Main_SG)
         Btn_Main_SG->SetBackgroundColor(TempMainWeaponID == EWeaponID::Shotgun ? SelectedColor : DefaultColor);
+    if (Btn_Main_SR)
+        Btn_Main_SR->SetBackgroundColor(TempMainWeaponID == EWeaponID::SR ? SelectedColor : DefaultColor);
+    if (Btn_Main_SMG)
+        Btn_Main_SMG->SetBackgroundColor(TempMainWeaponID == EWeaponID::SMG ? SelectedColor : DefaultColor);
+
 
     // ƒTƒu•Ší
     if (Btn_Sub_Pistol)
         Btn_Sub_Pistol->SetBackgroundColor(TempSubWeaponID == EWeaponID::Pistol ? SelectedColor : DefaultColor);
-    if (Btn_Sub_SMG)
-        Btn_Sub_SMG->SetBackgroundColor(TempSubWeaponID == EWeaponID::SMG ? SelectedColor : DefaultColor);
+   
+    if (Btn_Sub_HSG)
+        Btn_Sub_HSG->SetBackgroundColor(TempSubWeaponID == EWeaponID::HSG ? SelectedColor : DefaultColor);
     
     SEPlay();
 }
