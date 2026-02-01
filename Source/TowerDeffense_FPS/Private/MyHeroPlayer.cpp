@@ -168,9 +168,12 @@ void AMyHeroPlayer::Tick(float DeltaTime)
 		1.f
 	);
 
-	if (GetVelocity().Size()==0.0f)
+	// ===== Idle ”»’è =====
+	const float Speed = GetVelocity().Size2D();
+
+	if (Speed < 3.0f) // ‚Ù‚Ú’âŽ~
 	{
-		//PlayAnimation(EPlayerAnimType::Idle, true);
+		PlayAnimation(EPlayerAnimType::Idle, true);
 	}
 
 	// -------- Zoom ˆ— --------
@@ -199,6 +202,12 @@ void AMyHeroPlayer::Tick(float DeltaTime)
 	}
 
 	DashFlag ? MoveSpeed = 1500.0f : MoveSpeed = 750.0f;
+
+	if (CurrentWeapon->Ammo <= 0&&CurrentWeapon->bIsFullAuto)
+	{
+		LockRelease();
+		
+	}
 
 }
 
@@ -249,6 +258,16 @@ void AMyHeroPlayer::HandleFire()
 void AMyHeroPlayer::OnFirePressed()
 {
 	if (!CurrentWeapon) return;
+	if (!CurrentWeapon->bCanFire)
+	{
+		return;
+	}
+	if (CurrentWeapon->Ammo <= 0)
+	{
+		LockRelease();
+		return;
+	}
+
 
 	if (CurrentWeapon->bIsFullAuto)
 	{
@@ -265,6 +284,13 @@ void AMyHeroPlayer::OnFirePressed()
 		CurrentWeapon->Fire();
 		VaultAmmoNum();
 		PlayAnimation(EPlayerAnimType::RangeAttack, false);
+		GetWorldTimerManager().SetTimer(
+			AnimLockTimerHandle,
+			this,
+			&AMyHeroPlayer::LockRelease,
+			0.1f, // UŒ‚ƒAƒjƒ‚Ì’·‚³
+			false
+		);
 	}
 	
 	if (AmmoWidget)
@@ -281,6 +307,7 @@ void AMyHeroPlayer::OnFireReleased()
 		
 		CurrentWeapon->StopFire();
 		VaultAmmoNum();
+		LockRelease();
 	}
 
 	if (AmmoWidget)
@@ -763,6 +790,7 @@ void AMyHeroPlayer::CheatGunEquip(TSubclassOf<AWeaponBase> NewWeaponClass)
 
 void AMyHeroPlayer::MoveForward(float value)
 {
+	if (FMath::Abs(value) < 0.1f) return;
 	FVector Direction = FRotationMatrix(Controller->GetControlRotation()).GetScaledAxis(EAxis::X);
 	double D3 = Direction.Size();
 	GetCharacterMovement()->MaxWalkSpeed =D3* MoveSpeed;
@@ -773,6 +801,7 @@ void AMyHeroPlayer::MoveForward(float value)
 
 void AMyHeroPlayer::MoveRight(float value)
 {
+	if (FMath::Abs(value) < 0.1f) return;
 	FVector Direction = FRotationMatrix(Controller->GetControlRotation()).GetScaledAxis(EAxis::Y);
 	double D3 = Direction.Size();
 	GetCharacterMovement()->MaxWalkSpeed = D3 * MoveSpeed;
@@ -872,8 +901,8 @@ bool AMyHeroPlayer::IsLockedAnim(EPlayerAnimType Type) const
 {
 	return /*Type == EAllyAnimType::Attack
 		||*/ Type == EPlayerAnimType::Dead
-		|| Type == EPlayerAnimType::Damage;
-	//|| Type == EAllyAnimType::RangeAttack;
+		|| Type == EPlayerAnimType::Damage
+		|| Type == EPlayerAnimType::RangeAttack;
 }
 
 void AMyHeroPlayer::LockRelease()

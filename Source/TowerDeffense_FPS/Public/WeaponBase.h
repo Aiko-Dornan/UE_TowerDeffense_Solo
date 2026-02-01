@@ -48,6 +48,9 @@ public:
 
 	 USceneComponent* SceneRoot;
 
+	 UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	 bool bIsSubWeapon = false;
+
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	//class USkeletalMeshComponent* WMesh;
 	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
@@ -82,13 +85,13 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon|Grenade")
 	float ExploveArea = 100.0f;//‚¢‚ç‚È‚¢‚©‚à
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gameplay")
+	bool bCanFire;
 protected:
 //Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gameplay")
-	bool bCanFire;
+	
 
 	UFUNCTION(BlueprintCallable, Category = "Gameplay")
 	void SetCanFire();

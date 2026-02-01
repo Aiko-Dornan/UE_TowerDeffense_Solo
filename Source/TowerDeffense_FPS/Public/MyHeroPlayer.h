@@ -317,4 +317,5 @@ public:
 		bool DashFlag=false;
 		float MoveSpeed = 1.0f;
 		bool move_flag = false;
+		FTimerHandle AnimLockTimerHandle;
 };
