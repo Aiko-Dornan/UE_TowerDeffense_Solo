@@ -16,6 +16,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnReloadStateChanged, bool, bIsRelo
 class USoundBase;
 class USoundAttenuation;
 
+UENUM(BlueprintType)
+enum class EWeaponType : uint8
+{
+	Rifle     UMETA(DisplayName = "Rifle"),
+	Handgun   UMETA(DisplayName = "Handgun"),
+};
 
 UCLASS()
 class TOWERDEFFENSE_FPS_API AWeaponBase : public AActor
@@ -87,6 +93,16 @@ public:
 	float ExploveArea = 100.0f;//いらないかも
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gameplay")
 	bool bCanFire;
+
+	UFUNCTION()
+	void CancelReload();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+	bool bIsReloading = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	EWeaponType WeaponType = EWeaponType::Rifle;
+
 protected:
 //Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -102,8 +118,7 @@ protected:
 
 	bool bIsFiring = false; // 現在射撃中か
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
-	bool bIsReloading = false;
+	
 
 	FTimerHandle FireTimerHandle;       // フルオート用ループ
 	FTimerHandle FireResetTimerHandle;  // 単発用リセット

@@ -432,3 +432,18 @@ void AWeaponBase::FinishReload()
 	OnAmmoChanged.Broadcast((int32)Ammo, (int32)StockAmmo);
 }
 
+void AWeaponBase::CancelReload()
+{
+	if (!bIsReloading) return;
+
+	// タイマー停止
+	GetWorldTimerManager().ClearTimer(ReloadTimerHandle);
+
+	bIsReloading = false;
+	bCanFire = true;
+
+	// ★ UIに「リロード終了」を通知
+	OnReloadStateChanged.Broadcast(false);
+
+	UE_LOG(LogTemp, Log, TEXT("Reload canceled"));
+}

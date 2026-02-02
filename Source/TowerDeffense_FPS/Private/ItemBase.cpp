@@ -43,7 +43,7 @@ void AItemBase::OnPickedUp(AMyHeroPlayer* Player)
             Player->CurrentWeapon->StockAmmo = SavedStockAmmo;
         }
 
-        Player->VaultAmmoNum();
+       // Player->VaultAmmoNum();
         UE_LOG(LogTemp, Warning, TEXT("PickUpWeapon."));
 
         Destroy();

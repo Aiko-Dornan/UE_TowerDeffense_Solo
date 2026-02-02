@@ -19,6 +19,7 @@
 #include"EnemyCharacterBase.h"
 #include"MyGrenadeProjectileActor.h"
 #include"TD_GameInstance.h"
+#include"TD_GameModeBase.h"
 
 // Sets default values
 AMyHeroPlayer::AMyHeroPlayer()
@@ -217,8 +218,8 @@ void AMyHeroPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	PlayerInputComponent->BindAxis("MoveForward", this, &AMyHeroPlayer::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMyHeroPlayer::MoveRight);
-	InputComponent->BindAction("Jump", IE_Pressed, this, &AMyHeroPlayer::StartJump);
-	InputComponent->BindAction("Jump", IE_Released, this, &AMyHeroPlayer::StopJump);
+	//InputComponent->BindAction("Jump", IE_Pressed, this, &AMyHeroPlayer::StartJump);
+	//InputComponent->BindAction("Jump", IE_Released, this, &AMyHeroPlayer::StopJump);
 	
 	PlayerInputComponent->BindAxis("Turn", this, &AMyHeroPlayer::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("Look Up", this, &AMyHeroPlayer::AddControllerPitchInput);
@@ -274,7 +275,7 @@ void AMyHeroPlayer::OnFirePressed()
 		
 		// フルオート開始
 		CurrentWeapon->StartFire();
-		VaultAmmoNum();
+		//VaultAmmoNum();
 		PlayAnimation(EPlayerAnimType::RangeAttack, true);
 	}
 	else
@@ -282,7 +283,7 @@ void AMyHeroPlayer::OnFirePressed()
 		
 		// セミオートは一発だけ
 		CurrentWeapon->Fire();
-		VaultAmmoNum();
+		//VaultAmmoNum();
 		PlayAnimation(EPlayerAnimType::RangeAttack, false);
 		GetWorldTimerManager().SetTimer(
 			AnimLockTimerHandle,
@@ -306,7 +307,7 @@ void AMyHeroPlayer::OnFireReleased()
 	{
 		
 		CurrentWeapon->StopFire();
-		VaultAmmoNum();
+		//VaultAmmoNum();
 		LockRelease();
 	}
 
@@ -318,11 +319,15 @@ void AMyHeroPlayer::OnFireReleased()
 
 void AMyHeroPlayer::OnReloadPressed()
 {
+	if (!CurrentWeapon) return;
+	// ★ すでにリロード中なら何もしない
+	if (CurrentWeapon->bIsReloading) return;
+
 	if (CurrentWeapon)
 	{
 		
 		CurrentWeapon->StartReload();
-		VaultAmmoNum();
+		//VaultAmmoNum();
 	}
 
 	if (AmmoWidget)
@@ -385,7 +390,7 @@ void AMyHeroPlayer::ItemInteract()
 		if (AAmmoBox* AmmoBoxHit = Cast<AAmmoBox>(Hit.GetActor()))
 		{
 			AmmoBoxHit->TryGiveAmmo(CurrentWeapon);
-			VaultAmmoNum();
+			//VaultAmmoNum();
 
 			if (AmmoWidget)
 				AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
@@ -700,6 +705,9 @@ void AMyHeroPlayer::DropCurrentWeapon()
 {
 	if (!CurrentWeapon) return;
 
+	const bool bIsMainWeapon = !MainSubFlag;
+	VaultAmmoNum(CurrentWeapon, bIsMainWeapon);
+
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
@@ -838,8 +846,11 @@ float AMyHeroPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Player is dead!"));
 		// TODO: 死亡処理（リスポーン・ゲームオーバーUIなど）
-		
-		EnterSpectatorMode();
+		if (ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+		{
+			GM->GameOver();
+		}
+		//EnterSpectatorMode();
 	}
 
 	return ActualDamage;
@@ -847,22 +858,51 @@ float AMyHeroPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 
 UAnimationAsset* AMyHeroPlayer::GetAnimByType(EPlayerAnimType Type) const
 {
+	if (!CurrentWeapon)
+		return nullptr;
+
+	const EWeaponType WeaponType = CurrentWeapon->WeaponType;
+
 	switch (Type)
 	{
-	case EPlayerAnimType::Idle:   return IdleAnim;
-	case EPlayerAnimType::Move_Front:  return MoveFrontAnim;
-	//case EPlayerAnimType::Move_Back:   return MoveBackAnim;
-	//case EPlayerAnimType::Move_Left:   return MoveLeftAnim;
-	//case EPlayerAnimType::Move_Right:  return MoveRightAnim;
-	//case EPlayerAnimType::Attack: return AttackAnim;
-	case EPlayerAnimType::RangeAttack: return RangeAttackAnim;
-	case EPlayerAnimType::Dead:   return DeadAnim;
-	case EPlayerAnimType::Damage:   return DamageAnim;
-	default:                     return nullptr;
+	case EPlayerAnimType::Idle:
+		return (WeaponType == EWeaponType::Rifle)
+			? Rifle_Idle
+			: Handgun_Idle;
 
+	case EPlayerAnimType::RangeAttack:
+		return (WeaponType == EWeaponType::Rifle)
+			? Rifle_Fire
+			: Handgun_Fire;
+	case EPlayerAnimType::Move_Front:
+		return (WeaponType == EWeaponType::Rifle)
+			? Rifle_Fwd
+			: Handgun_Idle;
+	case EPlayerAnimType::Move_Back:
+		return (WeaponType == EWeaponType::Rifle)
+			? Rifle_Bwd
+			: Handgun_Idle;
+	case EPlayerAnimType::Move_Left:
+		return (WeaponType == EWeaponType::Rifle)
+			? Rifle_Lt
+			: Handgun_Idle;
+	case EPlayerAnimType::Move_Right:
+		return (WeaponType == EWeaponType::Rifle)
+			? Rifle_Rt
+			: Handgun_Idle;
+		// 共通アニメ
+	/*case EPlayerAnimType::Move_Front:  return MoveFrontAnim;
+	case EPlayerAnimType::Move_Back:   return MoveBackAnim;
+	case EPlayerAnimType::Move_Left:   return MoveLeftAnim;
+	case EPlayerAnimType::Move_Right:  return MoveRightAnim;*/
+	case EPlayerAnimType::Dead:        return DeadAnim;
+	case EPlayerAnimType::Damage:      return DamageAnim;
 
+	default:
+		return nullptr;
 	}
 }
+
 
 void AMyHeroPlayer::PlayAnimation(EPlayerAnimType NewType, bool bLoop)
 {
@@ -982,9 +1022,17 @@ void AMyHeroPlayer::EnterSpectatorMode()
 
 }
 
-void AMyHeroPlayer::VaultAmmoNum()
+void AMyHeroPlayer::VaultAmmoNum(AWeaponBase* Weapon, bool bIsMainWeapon)
 {
-	if (!MainSubFlag)
+	if (!Weapon) return;
+
+	//// ★ リロード中は保存しない
+	//if (Weapon->bIsReloading)
+	//{
+	//	return;
+	//}
+
+	if (bIsMainWeapon)
 	{
 		ammo_stock_main = CurrentWeapon->StockAmmo;
 		ammo_magazine_main = CurrentWeapon->Ammo;
@@ -998,18 +1046,16 @@ void AMyHeroPlayer::VaultAmmoNum()
 
 void AMyHeroPlayer::SwitchWeapon()
 {
-	if (MainSubFlag)
-	{
-		GunComponentVault = GunComponent;
-		MainSubFlag = false;
-	}
-	else
-	{
-		GunComponentVault = GunComponentSub;
-		MainSubFlag = true;
-	}
+	// ★ 切り替え前の武器を保存
+	const bool bWasMainWeapon = !MainSubFlag;
+	VaultAmmoNum(CurrentWeapon, bWasMainWeapon);
 
-	EquipWeapon(GunComponentVault);
+	// ===== フラグ切り替え =====
+	MainSubFlag = !MainSubFlag;
+	TSubclassOf<AWeaponBase> NextWeaponClass =
+		MainSubFlag ? GunComponentSub : GunComponent;
+
+	EquipWeapon(NextWeaponClass);
 
 	if (!MainSubFlag)
 	{
@@ -1020,14 +1066,18 @@ void AMyHeroPlayer::SwitchWeapon()
 	{
 		CurrentWeapon->StockAmmo = ammo_stock_sub;
 		CurrentWeapon->Ammo = ammo_magazine_sub;
-		
+
 	}
+
+	
+	CurrentAnimType = EPlayerAnimType::Dead;
+	PlayAnimation(EPlayerAnimType::Idle, true);
 
 	if (AmmoWidget)
 	{
 		AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
 	}
-	
+
 }
 
 void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
@@ -1038,7 +1088,11 @@ void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
 	if (CurrentWeapon)
 	{
 		
-
+		// ★ リロード中なら必ずキャンセル
+		if (CurrentWeapon->bIsReloading)
+		{
+			CurrentWeapon->CancelReload();
+		}
 
 		CurrentWeapon->Destroy();
 		CurrentWeapon = nullptr;
@@ -1062,6 +1116,8 @@ void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
 	{
 		CurrentWeapon->OnAmmoChanged.AddDynamic(this, &AMyHeroPlayer::OnAmmoChanged);
 		CurrentWeapon->OnReloadStateChanged.AddDynamic(this, &AMyHeroPlayer::OnReloadStateChanged);
+		
+		
 	}
 
 	
@@ -1098,7 +1154,7 @@ void AMyHeroPlayer::OnReloadStateChanged(bool bIsReloading)
 	if (AmmoWidget)
 	{
 		AmmoWidget->SetReloading(bIsReloading);
-		VaultAmmoNum();
+		//VaultAmmoNum();
 	}
 }
 

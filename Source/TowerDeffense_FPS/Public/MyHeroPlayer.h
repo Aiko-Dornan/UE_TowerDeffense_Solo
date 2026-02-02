@@ -104,7 +104,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	UAnimationAsset* MoveFrontAnim;
 
-	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	UAnimationAsset* MoveBackAnim;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
@@ -113,8 +113,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	UAnimationAsset* MoveRightAnim;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
-	UAnimationAsset* AttackAnim;*/
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	//UAnimationAsset* AttackAnim;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	UAnimationAsset* RangeAttackAnim;
@@ -124,6 +124,31 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	UAnimationAsset* DamageAnim;
+
+	// ===== ライフル用 =====
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation|Rifle")
+	UAnimationAsset* Rifle_Idle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation|Rifle")
+	UAnimationAsset* Rifle_Fire;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation|Rifle")
+	UAnimationAsset* Rifle_Fwd;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation|Rifle")
+	UAnimationAsset* Rifle_Bwd;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation|Rifle")
+	UAnimationAsset* Rifle_Lt;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation|Rifle")
+	UAnimationAsset* Rifle_Rt;
+	
+
+
+	// ===== ハンドガン用 =====
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation|Handgun")
+	UAnimationAsset* Handgun_Idle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation|Handgun")
+	UAnimationAsset* Handgun_Fire;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 	EPlayerAnimType PlayerAnimeState = EPlayerAnimType::Idle;
@@ -280,7 +305,7 @@ public:
 	void EnterSpectatorMode();
 
 	UFUNCTION()
-	void VaultAmmoNum();
+	void VaultAmmoNum(AWeaponBase* Weapon, bool bIsMainWeapon);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	float ammo_stock_main = 0;
