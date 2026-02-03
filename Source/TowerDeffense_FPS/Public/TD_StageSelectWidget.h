@@ -26,6 +26,9 @@ protected:
     UPROPERTY(meta = (BindWidget))
     UButton* Stage4Button;
 
+    UPROPERTY(meta = (BindWidget))
+    UButton* Stage5Button;
+
     // çƒê∂ÇµÇΩÇ¢SE
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
     USoundBase* ClickSE;

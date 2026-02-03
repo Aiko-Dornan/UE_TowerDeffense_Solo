@@ -146,7 +146,7 @@ void ATD_GameModeBase::BeginPlay()
     if (UTD_GameInstance* GI = GetGameInstance<UTD_GameInstance>())
     {
         /*GI->PlayBGM(TitleBGM, 1.0f);*/
-        GI->PlayBGMByType(EBGMType::Battle, 1.0f,true);
+        GI->PlayBGMByType(EBGMType::Battle, 0.6f,true);
         UE_LOG(LogTemp, Warning, TEXT("BGM Start!!"));
     }
 
@@ -169,6 +169,10 @@ void ATD_GameModeBase::GameOver()
         PC->bShowMouseCursor = true; // UI操作用にマウスを出す
     }
 
+    if (UTD_GameInstance* GI = GetGameInstance<UTD_GameInstance>())
+    {
+        GI->PlayBGMByType(EBGMType::Failed, 0.1f, false);
+    }
     //  「Game Over」を画面に出す（シンプル版）
    // GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("GAME OVER"));
 
@@ -208,7 +212,7 @@ void ATD_GameModeBase::GameClear()
             GI->SetStageCleared(GI->MaxClearedStage);
             UE_LOG(LogTemp, Warning, TEXT("=== GAME CLEAR! ===+%d"), GI->MaxClearedStage);
             Clear = true;
-           
+            GI->PlayBGMByType(EBGMType::Clear, 0.1f, false);
         }
         
         

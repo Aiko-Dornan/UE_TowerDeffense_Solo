@@ -34,7 +34,11 @@ bool UTD_StageSelectWidget::Initialize()
         Stage4Button->OnClicked.AddDynamic(
             this, &UTD_StageSelectWidget::OnStage1Clicked);
     }
-
+    if (Stage5Button)
+    {
+        Stage5Button->OnClicked.AddDynamic(
+            this, &UTD_StageSelectWidget::OnStage1Clicked);
+    }
 
 
     /*if (Stage2Button)
@@ -84,5 +88,6 @@ void UTD_StageSelectWidget::UpdateStageButtons()
         Stage2Button->SetIsEnabled(GI->MaxClearedStage >= 1);
         Stage3Button->SetIsEnabled(GI->MaxClearedStage >= 2);
         Stage4Button->SetIsEnabled(GI->MaxClearedStage >= 3);
+        Stage5Button->SetIsEnabled(GI->MaxClearedStage >= 4);
     }
 }

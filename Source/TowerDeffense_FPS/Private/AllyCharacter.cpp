@@ -43,7 +43,7 @@ void AAllyCharacter::BeginPlay()
         {
             EquippedWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("WeaponSocket"));
             EquippedWeapon->SetOwner(this);
-            EquippedWeapon->StockAmmo *= 3;
+            EquippedWeapon->StockAmmo *= 2;
         }
     }
 

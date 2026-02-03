@@ -57,6 +57,13 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 
     AttackCollision->OnComponentBeginOverlap.AddDynamic(
         this, &AEnemyCharacterBase::OnAttackOverlap);
+
+   /* BGMAudioComponent = NewObject<UAudioComponent>(this);
+    BGMAudioComponent->bAutoActivate = false;
+    BGMAudioComponent->bIsUISound = true;
+    BGMAudioComponent->bStopWhenOwnerDestroyed = false;
+    BGMAudioComponent->bAutoDestroy = false;*/
+
 }
 
 // ==================== BeginPlay ====================
@@ -1097,6 +1104,7 @@ void AEnemyCharacterBase::PerformAttack()//近距離
         PlayAnimation(EEnemyAnimType::Attack, false);
         /*GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
             &AEnemyCharacterBase::ResetAttack, AttackCooldown, false);*/
+        //BGMAudioComponent->SetSound(AttackSE);
     }
   
   
@@ -1254,6 +1262,11 @@ void AEnemyCharacterBase::ApplyAreaDamage(float DamageAmount, float Radius)
 
 void AEnemyCharacterBase::ResetAttack()
 {
+    if (!CurrentTarget)
+    {
+        return;
+    }
+
     bCanAttack = true;
     bIsAnimationLocked = false;
     GetCharacterMovement()->MaxWalkSpeed = MoveEnemySpeed;
@@ -1299,7 +1312,11 @@ void AEnemyCharacterBase::OnAttackOverlap(
 
     if (!OtherActor)
     {
-        return;
+        
+
+
+       
+       //return;
     }
     if (OtherActor == this) { 
         /*return;*/
@@ -1309,6 +1326,63 @@ void AEnemyCharacterBase::OnAttackOverlap(
     UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s:3"), *OtherActor->GetName());
     //if (HitActors.Contains(OtherActor)) return;
     /*UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s:4"), *OtherActor->GetName());*/
+
+    if (bIsBoss)
+    {
+        // 取得結果を入れる配列
+        TArray<AActor*> FoundActors;
+
+        // ★ コリジョン内にいる全てのアクタを取得
+        if (OverlappedComponent)
+        {
+            OverlappedComponent->GetOverlappingActors(FoundActors);
+        }
+
+        for (AActor* Actor : FoundActors)
+        {
+            if (Actor && Actor != this)
+            {
+          
+           
+            
+            // --- 範囲ダメージを与える対象 ---
+            if (Actor->IsA(AMyHeroPlayer::StaticClass()) ||
+                Actor->IsA(AAllyCharacter::StaticClass()) ||
+                Actor->IsA(ADroneCharacter::StaticClass()) ||
+                Actor->IsA(ADefenseBase::StaticClass()) ||
+                Actor->IsA(ADefenseStructure::StaticClass()))
+            {
+                UGameplayStatics::ApplyDamage(
+                    Actor,
+                    AttackDamage,
+                    GetController(),
+                    this,
+                    nullptr
+                );
+
+                UE_LOG(LogTemp, Warning, TEXT("%s - AreaDamage applied to %s巻き込みました!!"),
+                    *GetName(), *Actor->GetName());
+            }
+            }
+
+            UGameplayStatics::PlaySoundAtLocation(
+                this,
+                AttackSE,
+                OtherActor->GetActorLocation(),
+                1.0f,           // 音量
+                1.0f,           // ピッチ
+                0.0f,           // 開始時間
+                FireSoundAttenuation // Attenuationを指定
+            );
+
+            UE_LOG(LogTemp, Warning, TEXT("Actor in range: %s"), *Actor->GetName());
+        }
+       
+        bCanAttack = false;
+        UE_LOG(LogTemp, Warning, TEXT("%s Melee Hit: %s"), *GetName(), *CurrentTarget->GetName());
+        return;
+    }
+
     // 対象チェック
     if (OtherActor->IsA(AMyHeroPlayer::StaticClass())  ||
         OtherActor->IsA(AAllyCharacter::StaticClass()) ||
@@ -1324,6 +1398,16 @@ void AEnemyCharacterBase::OnAttackOverlap(
             GetController(),
             this,
             nullptr
+        );
+
+        UGameplayStatics::PlaySoundAtLocation(
+            this,
+            AttackSE,
+            OtherActor->GetActorLocation(),
+            1.0f,           // 音量
+            1.0f,           // ピッチ
+            0.0f,           // 開始時間
+            FireSoundAttenuation // Attenuationを指定
         );
         bCanAttack = false;
         UE_LOG(LogTemp, Warning, TEXT("%s Melee Hit: %s"), *GetName(),*CurrentTarget->GetName());

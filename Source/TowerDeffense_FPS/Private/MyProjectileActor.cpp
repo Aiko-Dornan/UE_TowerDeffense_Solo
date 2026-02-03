@@ -175,7 +175,7 @@ void AMyProjectileActor::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor,
 	if (OtherActor && OtherActor != this)
 	{
 		
-		if (OtherActor->IsA(AMyHeroPlayer::StaticClass()) ||
+		if (/*OtherActor->IsA(AMyHeroPlayer::StaticClass()) ||*/
 			OtherActor->IsA(AAllyCharacter::StaticClass()) ||
 			OtherActor->IsA(ADroneCharacter::StaticClass()) ||
 			/*Actor->IsA(ADefenseBase::StaticClass()) ||*/

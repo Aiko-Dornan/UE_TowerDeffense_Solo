@@ -6,6 +6,8 @@
 #include"Components/BoxComponent.h"
 #include "AIController.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundBase.h"
 #include "EnemyCharacterBase.generated.h"
 
 class ADefenseBase;
@@ -278,6 +280,12 @@ public:
 
     UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Boss")
     bool bIsBoss = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
+    USoundBase* AttackSE;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
+    USoundAttenuation* FireSoundAttenuation;
 
 private:
    
