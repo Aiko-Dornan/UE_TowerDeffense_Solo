@@ -48,6 +48,7 @@ AWeaponBase::AWeaponBase()
 	//RootComponent = Ub;
 	//Mesh = GetMesh();
 	
+	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	bCanFire = true;
 	bIsFiring = false;
@@ -74,6 +75,10 @@ void AWeaponBase::BeginPlay()
 {
 	Super::BeginPlay();
 	
+
+	// 単純コリジョン含め全部OFF
+	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
 	//Mesh = Cast<UStaticMeshComponent>(GetRootComponent());
 
 	//AActor* OwnerActor = GetOwner();

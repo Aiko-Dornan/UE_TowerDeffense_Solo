@@ -12,4 +12,7 @@ enum class EWeaponID : uint8
     SMG          UMETA(DisplayName = "Sub Machinegun"),
     SR          UMETA(DisplayName = "Sniper Rifle"),
     HSG          UMETA(DisplayName = "Hand Shotgun"),
+    SemiSG          UMETA(DisplayName = "SemiAuto Shotgun"),
+    Uzi          UMETA(DisplayName = "Mini Uzi"),
+    GL           UMETA(DisplayName = "Grenade Launcher"),
 };

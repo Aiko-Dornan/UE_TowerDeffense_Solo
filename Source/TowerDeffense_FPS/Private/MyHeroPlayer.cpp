@@ -154,10 +154,10 @@ void AMyHeroPlayer::Tick(float DeltaTime)
 	FVector Start = CameraComponent->GetComponentLocation();
 	FVector End = Start + CameraComponent->GetForwardVector() * 500.0f;
 
-	FVector BoxHalfSize(10, 10, 10);
+	FVector BoxHalfSize(30, 30, 30);
 	FRotator Orientation = CameraComponent->GetComponentRotation();
 
-	DrawDebugBox(
+	/*DrawDebugBox(
 		GetWorld(),
 		End,
 		BoxHalfSize,
@@ -167,7 +167,7 @@ void AMyHeroPlayer::Tick(float DeltaTime)
 		0.f,
 		0,
 		1.f
-	);
+	);*/
 
 	// ===== Idle 判定 =====
 	const float Speed = GetVelocity().Size2D();
@@ -277,6 +277,7 @@ void AMyHeroPlayer::OnFirePressed()
 		CurrentWeapon->StartFire();
 		//VaultAmmoNum();
 		PlayAnimation(EPlayerAnimType::RangeAttack, true);
+		
 	}
 	else
 	{
@@ -353,14 +354,19 @@ void AMyHeroPlayer::ItemInteract()
 	FVector End = Start + CameraComponent->GetForwardVector() * 500.0f;
 
 	// 四角形の半径（XYZ方向のサイズ）
-	FVector BoxHalfSize(10.f, 10.f, 10.f);
+	FVector BoxHalfSize(20.f, 20.f, 20.f);
 
 	// 角度（今回は回転なし）
 	FRotator Orientation = CameraComponent->GetComponentRotation();
 
-	FHitResult Hit;
+	//FHitResult Hit;
 
-	bool bHit = UKismetSystemLibrary::BoxTraceSingle(
+	TArray<FHitResult> Hits;
+	
+
+	
+
+	bool bHit = UKismetSystemLibrary::BoxTraceMulti(
 		this,
 		Start,
 		End,
@@ -369,17 +375,16 @@ void AMyHeroPlayer::ItemInteract()
 		UEngineTypes::ConvertToTraceType(ECC_Visibility),
 		false,
 		{ this },
-		EDrawDebugTrace::ForDuration,   // ← 四角形が視覚化される！
-		Hit,
+		EDrawDebugTrace::None/*ForDuration*/,   // ← 四角形が視覚化される！
+		Hits,
 		true,
 		FLinearColor::Green,
 		FLinearColor::Red,
 		0.1f
 	);
 
-	if (bHit)
+	for (auto& Hit : Hits)
 	{
-		// アイテム取得
 		if (AItemBase* Item = Cast<AItemBase>(Hit.GetActor()))
 		{
 			PickupItem(Item);
@@ -397,6 +402,27 @@ void AMyHeroPlayer::ItemInteract()
 			return;
 		}
 	}
+
+	//if (bHit)
+	//{
+	//	// アイテム取得
+	//	if (AItemBase* Item = Cast<AItemBase>(Hit.GetActor()))
+	//	{
+	//		PickupItem(Item);
+	//		return;
+	//	}
+
+	//	// AmmoBox (既存の処理)
+	//	if (AAmmoBox* AmmoBoxHit = Cast<AAmmoBox>(Hit.GetActor()))
+	//	{
+	//		AmmoBoxHit->TryGiveAmmo(CurrentWeapon);
+	//		//VaultAmmoNum();
+
+	//		if (AmmoWidget)
+	//			AmmoWidget->UpdateAmmoText(GetCurrentAmmo(), GetCurrentStockAmmo());
+	//		return;
+	//	}
+	//}
 
 	UE_LOG(LogTemp, Warning, TEXT("Nothing to interact with."));
 }
@@ -721,6 +747,7 @@ void AMyHeroPlayer::DropCurrentWeapon()
 		DropRotation,
 		Params
 	);
+	
 
 	if (DroppedItem)
 	{
@@ -740,6 +767,7 @@ void AMyHeroPlayer::DropCurrentWeapon()
 		if (CurrentWeapon->GetMesh())
 		{
 			DroppedItem->Mesh->SetStaticMesh(CurrentWeapon->GetMesh()->GetStaticMesh());
+			DroppedItem->Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		}
 
 		DroppedItem->Mesh->SetSimulatePhysics(true);
@@ -1069,7 +1097,7 @@ void AMyHeroPlayer::SwitchWeapon()
 
 	}
 
-	
+	bIsAnimationLocked = false;
 	CurrentAnimType = EPlayerAnimType::Dead;
 	PlayAnimation(EPlayerAnimType::Idle, true);
 

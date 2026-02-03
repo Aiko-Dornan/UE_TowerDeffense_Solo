@@ -27,12 +27,21 @@ protected:
     UPROPERTY(meta = (BindWidget))
     UButton* Btn_Main_SMG;
 
+    UPROPERTY(meta = (BindWidget))
+    UButton* Btn_Main_SemiSG;
+
 
     UPROPERTY(meta = (BindWidget))
     UButton* Btn_Sub_Pistol;
 
     UPROPERTY(meta = (BindWidget))
     UButton* Btn_Sub_HSG;
+
+    UPROPERTY(meta = (BindWidget))
+    UButton* Btn_Sub_Uzi;
+
+    UPROPERTY(meta = (BindWidget))
+    UButton* Btn_Sub_GL;
 
     UPROPERTY(meta = (BindWidget))
     UButton* Btn_Confirm;
@@ -56,6 +65,9 @@ private:
     void OnMainShotgun();
 
     UFUNCTION()
+    void OnMainSemiShotgun();
+
+    UFUNCTION()
     void OnMainSR();
 
     UFUNCTION()
@@ -65,10 +77,14 @@ private:
     UFUNCTION()
     void OnSubPistol();
 
-   
+    UFUNCTION()
+    void OnSubUzi();
 
     UFUNCTION()
     void OnSubHSG();
+
+    UFUNCTION()
+    void OnSubGL();
 
     UFUNCTION()
     void OnConfirm();

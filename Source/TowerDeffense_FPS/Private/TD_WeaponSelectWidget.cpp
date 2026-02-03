@@ -18,14 +18,22 @@ bool UTD_WeaponSelectWidget::Initialize()
         Btn_Main_SR->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnMainSR);
     if (Btn_Main_SMG)
         Btn_Main_SMG->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnMainSMG);
+    if (Btn_Main_SemiSG)
+        Btn_Main_SemiSG->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnMainSemiShotgun);
+
+
 
     if (Btn_Sub_Pistol)
         Btn_Sub_Pistol->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnSubPistol);
 
-   
+    if (Btn_Sub_Uzi)
+        Btn_Sub_Uzi->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnSubUzi);
 
     if (Btn_Sub_HSG)
         Btn_Sub_HSG->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnSubHSG);
+
+    if (Btn_Sub_GL)
+        Btn_Sub_GL->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnSubGL);
 
     if (Btn_Confirm)
         Btn_Confirm->OnClicked.AddDynamic(this, &UTD_WeaponSelectWidget::OnConfirm);
@@ -57,6 +65,12 @@ void UTD_WeaponSelectWidget::OnMainSMG()
     UpdateButtonVisuals();
 }
 
+void UTD_WeaponSelectWidget::OnMainSemiShotgun()
+{
+    TempMainWeaponID = EWeaponID::SemiSG;
+    UpdateButtonVisuals();
+}
+
 
 void UTD_WeaponSelectWidget::OnSubPistol()
 {
@@ -67,6 +81,18 @@ void UTD_WeaponSelectWidget::OnSubPistol()
 void UTD_WeaponSelectWidget::OnSubHSG()
 {
     TempSubWeaponID = EWeaponID::HSG;
+    UpdateButtonVisuals();
+}
+
+void UTD_WeaponSelectWidget::OnSubUzi()
+{
+    TempSubWeaponID = EWeaponID::Uzi;
+    UpdateButtonVisuals();
+}
+
+void UTD_WeaponSelectWidget::OnSubGL()
+{
+    TempSubWeaponID = EWeaponID::GL;
     UpdateButtonVisuals();
 }
 
@@ -97,6 +123,8 @@ void UTD_WeaponSelectWidget::UpdateButtonVisuals()
         Btn_Main_SR->SetBackgroundColor(TempMainWeaponID == EWeaponID::SR ? SelectedColor : DefaultColor);
     if (Btn_Main_SMG)
         Btn_Main_SMG->SetBackgroundColor(TempMainWeaponID == EWeaponID::SMG ? SelectedColor : DefaultColor);
+    if (Btn_Main_SemiSG)
+        Btn_Main_SemiSG->SetBackgroundColor(TempMainWeaponID == EWeaponID::SemiSG ? SelectedColor : DefaultColor);
 
 
     // ƒTƒu•Ší
@@ -105,6 +133,10 @@ void UTD_WeaponSelectWidget::UpdateButtonVisuals()
    
     if (Btn_Sub_HSG)
         Btn_Sub_HSG->SetBackgroundColor(TempSubWeaponID == EWeaponID::HSG ? SelectedColor : DefaultColor);
+    if (Btn_Sub_Uzi)
+        Btn_Sub_Uzi->SetBackgroundColor(TempSubWeaponID == EWeaponID::Uzi? SelectedColor : DefaultColor);
+    if (Btn_Sub_GL)
+        Btn_Sub_GL->SetBackgroundColor(TempSubWeaponID == EWeaponID::GL ? SelectedColor : DefaultColor);
     
     SEPlay();
 }
