@@ -1149,6 +1149,10 @@ void AMyHeroPlayer::EquipWeapon(TSubclassOf<AWeaponBase> WeaponClass)
 	}
 
 	
+	bIsAnimationLocked = false;
+	CurrentAnimType = EPlayerAnimType::Dead;
+	PlayAnimation(EPlayerAnimType::Idle, true);
+
 }
 
 int32 AMyHeroPlayer::GetCurrentAmmo() const

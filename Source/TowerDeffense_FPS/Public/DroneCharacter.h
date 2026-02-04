@@ -5,6 +5,7 @@
 #include"DropPointActor.h"
 #include"AmmoDisplayWidget.h"
 #include"MyHeroPlayer.h"
+#include"ItemBase.h"
 #include "DroneCharacter.generated.h"
 
 UCLASS()
@@ -34,6 +35,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone")
 	float MaxHealth = 100.0f;
 
+	UPROPERTY(EditAnywhere, Category = "Drone")
+	TSubclassOf<AItemBase> DropItem[7];
+
 	UPROPERTY()
 	TArray<AActor*> TargetActors;
 
@@ -62,6 +66,10 @@ public:
 
 private:
 	
+	int RandomInt = 0;
+
+	UPROPERTY(VisibleAnywhere, Category = "Drone")
+	TSubclassOf<AItemBase> ItemClass;
 
 	bool bIsDead = false;
 

@@ -3,25 +3,69 @@
 #include "Components/Button.h"
 #include "Kismet/GameplayStatics.h"
 
-bool UTitleWidget::Initialize()
+//bool UTitleWidget::Initialize()
+//{
+//    Super::Initialize();
+//
+//    if (StartButton)
+//    {
+//        StartButton->OnClicked.AddDynamic(this, &UTitleWidget::OnStartClicked);
+//    }
+//
+//
+//
+//    return true;
+//}
+
+void UTitleWidget::NativeConstruct()
 {
-    Super::Initialize();
+    Super::NativeConstruct();
 
     if (StartButton)
+            {
+                StartButton->OnClicked.AddDynamic(this, &UTitleWidget::OnStartClicked);
+            }
+
+    if (QuitButton)
     {
-        StartButton->OnClicked.AddDynamic(this, &UTitleWidget::OnStartClicked);
+        QuitButton->OnClicked.AddDynamic(this, &UTitleWidget::OnQuitClicked);
     }
-
-
-
-    return true;
 }
 
 void UTitleWidget::OnStartClicked()
 {
-    UGameplayStatics::OpenLevel(this, FName("StageSelect"));
     if (ClickSE)
     {
         UGameplayStatics::PlaySound2D(this, ClickSE);
     }
+    UGameplayStatics::OpenLevel(this, FName("StageSelect"));
+    
+}
+
+void UTitleWidget::OnQuitClicked()
+{
+    if (ClickSE)
+    {
+        UGameplayStatics::PlaySound2D(this, ClickSE);
+    }
+
+
+    if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+    {
+        UKismetSystemLibrary::QuitGame(
+            GetWorld(),
+            PC,
+            EQuitPreference::Quit,
+            false
+        );
+    }
+
+  /*  UE_LOG(LogTemp, Warning, TEXT("Quit button clicked"));
+ 
+    UKismetSystemLibrary::QuitGame(
+        GetWorld(),
+        GetOwningPlayer(),
+        EQuitPreference::Quit,
+        false
+    );*/
 }

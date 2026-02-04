@@ -14,6 +14,12 @@ ADroneCharacter::ADroneCharacter()
 
 	// ドローンの移動速度を変更
 	GetCharacterMovement()->MaxWalkSpeed = MoveDroneSpeed;
+
+	GetCapsuleComponent()->SetCollisionResponseToChannel(
+		ECC_GameTraceChannel3, // BlockVolumeOnly に割り当てた Channel
+		ECR_Ignore
+	);
+
 }
 
 void ADroneCharacter::BeginPlay()
@@ -242,6 +248,34 @@ void ADroneCharacter::DropAmmoBox()
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
 	AAmmoBox* Box = GetWorld()->SpawnActor<AAmmoBox>(AmmoBoxClass, SpawnPos, FRotator::ZeroRotator, Params);
+
+	for (int32 i = 0; i < 3; i++)
+	{
+
+		// ランダムなスポーンポイントを選択
+		FVector SpawnLocation = Box->GetActorLocation();
+
+		// 少し位置をずらす
+		SpawnLocation += FVector(FMath::RandRange(-300, 300), FMath::RandRange(-300, 300), 0);
+
+		FRotator SpawnRotation = FRotator::ZeroRotator;
+
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+		RandomInt = FMath::RandRange(0, 6);
+
+		
+			ItemClass = DropItem[RandomInt];
+		
+			AItemBase* SpawnedItem = GetWorld()->SpawnActor<AItemBase>(
+				ItemClass,
+				SpawnLocation,
+				SpawnRotation,
+				SpawnParams
+			);
+
+	}
 
 	if (Box)
 	{

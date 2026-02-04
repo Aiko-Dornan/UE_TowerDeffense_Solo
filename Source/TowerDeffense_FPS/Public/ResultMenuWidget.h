@@ -14,6 +14,12 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* ClearOrOverTextBlock;
 
+	// çƒê∂ÇµÇΩÇ¢SE
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
+	USoundBase* ClickSE;
+
+	void SEPlay();
+
 protected:
 	virtual void NativeConstruct() override;
 
