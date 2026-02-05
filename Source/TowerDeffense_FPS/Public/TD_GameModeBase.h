@@ -40,6 +40,10 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
     TSubclassOf<UUserWidget> GameClearWidgetClass;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+    TSubclassOf<UUserWidget> PauseWidgetClass;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+    UUserWidget* PauseWidget;
     UPROPERTY()
     UDefenseBaseHPWidget* DefenseBaseHPWidget;
 
@@ -49,6 +53,12 @@ public:
     UFUNCTION(BlueprintCallable)
     void GameClear();
     bool Clear = false;
+
+    UFUNCTION(BlueprintCallable)
+    void PWOpen();
+
+    UFUNCTION(BlueprintCallable)
+    void PWClose();
 
     // スポーナーへの参照
     AEnemySpawnerWave* EnemySpawnerRef;

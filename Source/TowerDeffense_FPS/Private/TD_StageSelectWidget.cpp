@@ -46,12 +46,23 @@ bool UTD_StageSelectWidget::Initialize()
         Stage2Button->OnClicked.AddDynamic(
             this, &UTD_StageSelectWidget::OnStage2Clicked);
     }*/
-
+    if (TitleBackButton)
+    {
+        TitleBackButton->OnClicked.AddDynamic(
+            this, &UTD_StageSelectWidget::OnTitleBackClicked);
+    }
     
     // ★ここが重要
     UpdateStageButtons();
 
     return true;
+}
+
+void UTD_StageSelectWidget::OnTitleBackClicked()
+{
+    SEPlay();
+    // ステージセレクト用レベル名
+    UGameplayStatics::OpenLevel(this, FName("Title"));
 }
 
 void UTD_StageSelectWidget::OnStage1Clicked()

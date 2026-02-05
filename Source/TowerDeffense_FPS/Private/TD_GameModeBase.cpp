@@ -228,6 +228,24 @@ void ATD_GameModeBase::GameClear()
     
 }
 
+void ATD_GameModeBase::PWOpen()
+{
+    if (PauseWidgetClass)
+    {
+        UUserWidget* Widget = CreateWidget<UUserWidget>(GetWorld(), PauseWidgetClass);
+        if (Widget) Widget->AddToViewport();
+        PauseWidget = Widget;
+    }
+}
+
+void ATD_GameModeBase::PWClose()
+{
+    if (PauseWidgetClass)
+    {
+        PauseWidget->RemoveFromParent();
+        PauseWidget = nullptr;
+    }
+}
 void ATD_GameModeBase::OnEnemyDestroyed()
 {
     // スポーナーが存在するか確認

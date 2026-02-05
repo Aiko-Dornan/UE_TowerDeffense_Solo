@@ -130,13 +130,13 @@ void AEnemyCharacterBase::TryStartAI()
 {
     if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
     {
-        UE_LOG(LogTemp, Warning, TEXT("%s: AI initialized successfully."), *GetName());
+        //UE_LOG(LogTemp, Warning, TEXT("%s: AI initialized successfully."), *GetName());
         UpdateTarget();               // ターゲット選定
         StartMovingToTarget();        // 移動開始
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("%s: AI not ready, retrying..."), *GetName());
+        //UE_LOG(LogTemp, Warning, TEXT("%s: AI not ready, retrying..."), *GetName());
         // まだAIがついていなければ再試行
         GetWorldTimerManager().SetTimerForNextTick(this, &AEnemyCharacterBase::TryStartAI);
     }
@@ -149,9 +149,9 @@ void AEnemyCharacterBase::StartMovingToTarget()
     {
         if (!IsValid(CurrentTarget))
         {
-            UE_LOG(LogTemp, Warning,
+           /* UE_LOG(LogTemp, Warning,
                 TEXT("%s: StartMovingToTarget failed (no target)"),
-                *GetName());
+                *GetName());*/
             return;
         }
 
@@ -161,11 +161,11 @@ void AEnemyCharacterBase::StartMovingToTarget()
             AActor* Blocking = CheckBlockingStructure(CurrentTarget);
             if (IsValid(Blocking))
             {
-                UE_LOG(LogTemp, Warning,
+                /*UE_LOG(LogTemp, Warning,
                     TEXT("%s: Target %s blocked → switch to %s"),
                     *GetName(),
                     *CurrentTarget->GetName(),
-                    *Blocking->GetName());
+                    *Blocking->GetName());*/
 
                 PreviousTarget = CurrentTarget;
                 CurrentTarget = Blocking;
@@ -193,9 +193,9 @@ void AEnemyCharacterBase::StartMovingToTarget()
     }
     else
     {
-        UE_LOG(LogTemp, Warning,
+       /* UE_LOG(LogTemp, Warning,
             TEXT("%s: StartMovingToTarget failed (no controller yet)"),
-            *GetName());
+            *GetName());*/
 
         GetWorldTimerManager().SetTimerForNextTick(
             this,
@@ -215,7 +215,7 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
 
     if (bIsDead) return;
     if (!IsValid(CurrentTarget)) {
-        UE_LOG(LogTemp, Warning, TEXT("{{{%s}}}No Target!!!!!!!!!!!!11!"), *GetName());
+       // UE_LOG(LogTemp, Warning, TEXT("{{{%s}}}No Target!!!!!!!!!!!!11!"), *GetName());
         //CurrentTarget = BaseStructure;
         //UE_LOG(LogTemp, Warning, TEXT("{{{%s}}}!!!!!!!!!!!!11!"), *CurrentTarget->GetName());
         return;
@@ -231,17 +231,17 @@ void AEnemyCharacterBase::Tick(float DeltaTime)
             AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController());
             if (AICon)
             {
-                UE_LOG(LogTemp, Error, TEXT("[STUCK AI] %s has Target: %s but is not moving! AIController: %s (Class: %s)"),
+               /* UE_LOG(LogTemp, Error, TEXT("[STUCK AI] %s has Target: %s but is not moving! AIController: %s (Class: %s)"),
                     *GetName(),
                     *CurrentTarget->GetName(),
                     *AICon->GetName(),
-                    *AICon->GetClass()->GetName());
+                    *AICon->GetClass()->GetName());*/
             }
             else
             {
-                UE_LOG(LogTemp, Error, TEXT("[STUCK AI] %s has Target: %s but has NO AIController!"),
+               /* UE_LOG(LogTemp, Error, TEXT("[STUCK AI] %s has Target: %s but has NO AIController!"),
                     *GetName(),
-                    *CurrentTarget->GetName());
+                    *CurrentTarget->GetName());*/
             }
         }
     }
@@ -360,8 +360,8 @@ bool AEnemyCharacterBase::ShouldAttackBlockingStructure(
     // すでに障害物を殴っているなら何もしない
     if (Target->IsA(ADefenseStructure::StaticClass()))
     {
-        UE_LOG(LogTemp, Warning,
-            TEXT("%s already attack;"),*GetName());
+       /* UE_LOG(LogTemp, Warning,
+            TEXT("%s already attack;"),*GetName());*/
         return false;
     }
         
@@ -376,34 +376,34 @@ bool AEnemyCharacterBase::ShouldAttackBlockingStructure(
     const float NavDist =
         GetNavPathLengthToTarget(Target);
 
-    UE_LOG(LogTemp, Warning,
+    /*UE_LOG(LogTemp, Warning,
         TEXT("[PATH CHECK] Straight=%.1f Nav=%.1f Ratio=%.2f"),
         StraightDist,
         NavDist,
         NavDist / StraightDist
-    );
+    );*/
 
     // Nav距離が取れない = 大回り or 到達不能 → 壊す
     if (NavDist == FLT_MAX)
     {
         OutBlocking = Blocking;
-        UE_LOG(LogTemp, Warning,
-            TEXT("%s will attack;"), *GetName());
+      /*  UE_LOG(LogTemp, Warning,
+            TEXT("%s will attack;"), *GetName());*/
         return true;
     }
 
     // ★ 迂回が許容範囲なら「壊さない」
     if (NavDist <= StraightDist * AllowDetourRatio)
     {
-        UE_LOG(LogTemp, Warning,
-            TEXT("%s will ukai;"), *GetName());
+        /*UE_LOG(LogTemp, Warning,
+            TEXT("%s will ukai;"), *GetName());*/
         return false; // 迂回する
     }
 
     // ★ それ以上なら「邪魔だから壊す」
     OutBlocking = Blocking;
-    UE_LOG(LogTemp, Warning,
-        TEXT("%s will kowasu;"), *GetName());
+   /* UE_LOG(LogTemp, Warning,
+        TEXT("%s will kowasu;"), *GetName());*/
     return true;
 }
 
@@ -530,12 +530,12 @@ AActor* AEnemyCharacterBase::CheckBlockingStructure(AActor* MainTarget)const
 
     if (bHit)
     {
-        UE_LOG(LogTemp, Warning,
+       /* UE_LOG(LogTemp, Warning,
             TEXT("Trace Hit: %s (%s)by%s"),
             *Hit.GetActor()->GetName(),
             *Hit.GetActor()->GetClass()->GetName(),
             *this->GetName()
-        );
+        );*/
     }
 
     if (!bHit || !Hit.GetActor())
@@ -617,7 +617,7 @@ void AEnemyCharacterBase::UpdateTarget()
                     50.0f,
                     RangeAttack ? GetEffectiveAttackRange(CurrentTarget) - 20.0f : GetEffectiveAttackRange(CurrentTarget) - 200.0f
                 );
-                UE_LOG(LogTemp, Warning, TEXT("%s is watching %s?"), *GetName(), *CurrentTarget->GetName());
+               // UE_LOG(LogTemp, Warning, TEXT("%s is watching %s?"), *GetName(), *CurrentTarget->GetName());
                 AI->MoveToActor(CurrentTarget, Radius);
                 MoveORIdle();
 
@@ -684,8 +684,8 @@ void AEnemyCharacterBase::UpdateTarget()
 
         //CurrentTarget = ChooseTarget_DefenseStructure();
 
-        UE_LOG(LogTemp, Warning, TEXT("%s is targeting %s !"),
-            *GetName(), *CurrentTarget->GetName());
+       /* UE_LOG(LogTemp, Warning, TEXT("%s is targeting %s !"),
+            *GetName(), *CurrentTarget->GetName());*/
 
         if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
         {
@@ -763,8 +763,8 @@ void AEnemyCharacterBase::UpdateTarget()
 
 void AEnemyCharacterBase::MoveORIdle()
 {
-    UE_LOG(LogTemp, Warning, TEXT("%s is %f! !"),
-        *GetName(), GetVelocity().Size());
+  /*  UE_LOG(LogTemp, Warning, TEXT("%s is %f! !"),
+        *GetName(), GetVelocity().Size());*/
 
     if (GetVelocity().Size() < 1.0f ||GetCharacterMovement()->IsMovingOnGround() /*&&
         !GetController()->IsFollowingAPath()*/)
@@ -773,8 +773,8 @@ void AEnemyCharacterBase::MoveORIdle()
         {
             if (CurrentAnimType == EEnemyAnimType::Move)
             {
-                UE_LOG(LogTemp, Warning, TEXT("%s is Dash! !"),
-                    *GetName());
+               /* UE_LOG(LogTemp, Warning, TEXT("%s is Dash! !"),
+                    *GetName());*/
                return;
             }
             else
@@ -817,8 +817,8 @@ void AEnemyCharacterBase::OnEnemyBeginOverlap(AActor* OverlappedActor, AActor* O
     {
         if (CurrentTarget == HitStructure) return;
 
-        UE_LOG(LogTemp, Warning, TEXT("%s collided with structure %s -> targeting it!"),
-            *GetName(), *HitStructure->GetName());
+      /*  UE_LOG(LogTemp, Warning, TEXT("%s collided with structure %s -> targeting it!"),
+            *GetName(), *HitStructure->GetName());*/
 
         PreviousTarget = CurrentTarget;
         CurrentTarget = HitStructure;
@@ -1093,8 +1093,8 @@ void AEnemyCharacterBase::PerformAttack()//近距離
 
    
 
-    UE_LOG(LogTemp, Warning, TEXT("%s attacks %s!"),
-        *GetName(), *CurrentTarget->GetName());
+ /*   UE_LOG(LogTemp, Warning, TEXT("%s attacks %s!"),
+        *GetName(), *CurrentTarget->GetName());*/
 
   
 
@@ -1130,7 +1130,7 @@ void AEnemyCharacterBase::AllRangeAttack()
 
     if (!ProjectileClass)
     {
-        UE_LOG(LogTemp, Error, TEXT("ProjectileClass is NULL!!"));
+      //  UE_LOG(LogTemp, Error, TEXT("ProjectileClass is NULL!!"));
         return;
     }
 
@@ -1145,7 +1145,7 @@ void AEnemyCharacterBase::AllRangeAttack()
     USkeletalMeshComponent* MeshComp = GetMesh();
     if (!MeshComp)
     {
-        UE_LOG(LogTemp, Error, TEXT("Enemy has no SkeletalMesh!"));
+      //  UE_LOG(LogTemp, Error, TEXT("Enemy has no SkeletalMesh!"));
         return;
     }
 
@@ -1170,11 +1170,11 @@ void AEnemyCharacterBase::AllRangeAttack()
         Grenade->AmountAreaAtacck = AmountAreaAtacck;
         Grenade->TargetLocation = CurrentTarget->GetActorLocation();
         Grenade->CalculateLaunchVelocity(); // ここで velocity を計算
-        UE_LOG(LogTemp, Warning, TEXT("Projectile Spawned!"));
+       // UE_LOG(LogTemp, Warning, TEXT("Projectile Spawned!"));
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("Projectile Spawn FAILED!!"));
+       // UE_LOG(LogTemp, Error, TEXT("Projectile Spawn FAILED!!"));
     }
     bCanAttack = false;
     GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
@@ -1233,11 +1233,11 @@ void AEnemyCharacterBase::ApplyAreaDamage(float DamageAmount, float Radius)
                     nullptr
                 );
 
-                UE_LOG(LogTemp, Warning, TEXT("%s - AreaDamage applied to %s巻き込みました!!"),
-                    *GetName(), *Actor->GetName());
+            //    UE_LOG(LogTemp, Warning, TEXT("%s - AreaDamage applied to %s巻き込みました!!"),
+                 //   *GetName(), *Actor->GetName());
             }
 
-            UE_LOG(LogTemp, Warning, TEXT("Actor in range: %s"), *Actor->GetName());
+           // UE_LOG(LogTemp, Warning, TEXT("Actor in range: %s"), *Actor->GetName());
         }
     }
 
@@ -1273,7 +1273,7 @@ void AEnemyCharacterBase::ResetAttack()
 
     FVector ToTarget = CurrentTarget->GetActorLocation() - GetActorLocation();
     float Distance = ToTarget.Size();
-    UE_LOG(LogTemp, Warning, TEXT("%s Range %f!"),*GetName(),Distance);
+  //  UE_LOG(LogTemp, Warning, TEXT("%s Range %f!"),*GetName(),Distance);
     if (Distance< GetEffectiveAttackRange(CurrentTarget))
     {
         return;
@@ -1289,7 +1289,7 @@ void AEnemyCharacterBase::OnAttackHit()
 {
     if (bIsDead || !IsValid(CurrentTarget)) return;
 
-    UE_LOG(LogTemp, Warning, TEXT("Attack Hit!"));
+ //   UE_LOG(LogTemp, Warning, TEXT("Attack Hit!"));
 
     UGameplayStatics::ApplyDamage(
         CurrentTarget,
@@ -1323,7 +1323,7 @@ void AEnemyCharacterBase::OnAttackOverlap(
         //UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s:MyOwn"), *OtherActor->GetName());
        // OtherActor = CurrentTarget;
     }
-    UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s:3"), *OtherActor->GetName());
+   // UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s:3"), *OtherActor->GetName());
     //if (HitActors.Contains(OtherActor)) return;
     /*UE_LOG(LogTemp, Warning, TEXT("Melee Hit: %s:4"), *OtherActor->GetName());*/
 
@@ -1360,8 +1360,8 @@ void AEnemyCharacterBase::OnAttackOverlap(
                     nullptr
                 );
 
-                UE_LOG(LogTemp, Warning, TEXT("%s - AreaDamage applied to %s巻き込みました!!"),
-                    *GetName(), *Actor->GetName());
+              /*  UE_LOG(LogTemp, Warning, TEXT("%s - AreaDamage applied to %s巻き込みました!!"),
+                    *GetName(), *Actor->GetName());*/
             }
             }
 
@@ -1375,11 +1375,11 @@ void AEnemyCharacterBase::OnAttackOverlap(
                 FireSoundAttenuation // Attenuationを指定
             );
 
-            UE_LOG(LogTemp, Warning, TEXT("Actor in range: %s"), *Actor->GetName());
+           // UE_LOG(LogTemp, Warning, TEXT("Actor in range: %s"), *Actor->GetName());
         }
        
         bCanAttack = false;
-        UE_LOG(LogTemp, Warning, TEXT("%s Melee Hit: %s"), *GetName(), *CurrentTarget->GetName());
+        //UE_LOG(LogTemp, Warning, TEXT("%s Melee Hit: %s"), *GetName(), *CurrentTarget->GetName());
         return;
     }
 
@@ -1410,7 +1410,7 @@ void AEnemyCharacterBase::OnAttackOverlap(
             FireSoundAttenuation // Attenuationを指定
         );
         bCanAttack = false;
-        UE_LOG(LogTemp, Warning, TEXT("%s Melee Hit: %s"), *GetName(),*CurrentTarget->GetName());
+       // UE_LOG(LogTemp, Warning, TEXT("%s Melee Hit: %s"), *GetName(),*CurrentTarget->GetName());
         return;
     }
     /*GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this,
@@ -1432,17 +1432,18 @@ float AEnemyCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& Da
     const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
     CurrentHealth -= ActualDamage;
-    UE_LOG(LogTemp, Warning, TEXT("%s took %f damage! HP: %f/%f"),
-        *GetName(), ActualDamage, CurrentHealth, MaxHealth);
+    //UE_LOG(LogTemp, Warning, TEXT("%s took %f damage! HP: %f/%f"),
+    //    *GetName(), ActualDamage, CurrentHealth, MaxHealth);
 
     if (DamageAnim&&!bIsBoss)
     {
         
         PlayAnimation(EEnemyAnimType::Damage, false);
     }
-
-    GetCharacterMovement()->MaxWalkSpeed= GetCharacterMovement()->MaxWalkSpeed/10;
-
+    if (!bIsBoss)
+    {
+        GetCharacterMovement()->MaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed / 10;
+    }
     //LockTarget = false;
     
    
@@ -1476,7 +1477,7 @@ void AEnemyCharacterBase::Die()
     if (bIsDead) return;
     bIsDead = true;
 
-    UE_LOG(LogTemp, Warning, TEXT("Enemy %s died!"), *GetName());
+    //UE_LOG(LogTemp, Warning, TEXT("Enemy %s died!"), *GetName());
 
     bIsAnimationLocked = false;
 
@@ -1622,7 +1623,7 @@ void AEnemyCharacterBase::PlayAnimation(EEnemyAnimType NewType, bool bLoop)
 
     UAnimationAsset* Anim = GetAnimByType(NewType);
     if (!Anim) { 
-        UE_LOG(LogTemp, Warning, TEXT("No Anime"));
+        //UE_LOG(LogTemp, Warning, TEXT("No Anime"));
         return; }
 
     USkeletalMeshComponent* USMesh = GetMesh();
@@ -1665,7 +1666,7 @@ void AEnemyCharacterBase::LockRelease()
         GetCharacterMovement()->MaxWalkSpeed = MoveEnemySpeed;
         UpdateTarget();
         
-        UE_LOG(LogTemp, Warning, TEXT("Damage Anime end"));
+        //UE_LOG(LogTemp, Warning, TEXT("Damage Anime end"));
     }
 
 }

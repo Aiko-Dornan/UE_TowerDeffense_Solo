@@ -14,6 +14,7 @@
 #include "Components/TextRenderComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
+//#include"PauseWidget.h"
 #include "MyHeroPlayer.generated.h"
 
 UENUM(BlueprintType)
@@ -323,6 +324,20 @@ public:
 	void DashStart();
 	void DashEnd();
 
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsPaused = false;
+
+	void TogglePause();
+
+	UFUNCTION(BlueprintCallable)
+	void ResumeGame();
+	// PlayerController ÉÅÉìÉo
+
+
+	/*UPROPERTY()
+	UPauseWidget* PauseWidget;*/
+
 	private:
 
 		/*UPROPERTY(VisibleAnywhere)
@@ -343,4 +358,6 @@ public:
 		float MoveSpeed = 1.0f;
 		bool move_flag = false;
 		FTimerHandle AnimLockTimerHandle;
+
+		
 };

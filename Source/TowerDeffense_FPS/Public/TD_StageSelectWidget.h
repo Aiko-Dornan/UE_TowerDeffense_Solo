@@ -17,6 +17,9 @@ protected:
     UFUNCTION()
     void OnStage1Clicked();
 
+    UFUNCTION()
+    void OnTitleBackClicked();
+
     UPROPERTY(meta = (BindWidget))
     UButton* Stage1Button;
     UPROPERTY(meta = (BindWidget))
@@ -29,6 +32,9 @@ protected:
     UPROPERTY(meta = (BindWidget))
     UButton* Stage5Button;
 
+
+    UPROPERTY(meta = (BindWidget))
+    UButton* TitleBackButton;
     // çƒê∂ÇµÇΩÇ¢SE
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
     USoundBase* ClickSE;

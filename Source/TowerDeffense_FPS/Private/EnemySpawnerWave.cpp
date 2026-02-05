@@ -20,6 +20,11 @@ void AEnemySpawnerWave::BeginPlay()
 {
     Super::BeginPlay();
 
+    if (UTD_GameInstance* GI = GetGameInstance<UTD_GameInstance>())
+    {
+        LimitWave = PlusWave[GI->MaxClearedStage];
+        //NumberOfSpawnPoints=PlusNumberOfSpawnPoints[GI->MaxClearedStage];
+    }
     UE_LOG(LogTemp, Warning, TEXT("AEnemySpawnerWave::BeginPlay() called for: %s | IsPendingKill: %d | IsTemplate: %d"),
         *GetName(),
         IsPendingKillPending() ? 1 : 0,
@@ -272,7 +277,16 @@ void AEnemySpawnerWave::SpawnWave()
     }*/
     if (MHP != nullptr && MHP->AmmoWidget != nullptr)
     {
-        MHP->AmmoWidget->UpdateDroneText(4);
+        if (CurrentWave<LimitWave)
+        {
+            MHP->AmmoWidget->UpdateDroneText(4);
+        }
+        else
+        {
+            MHP->AmmoWidget->UpdateDroneText(6);
+        }
+
+        
     }
    // all_spawn = true;
 }
@@ -314,7 +328,7 @@ void AEnemySpawnerWave::NotifyEnemyDestroyed(AEnemyCharacterBase* DeadEnemy)
 
             if (CurrentWave >= LimitWave)
             {
-                GetWorldTimerManager().SetTimer(GameClearHandle, this, &AEnemySpawnerWave::GameClearAct, 5.0f, false);
+                GetWorldTimerManager().SetTimer(GameClearHandle, this, &AEnemySpawnerWave::GameClearAct, 3.0f, false);
               /*  if (ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
                 {
                     GM->GameClear();
@@ -396,13 +410,13 @@ void AEnemySpawnerWave::GenerateRandomSpawnPoints()
 
     ADefenseBase* Base = Cast<ADefenseBase>(UGameplayStatics::GetActorOfClass(GetWorld(), ADefenseBase::StaticClass()));
     if (!Base) return;
-
+    UTD_GameInstance* GI = GetGameInstance<UTD_GameInstance>();
     FVector BaseLocation = Base->GetActorLocation();
     int32 SpawnedCount = 0;
     int32 MaxAttempts = 1000;
     int32 Attempts = 0;
 
-    while (SpawnedCount < NumberOfSpawnPoints && Attempts < MaxAttempts)
+    while (SpawnedCount < NumberOfSpawnPoints+PlusNumberOfSpawnPoints[GI->MaxClearedStage] && Attempts < MaxAttempts)
     {
         Attempts++;
 

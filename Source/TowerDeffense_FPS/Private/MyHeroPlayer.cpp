@@ -243,6 +243,15 @@ void AMyHeroPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyHeroPlayer::DashStart);
 	PlayerInputComponent->BindAction("Dash", IE_Released, this, &AMyHeroPlayer::DashEnd);
+
+	// ESCキーをバインド
+	InputComponent->BindAction("Pause", IE_Pressed, this, &AMyHeroPlayer::TogglePause);
+
+	// ポーズ中も入力を受け取る
+	InputComponent->bBlockInput = false;
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	PC->bShowMouseCursor = true;
+
 }
 
 void AMyHeroPlayer::HandleFire()
@@ -1258,3 +1267,71 @@ void AMyHeroPlayer::DrawGrenadeTrajectory()
 		);
 	}*/
 }
+
+void AMyHeroPlayer::TogglePause()
+{
+	if (bIsPaused) return;
+
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	bIsPaused = true;
+
+	//UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.0f);
+
+	/*PauseWidget = CreateWidget<UPauseWidget>(this, PauseWidgetClass);
+	if (PauseWidget)
+	{
+		PauseWidget->AddToViewport();
+	}*/
+	if (ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+	{
+		GM->PWOpen();
+	}
+	
+	if (bIsPaused)
+	{
+		// ほぼ停止（入力は生きる）
+		UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.0f);
+
+		FInputModeUIOnly InputMode;
+		PC->SetInputMode(InputMode);
+		PC->bShowMouseCursor = true;
+	}
+	
+	//else
+	//{
+	//	// ポーズOFF
+	//	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
+
+	//	FInputModeGameOnly InputMode;
+	//	PC->SetInputMode(InputMode);
+	//	PC->bShowMouseCursor = false;
+	//}
+}
+
+void AMyHeroPlayer::ResumeGame()
+{
+	// 念のため二重解除防止
+	if (!bIsPaused) return;
+
+	APlayerController* PC = Cast<APlayerController>(GetController());
+
+	bIsPaused = false;
+
+	if (ATD_GameModeBase* GM = Cast<ATD_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+	{
+		GM->PWClose();
+	}
+
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
+
+	/*if (PauseWidget)
+	{
+		PauseWidget->RemoveFromParent();
+		PauseWidget = nullptr;
+	}*/
+
+	FInputModeGameOnly InputMode;
+	PC->SetInputMode(InputMode);
+	PC->bShowMouseCursor = false;
+}
+

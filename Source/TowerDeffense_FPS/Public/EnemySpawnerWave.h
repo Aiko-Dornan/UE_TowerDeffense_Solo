@@ -87,6 +87,12 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave")
     int32 LimitWave = 5;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave")
+    TArray<int32> PlusWave;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave")
+    TArray<int32> PlusNumberOfSpawnPoints;
+
     UPROPERTY()
     UWaveWidget* WaveWidgetInstance; // WaveWidget のインスタンス
 
@@ -104,7 +110,7 @@ public:
     // 敵全滅後に次ウェーブに進むまでの待機時間
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave")
     float TimeAfterClear = 5.0f;
-
+     
 
     UPROPERTY(EditAnywhere, Category = "WaveSpawn")
     int32 NumberOfSpawnPoints = 5; // 配置するウェーブスポーン数
